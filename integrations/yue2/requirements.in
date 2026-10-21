@@ -1,0 +1,14 @@
+# Upstream source revision 1647252d68b70cbead046ffd3f7caf036dde47ee.
+# CPython 3.10 / Linux x86_64 / CUDA 12.8; no optional vLLM/fast extra.
+# Direct official wheel avoids pip needing a second index for unrelated packages.
+torch @ https://download-r2.pytorch.org/whl/cu128/torch-2.10.0%2Bcu128-cp310-cp310-manylinux_2_28_x86_64.whl#sha256=36368507b56eaa51acbd3c96ac8893bb9a86991ffcd0699fea3a1a74a2b8bdcb
+transformers==4.57.6
+huggingface-hub==0.36.2
+safetensors==0.7.0
+tiktoken==0.12.0
+numpy==2.2.6
+soundfile==0.13.1
+accelerate==1.13.0
+pip==25.3
+setuptools==80.9.0
+wheel==0.45.1

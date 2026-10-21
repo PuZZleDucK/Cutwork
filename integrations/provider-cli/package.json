@@ -1,0 +1,10 @@
+{
+  "name": "music-video-studio-provider-cli",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Pinned terminal executables; not dependencies of the browser application",
+  "dependencies": {
+    "@openai/codex": "0.163.0",
+    "@anthropic-ai/claude-code": "2.1.306"
+  }
+}

@@ -1,0 +1,18 @@
+# Personal learning context (not committed by default)
+/devpost/learner-profile.md
+
+# Local credentials; only secret-free examples may be committed
+.env
+.env.*
+!.env.example
+
+# Local test dependencies and generated reports
+node_modules/
+.vitest/
+coverage/
+test-results/
+*.tsbuildinfo
+
+# Local runtime/evidence: real media and machine-specific execution logs
+/.runtime/
+/.local-evidence/

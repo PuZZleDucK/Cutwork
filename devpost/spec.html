@@ -1,0 +1,746 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark"><meta name="source-fingerprint" content="f945eb3592bc"><title>Technical blueprint · AI Music Video Maker</title><style>
+:root{color-scheme:dark;--bg:#10191e;--surface:#19252b;--line:#384a51;--ink:#eeeae0;--muted:#aebbc0;--amber:#e9bb64;--mint:#a8d5cb}*{box-sizing:border-box}html{scroll-behavior:auto;scroll-padding-top:25px}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.65 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}a{color:var(--mint);text-underline-offset:4px}a:hover{color:#fff}button,a,summary{touch-action:manipulation}a:focus-visible,button:focus-visible,summary:focus-visible,[tabindex]:focus-visible{outline:3px solid var(--amber);outline-offset:5px}button{font:inherit;cursor:pointer;color:inherit}header,main,footer{max-width:1220px;margin:auto;padding:0 44px}header{display:flex;justify-content:space-between;gap:20px;padding-top:27px;padding-bottom:24px;border-bottom:1px solid var(--line)}.brand{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}.brand b{color:var(--ink)}nav{display:flex;gap:22px;font-size:13px}nav a{text-decoration:none}.hero{display:grid;grid-template-columns:1fr 260px;gap:60px;padding:54px 0 38px}.eyebrow{color:var(--amber);font:11px/1.5 ui-monospace,monospace;letter-spacing:.14em;text-transform:uppercase}h1{font:normal clamp(39px,5vw,67px)/1.05 Georgia,serif;letter-spacing:-.035em;margin:17px 0 23px}h1 em{color:var(--amber);font-style:normal}h2{font:normal 30px/1.2 Georgia,serif;letter-spacing:-.015em;margin:0 0 16px}h3{font-size:21px;line-height:1.3;margin-top:26px}p{margin:0 0 18px}.lede{max-width:720px;color:var(--muted);font-size:18px;line-height:1.7}.hero-aside{align-self:center;border-left:1px solid var(--line);padding-left:26px}.metric{margin:17px 0;display:flex;gap:13px;align-items:baseline}.metric strong{font:32px Georgia,serif;color:var(--mint)}.metric span{font-size:12px;line-height:1.5;color:var(--muted)}.status{display:inline-block;border:1px solid #856b3d;background:#332e22;color:var(--amber);padding:4px 11px;border-radius:3px;font-size:11px;letter-spacing:.12em}.boundary{display:grid;grid-template-columns:1fr 1fr 1fr;border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-bottom:48px}.boundary div{padding:21px 23px;position:relative}.boundary div+div{border-left:1px solid var(--line)}.boundary b{font-size:13px;display:block;margin-bottom:6px}.boundary p{font-size:13px;color:var(--muted);margin:0}.boundary .gate{border-top:3px solid var(--amber);padding-top:18px}.section-top{display:flex;gap:15px;align-items:baseline}.section-top .number{font:12px ui-monospace,monospace;color:var(--amber)}.intro{font-size:15px;color:var(--muted);max-width:850px;margin-bottom:24px}.map-frame{border:1px solid var(--line);background:var(--surface);padding:14px;border-radius:12px;overflow:auto}.map-frame svg{display:block;width:100%;min-width:800px;height:auto}.map-box{fill:#22343b;stroke:#547079}.map-title{font:600 15px system-ui,sans-serif;fill:#eeeae0}.map-sub{font:12px system-ui,sans-serif;fill:#becbd0}.map-small{font:10px system-ui,sans-serif;fill:#a9b8be}.map-label{font:9px ui-monospace,monospace;fill:#e9bb64;letter-spacing:1px}svg a:hover rect{stroke:#e9bb64;stroke-width:2}svg a:focus-visible rect{stroke:#e9bb64;stroke-width:3}.map-caption{font-size:12px;color:var(--muted);padding-top:12px;margin-bottom:42px}.journey-buttons{display:grid;grid-template-columns:repeat(6,1fr);border:1px solid var(--line);border-radius:8px 8px 0 0;overflow:hidden}.step{border:0;border-right:1px solid var(--line);background:#19252b;text-align:left;padding:16px 12px;font-size:12px}.step:last-child{border-right:0}.step span{display:block;font:11px ui-monospace,monospace;margin-bottom:6px;color:var(--muted)}.step[aria-pressed=true]{background:var(--amber);color:#182027}.step[aria-pressed=true] span{color:#3c422f}.journey-panel{border:1px solid var(--line);border-top:0;padding:25px 30px;background:var(--surface)}.journey-panel h3{margin:10px 0 12px;font-size:24px}.journey-panel p{max-width:920px;color:var(--muted)}.journey-panel .trace{font-size:12px;margin:14px 0 0}.journey-panel code{font-size:12px;overflow-wrap:anywhere}[hidden]{display:none!important}.review-focus{margin:44px 0;padding:26px 30px;border-left:4px solid var(--amber);background:linear-gradient(135deg,#2b2c25,#1c292d)}.review-focus h3{margin:0 0 12px}.review-focus p{font-size:15px;color:var(--muted)}.focus-links{display:flex;flex-wrap:wrap;gap:8px 20px;font-size:13px}.reading-header{display:flex;justify-content:space-between;gap:18px;align-items:center;margin-bottom:18px}.toolbar{display:flex;gap:8px;flex-shrink:0}.toolbar button{background:var(--surface);border:1px solid var(--line);padding:7px 12px;font-size:12px;border-radius:5px}.toolbar button:hover{border-color:var(--amber)}.canonical>p{font-size:14px;color:var(--muted)}.chapter{border:1px solid var(--line);background:#142127;margin:12px 0;border-radius:7px;scroll-margin-top:24px}.chapter>summary{cursor:pointer;padding:19px 22px;display:flex;gap:20px;align-items:baseline;font-size:17px;font-weight:600;list-style:none}.chapter>summary::-webkit-details-marker{display:none}.chapter>summary::after{content:'+';margin-left:auto;color:var(--amber);font:22px ui-monospace,monospace}.chapter[open]>summary::after{content:'−'}.chapter-no{font:11px ui-monospace,monospace;color:var(--muted);min-width:20px}.chapter-content{padding:4px 30px 26px;border-top:1px solid var(--line);overflow-wrap:anywhere}.chapter-content p,.chapter-content li{font-size:15px;line-height:1.8}.chapter-content>p:first-child{margin-top:22px}.chapter-content h3{color:var(--mint);border-top:1px solid var(--line);padding-top:23px;scroll-margin-top:20px}.chapter-content h3:first-child{border-top:0}.chapter-content ul,.chapter-content ol{padding-left:25px}li+li{margin-top:8px}code{font: .88em/1.7 ui-monospace,SFMono-Regular,Consolas,monospace;color:#d6e2d4;background:#263238;border-radius:3px;padding:2px 5px}pre{background:#0d171c;border:1px solid var(--line);padding:20px;border-radius:5px;overflow-x:auto;line-height:1.65;font-size:13px}pre code{background:none;padding:0;font:inherit;white-space:pre;color:#cad7d5}.table-scroll{overflow:auto;margin:20px 0}table{border-collapse:collapse;width:100%;font-size:13px;min-width:560px}th,td{text-align:left;vertical-align:top;padding:12px 13px;border:1px solid var(--line);line-height:1.7}th{color:var(--mint);background:#213139}td{background:#17252b}footer{margin-top:45px;border-top:1px solid var(--line);padding-top:24px;padding-bottom:35px;display:flex;justify-content:space-between;gap:20px;color:var(--muted);font-size:12px}.back-top{margin:30px 0 0;text-align:right;font-size:13px}.offline-note{font-size:12px;color:var(--muted)}.nojs{background:#332e22;padding:14px}.rule{height:5px;background:repeating-linear-gradient(135deg,var(--amber) 0 10px,transparent 10px 20px);opacity:.7}
+@media(max-width:850px){header,main,footer{padding-left:23px;padding-right:23px}.hero{grid-template-columns:1fr;gap:10px;padding-top:35px}.hero-aside{border-left:0;padding:0;display:flex;flex-wrap:wrap;gap:25px}.metric{margin:8px 0}.hero-aside .status{align-self:center}.boundary div{padding:17px}.boundary .gate{padding-top:14px}.journey-buttons{grid-template-columns:repeat(3,1fr)}.step{border-bottom:1px solid var(--line)}.reading-header{align-items:flex-start;flex-direction:column}.hero h1{font-size:50px}.chapter>summary{padding:17px;gap:12px}.chapter-content{padding:0 20px 22px}}
+@media(max-width:530px){header{display:block}nav{margin-top:13px;gap:20px}.hero h1{font-size:41px}.hero{padding-bottom:22px}.hero-aside{gap:17px}.metric strong{font-size:26px}.metric span{font-size:11px}.boundary{grid-template-columns:1fr}.boundary div+div{border-left:0;border-top:1px solid var(--line)}.boundary div.gate{border-top:3px solid var(--amber)}.section-top h2{font-size:26px}.journey-panel{padding:22px}.review-focus{padding:22px}.chapter>summary{font-size:15px}.chapter-content{padding-left:16px;padding-right:16px}.chapter-content p,.chapter-content li{font-size:14px}footer{display:block}.map-frame{padding:8px}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{animation:none!important;transition:none!important}}
+@media print{body{background:white;color:#18242a;font-size:10pt}header,main,footer{padding:0;max-width:none}.hero{padding:25px 0}.hero-aside{display:none}.boundary,.chapter,.journey-panel,.map-frame,.review-focus{background:white;border-color:#aaa}.chapter-content{border-color:#aaa}.chapter-content p,.chapter-content li{font-size:10pt}details>summary{break-after:avoid}h3{break-after:avoid}a,.lede,.intro,.canonical>p,.boundary p,.journey-panel p{color:#234752}code,pre,td,th{color:#18242a;background:#f3f5f4;border-color:#aaa}button,.toolbar,.journey-buttons,.back-top{display:none!important}.journey-panel[hidden]{display:block!important}.journey-panel{break-inside:avoid}.map-frame svg{min-width:0}.rule{display:none}footer{margin-top:20px}}
+</style></head><body id="top"><div class="rule" aria-hidden="true"></div><header><div class="brand"><b>Build with AI</b> / Planning workspace</div><nav aria-label="Planning documents"><a href="scope.html">02 Scope · approved</a><a href="prd.html">03 PRD · approved</a><a href="#full-spec">04 Spec · approved</a></nav></header><main>
+<section class="hero"><div><span class="eyebrow">04 / From requirements to implementation</span><h1>A creative studio.<br><em>An explicit blueprint.</em></h1><p class="lede">How ordinary creative intent becomes a real music video—without hiding who owns the jobs, the timing, or the original media.</p></div><aside class="hero-aside"><span class="status">SPECIFICATION APPROVED</span><div class="metric"><strong>01</strong><span>GPU server<br>LAN browsers</span></div><div class="metric"><strong>24</strong><span>frames per second<br>one shared timebase</span></div><div class="metric"><strong>18</strong><span>PRD feature areas<br>mapped to components</span></div></aside></section>
+<div class="boundary"><div><b>Accepted and corrected</b><p>Dundee, capable project agents, isolated Python environments, per-clip continuation and the retained blueprint decisions.</p></div><div><b>Accepted setup split</b><p>Host prerequisites for FFmpeg/FFprobe; isolated Librosa managed through the existing Audio analysis setup panel.</p></div><div class="gate"><b>Evidence still required</b><p>Clean 16 GB setup, native frame counts, real stopping, provider access and usable outputs.</p></div></div>
+<section id="system-map"><div class="section-top"><span class="number">01</span><h2>Where the work actually happens.</h2></div><p class="intro">The browser can disappear without taking a generation with it. The server owns the request, the tools and the result. Select a box to open its detailed component contract.</p><div class="map-frame" tabindex="0" role="region" aria-label="Architecture map; horizontally scrollable on narrow screens"><svg viewBox="0 0 1100 530" xmlns="http://www.w3.org/2000/svg" role="group" aria-labelledby="map-title map-desc">
+<title id="map-title">The browser controls Dundee, one Ubuntu GPU server</title><desc id="map-desc">The LAN browser calls Fastify. Dundee persists jobs and runs creative provider agents in project workspaces with their normal tools. Providers contact their external frontier models. Supplied helpers coordinate the GPU queue and capture native generator execution. The edit plan uses stored media to render preview and export. Links open each component's detailed contract.</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#9ca9aa"/></marker><pattern id="grid" width="22" height="22" patternUnits="userSpaceOnUse"><circle cx="1" cy="1" r="0.8" fill="#354246"/></pattern></defs>
+<rect width="1100" height="530" rx="12" fill="url(#grid)"/><rect x="220" y="26" width="660" height="478" rx="13" fill="#19252b" stroke="#4d636b" stroke-dasharray="5 5"/>
+<text x="242" y="53" class="map-label">DUNDEE · UBUNTU 26.04 GPU SERVER</text><text x="680" y="53" class="map-label">16 GB · TARGET, NOT PROVEN</text>
+<g fill="none" stroke="#9ca9aa" stroke-width="1.8" marker-end="url(#arrow)"><path d="M190 152H245"/><path d="M425 130H480"/><path d="M565 92V70H905V111H925"/><path d="M695 170H650"/><path d="M335 184V255"/><path d="M565 184V255"/><path d="M480 307H425"/><path d="M335 358V406H480"/><path d="M650 308H695"/><path d="M770 358V430H650"/></g>
+<text x="34" y="96" class="map-label">ANY LAN BROWSER</text>
+<a href="#c1-studio-ui-and-project-workspace"><rect x="22" y="118" width="168" height="72" rx="7" class="map-box"/><text x="40" y="146" class="map-title">Studio UI</text><text x="40" y="170" class="map-sub">React · TypeScript</text></a>
+<a href="#c2-api-persistence-and-mutation-boundary"><rect x="245" y="92" width="180" height="92" rx="7" class="map-box"/><text x="263" y="122" class="map-title">API + persistence</text><text x="263" y="148" class="map-sub">Fastify · SQLite</text><text x="263" y="169" class="map-small">Projects / attempts / edits</text></a>
+<a href="#c3-provider-adapters-and-product-owned-generator-knowledge"><rect x="480" y="92" width="170" height="92" rx="7" class="map-box"/><text x="498" y="122" class="map-title">Provider CLI</text><text x="498" y="148" class="map-sub">Codex or Claude</text><text x="498" y="169" class="map-small">Project cwd · normal tools</text></a>
+<a href="#c5-setup-manager-and-confirmed-debug"><rect x="695" y="118" width="157" height="90" rx="7" class="map-box"/><text x="712" y="145" class="map-title">Setup + Debug</text><text x="712" y="170" class="map-sub">Shared installations</text><text x="712" y="191" class="map-small">Debug needs confirmation</text></a>
+<rect x="925" y="78" width="153" height="96" rx="7" fill="#263039" stroke="#778f9b"/><text x="942" y="109" class="map-title">Frontier model</text><text x="942" y="135" class="map-sub">External provider</text><text x="942" y="157" class="map-small">Account + internet</text>
+<a href="#c4-durable-jobs-gpu-scheduler-and-cancellation"><rect x="480" y="255" width="170" height="103" rx="7" fill="#343122" stroke="#e9bb64"/><text x="498" y="285" class="map-title">One GPU queue</text><text x="498" y="312" class="map-sub">YuE2 / Comfy H3</text><text x="498" y="337" class="map-small">Helpers record jobs + receipts</text></a>
+<a href="#c8-library-arrangements-coverage-and-provenance"><rect x="245" y="255" width="180" height="103" rx="7" class="map-box"/><text x="263" y="285" class="map-title">Media + history</text><text x="263" y="312" class="map-sub">Song / clips / all PNG frames</text><text x="263" y="337" class="map-small">Originals ≠ placements</text></a>
+<a href="#c7-audio-analysis-and-exact-timing-engine"><rect x="695" y="255" width="157" height="103" rx="7" class="map-box"/><text x="712" y="285" class="map-title">Analysis + time</text><text x="712" y="312" class="map-sub">Beat map · exact 24 fps</text><text x="712" y="337" class="map-small">One shared conversion rule</text></a>
+<a href="#c9-edit-plan-preview-and-export"><rect x="480" y="401" width="170" height="75" rx="7" class="map-box"/><text x="498" y="429" class="map-title">Edit plan → FFmpeg</text><text x="498" y="455" class="map-sub">Preview + export</text></a>
+<text x="33" y="269" class="map-label">THE TAB CAN CLOSE.</text><text x="33" y="294" class="map-sub">The server still owns</text><text x="33" y="317" class="map-sub">the same request.</text>
+<text x="923" y="290" class="map-label">NO PUBLIC HOSTING</text><text x="923" y="315" class="map-sub">No app accounts in v1.</text><text x="923" y="338" class="map-sub">Reachable LAN users</text><text x="923" y="361" class="map-sub">share all capabilities.</text>
+</svg></div><p class="map-caption">Accepted topology; helpers support normal agent execution rather than restricting it. Arrows summarise the supported path, not every possible agent tool call or a deployed product.</p></section>
+<section id="walkthrough"><div class="section-top"><span class="number">02</span><h2>Follow one request through the system.</h2></div><p class="intro">Each step connects an observable behaviour to the files and component responsible for it.</p><div class="journey-buttons" id="journey-buttons" hidden><button type="button" class="step" data-step="0" aria-pressed="true" aria-controls="journey-0"><span>01</span>Set up</button><button type="button" class="step" data-step="1" aria-pressed="false" aria-controls="journey-1"><span>02</span>Describe</button><button type="button" class="step" data-step="2" aria-pressed="false" aria-controls="journey-2"><span>03</span>Reserve</button><button type="button" class="step" data-step="3" aria-pressed="false" aria-controls="journey-3"><span>04</span>Generate</button><button type="button" class="step" data-step="4" aria-pressed="false" aria-controls="journey-4"><span>05</span>Keep & edit</button><button type="button" class="step" data-step="5" aria-pressed="false" aria-controls="journey-5"><span>06</span>Preview & export</button></div><article class="journey-panel" id="journey-0" data-panel="0"><span class="eyebrow">C5 / Set up</span><h3>Shared tools, not a project wizard.</h3><p>A durable install record drives the panel and navbar. Refreshing the browser reconnects to the same installation. Debug first shows its exact prompt, command and authority.</p><code>apps/server/src/setup/</code><p class="trace">PRD: Tool Setup and Failure Recovery · <a href="#c5-setup-manager-and-confirmed-debug">Open component contract ↗</a></p></article><article class="journey-panel" id="journey-1" data-panel="1"><span class="eyebrow">C3 / Describe</span><h3>Creative freedom, with useful project context.</h3><p>The selected agent receives the brief in this project’s workspace. It can research, use its normal tools, write scripts or edit scores, and call generators. Supplied skills and helpers add knowledge and capture facts—not a forced JSON reply.</p><code>apps/server/src/providers/ · integrations/knowledge/</code><p class="trace">PRD: Music and Video Generation · <a href="#c3-provider-adapters-and-product-owned-generator-knowledge">Open component contract ↗</a></p></article><article class="journey-panel" id="journey-2" data-panel="2"><span class="eyebrow">C7 / Reserve</span><h3>Freeze the intended song and timing.</h3><p>Capture project/song, provider, seeds and the realised 24 fps interval before queueing. Pending ranges influence the next suggestion, but do not count as coverage.</p><code>packages/core/src/time/ · apps/server/src/jobs/</code><p class="trace">PRD: Default Clip Timing · <a href="#c7-audio-analysis-and-exact-timing-engine">Open component contract ↗</a></p></article><article class="journey-panel" id="journey-3" data-panel="3"><span class="eyebrow">C4 / Generate</span><h3>One GPU owner, across every project.</h3><p>Supplied helpers coordinate the GPU queue and record native job IDs. Agent-written scripts can participate without losing normal tools. Untracked calls are an explicit observability gap, not guaranteed cancellation. Existing requests retain their project/provider.</p><code>apps/server/src/jobs/ · apps/server/src/generation/</code><p class="trace">PRD: Music and Video Generation · <a href="#c4-durable-jobs-gpu-scheduler-and-cancellation">Open component contract ↗</a></p></article><article class="journey-panel" id="journey-4" data-panel="4"><span class="eyebrow">C8 / Keep & edit</span><h3>Original frames outlive individual edits.</h3><p>Verify the complete decoded frame batch. Store one artifact and separate placements. A trim keeps surviving frames at their song times; archive removes uses, restore returns an unplaced clip.</p><code>apps/server/src/media/ · apps/server/src/projects/</code><p class="trace">PRD: Raw Frame Preservation · <a href="#c8-library-arrangements-coverage-and-provenance">Open component contract ↗</a></p></article><article class="journey-panel" id="journey-5" data-panel="5"><span class="eyebrow">C9 / Preview & export</span><h3>One edit plan, the same editorial result.</h3><p>Pick one dominant image and one audio source per interval. Render gaps black and retain post-song clips. The accepted server MP4 preview trades instant playback for one verifiable render path.</p><code>apps/server/src/render/</code><p class="trace">PRD: Preview, Black Gaps, and Export · <a href="#c9-edit-plan-preview-and-export">Open component contract ↗</a></p></article><noscript><p class="nojs">JavaScript is disabled: all journey explanations and native disclosure sections remain available below.</p></noscript></section>
+<aside class="review-focus"><span class="eyebrow">Worth reading closely</span><h3>Tools for the agent—not a cage around it.</h3><p>The corrected design keeps research, normal tools, scripts, scores and relevant history available. Project folders organise shared creative work; wrappers record actual calls and outputs without forcing JSON responses. Earlier proposals are accepted or replaced. The host-versus-tool dependency setup split is also accepted. Planning is complete; implementation and live verification come next.</p><div class="focus-links"><a href="#decisions-and-open-issues">Read the accepted decisions ↗</a><a href="#time-and-edit-semantics">Inspect timing examples ↗</a><a href="#verification-and-build-gates">See what still needs proof ↗</a></div></aside>
+<section id="full-spec"><div class="reading-header"><div class="section-top"><span class="number">03</span><h2>The complete technical specification.</h2></div><div class="toolbar" id="disclosure-controls" hidden><button type="button" id="expand-all">Expand all</button><button type="button" id="collapse-all">Collapse all</button></div></div><p class="intro">This is the complete approved specification, not a shortened slide deck. Open sections as needed; all content, diagrams and controls work without a build step or external assets.</p><article class="canonical" data-canonical-fingerprint="f945eb3592bc">
+<p><strong>Approved by the learner · 21 October 2026 · Working name, not a chosen brand.</strong></p>
+<p>Markdown is canonical; <code>spec.html</code> is the offline visual companion. The learner accepted the other first-draft proposals while explicitly correcting the deployment host, Python isolation, agent autonomy, project working directories and per-clip continuation. Those decisions are recorded as accepted below; the rejected constrained-plan architecture is not retained as a fallback. The learner approved the revised blueprint and the host/tool dependency setup split with "perfect, all sounds great" on 21 October 2026. <code>4-spec</code> is complete; no further planning sign-off is required. Application implementation has not started and belongs to <code>5-build</code>.</p>
+<p><strong>Reading key:</strong> <strong>Agreed/Accepted</strong> records the learner's choices. <strong>Accepted P9</strong> records the approved host/tool dependency-installation split. <strong>Gate</strong> means evidence still required before claiming the integration works. Accepted design is not a feasibility certificate.</p>
+<details class="chapter" data-source-heading="How This Works, In Plain Language" id="how-this-works-in-plain-language" open=""><summary><span class="chapter-no">01</span><span>How This Works, In Plain Language</span></summary><div class="chapter-content">
+<p>The browser is the studio's control surface, not the machine doing the work. Dundee, the target Ubuntu GPU server, remembers projects and edits, installs and monitors the tools, runs the selected frontier-agent terminal program, and owns every generation even when you close the browser.</p>
+<p>The agent is a creative worker, not a JSON-plan compiler. Give it the user's intent, this project's context, generator skills, working tool paths and helpful wrappers/workflows; let it research, inspect relevant history, write scripts, create or edit scores, and invoke tools using its normal capabilities. <strong>Agreed:</strong> no product-added sandbox, read-only mode, tool denylist, configuration-stripping mode or forced JSON response. Wrappers and workflows help record real calls, seeds, processes and outputs; they do not prescribe the only permitted creative route.</p>
+<p>Project workers start in a stable project-specific workspace on Dundee and can share that project's notes, references, scripts and scores. Separate folders and context selection prevent accidental mixing by the application, not filesystem access by an unrestricted agent. The server still stores submitted intent and checks actual media; it does not infer successful generation merely from the agent's final prose.</p>
+<p>One shared queue lets music and video take turns using the GPU. A small local database remembers requests and edits; large media lives in ordinary server directories. Each song has its own arrangement, while the project's clip library can be reused across its songs. The same edit plan determines both preview and export: which clip is visible, which audio source wins, and where black frames or silence belong.</p>
+<p><strong>The learning distinction:</strong> “generation survives refresh” is a requirement. “Persist an attempt before launch, run it in the server worker, and let a refreshed browser fetch that attempt” is the specification that makes the requirement implementable.</p>
+</div></details><details class="chapter" data-source-heading="The Core Journey Through the System" id="the-core-journey-through-the-system"><summary><span class="chapter-no">02</span><span>The Core Journey Through the System</span></summary><div class="chapter-content">
+<ol>
+<li><strong>Prepare the shared tools.</strong> The browser asks the setup manager to prepare the chosen provider and then the generator/analysis dependencies. Durable install records drive progress and navbar status; closing the page is irrelevant to the installer.</li>
+<li><strong>Create a project and a song request.</strong> The API records the project, user description, optional lyrics, provider/model snapshot, and assigned seed identity before acknowledging submission. The project agent receives the task and can research, create/edit a score and invoke native music tools. The supplied helpers coordinate GPU use and record actual execution.</li>
+<li><strong>Verify and analyse the result.</strong> The media store checks the real song file. Analysis records duration, waveform peaks and beat positions. A successfully generated song is selected once, with a new empty arrangement; an analysis failure is shown separately, not disguised as a failed or invented song.</li>
+<li><strong>Prepare a clip.</strong> The timing engine proposes the next free adaptive beat window. The user can edit it or use Continue From End. Submission freezes project/song, exact timing intent, realised frame interval, both prompts, conditioning references, provider and seeds. It reserves the interval and creates a placeholder immediately.</li>
+<li><strong>Translate and generate.</strong> The agent receives the captured style, clip idea and timing/audio context. The agent can use the supplied helpers/workflow or write a script. The supported integration path extracts the matching song interval, records the actual graph/seed/job ID and saves both video and all decoded pre-lossy frames. Custom paths need the same observable facts; they are not prohibited.</li>
+<li><strong>Commit once.</strong> Only validated output becomes an artifact and placement. Both belong to the originating project/song at the captured times, regardless of the currently open project. The next suggestion never relocates a completed request.</li>
+<li><strong>Arrange, inspect and export.</strong> Trims, moves, priority and audio-source choices update an arrangement revision. The renderer creates a playable result from that revision. History exposes supplied inputs and actual calls. Export is a real downloadable file to test independently in VLC.</li>
+</ol>
+<p>Implements <code>prd.md &gt; The Core Journey</code>; component ownership follows below.</p>
+</div></details><details class="chapter" data-source-heading="Stack" id="stack"><summary><span class="chapter-no">03</span><span>Stack</span></summary><div class="chapter-content">
+<div aria-label="Scrollable specification table" class="table-scroll" role="region" tabindex="0"><table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>Choice and status</th>
+<th>Why / tradeoff</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Browser</td>
+<td><strong>Agreed:</strong> React + TypeScript, Vite</td>
+<td>Typed studio components; explicit <code>tsc</code> checking in addition to Vite's build.</td>
+</tr>
+<tr>
+<td>Application server</td>
+<td><strong>Agreed:</strong> Node.js + TypeScript, Fastify</td>
+<td>Owns HTTP, validation, jobs and tools independently of browser tabs.</td>
+</tr>
+<tr>
+<td>Native tools</td>
+<td><strong>Agreed:</strong> retain native Python/media environments</td>
+<td>ComfyUI/H3 and YuE2 each have a separate isolated Python environment; helper contracts remain observable.</td>
+</tr>
+<tr>
+<td>Persistence</td>
+<td><strong>Accepted P1:</strong> SQLite through <code>better-sqlite3</code>, plus filesystem media</td>
+<td>Transactions without a database service. Short synchronous DB operations only; never do inference or media work in a DB transaction.</td>
+</tr>
+<tr>
+<td>Queue</td>
+<td><strong>Agreed:</strong> one shared GPU-heavy lane. <strong>Accepted:</strong> persisted FIFO sequence, one Node worker module in the server process</td>
+<td>No Redis, separate broker, remote workers or priority UI. Research/preparation may run ahead; helpers coordinate the accepted FIFO GPU lane. Unrestricted direct calls cannot be universally policed by that lane.</td>
+</tr>
+<tr>
+<td>UI updates</td>
+<td><strong>Accepted:</strong> snapshot polling (about 1 s while active, 5 s idle) with revision numbers</td>
+<td>Easier reconnect/debugging than a second persistent transport. Native tool progress may use its own WebSocket; the browser does not connect directly to ComfyUI.</td>
+</tr>
+<tr>
+<td>Validation</td>
+<td><strong>Accepted:</strong> shared TypeScript contracts plus JSON Schema, checked by Fastify and at adapter boundaries</td>
+<td>Validate HTTP requests, helper receipts and Python results; this does not impose a response schema on the agent.</td>
+</tr>
+<tr>
+<td>Tests</td>
+<td><strong>Accepted:</strong> Vitest for domain/contracts, server integration tests, Playwright for actual browser flows, Python tests for media wrappers</td>
+<td>Test cases reviewed before feature implementation; mocked success never counts as generator proof.</td>
+</tr>
+<tr>
+<td>Runtime delivery</td>
+<td><strong>Accepted P3:</strong> Node 24 LTS at a tested patch, npm lockfile, user-level systemd service; isolated Python environments</td>
+<td>One application service, not containers/Kubernetes. No dependence on the developer's installed packages.</td>
+</tr>
+</tbody>
+</table></div>
+<p>Select exact compatible package versions during the first contract/build slice, record them in lockfiles and a tool manifest, and test on Ubuntu 26.04. “Latest” is not a reproducible installation recipe. SQLite WAL requires a version containing the upstream WAL-reset fix (3.51.3+ or documented backport); record the embedded SQLite version, not just the JavaScript package version. See <a href="https://www.sqlite.org/wal.html">SQLite WAL</a>, <a href="https://github.com/WiseLibs/better-sqlite3">better-sqlite3</a>, and <a href="https://nodejs.org/en/about/previous-releases">Node release policy</a>.</p>
+</div></details><details class="chapter" data-source-heading="Where It Runs and How Someone Tries It" id="where-it-runs-and-how-someone-tries-it"><summary><span class="chapter-no">04</span><span>Where It Runs and How Someone Tries It</span></summary><div class="chapter-content">
+<p><strong>Agreed:</strong> the named deployment/demo target is <strong>Dundee</strong>, not Artigas. Artigas is the laptop hosting the inspected personal prototype; that evidence is not a hardware recommendation. Everything except the browser runs on one Ubuntu 26.04 Desktop machine with an NVIDIA GPU and 16 GB VRAM. This includes provider CLIs, project files, Python environments, ComfyUI, YuE2, analysis and FFmpeg. Frontier model requests still contact their provider over the internet. Sixteen-gigabyte feasibility is a gate, not measured evidence; 8 GB support is deferred.</p>
+<p><strong>Accepted P3 — launch contract, not commands available today:</strong> from the future release checkout, run <code>./scripts/bootstrap-ubuntu.sh</code>. It checks the OS, driver visibility, disk space and host prerequisites, installs the pinned application runtime/build, creates a user service, and prints the studio URL. It must not silently replace an NVIDIA driver. Any required privileged package step is described and authorised locally by the operator; no sudo password enters a web form, agent prompt or log. Generator downloads and installations remain in the product's setup UI, not manual prerequisite homework.</p>
+<p>The intended developer start sequence is:</p>
+<pre><code class="language-sh">npm ci
+npm run typecheck
+npm run build
+STUDIO_HOST=0.0.0.0 STUDIO_PORT=9122 npm start
+</code></pre>
+<p>Open <code>http://localhost:9122/</code> on the server or <code>http://&lt;server-name-or-IP&gt;:9122/</code> from the LAN. On Dundee that would be <code>http://dundee.local:9122/</code>, <strong>if that hostname resolves and the application is installed there</strong>. Keep the selected 9122 application port; the Artigas prototype on 9121 remains an independent reference. Dundee's hostname resolution, available port and installed capabilities have not been probed during this revision. For development, <code>npm run dev</code> will run Vite on localhost:5173 with <code>/api</code> proxied to the backend. LAN demos use the built single-origin server, not an exposed Vite development server.</p>
+<p>The selected service design is <code>music-video-studio.service</code> under the normal server account. It owns the server and tool subprocesses; browser refresh cannot stop it. Service restart is a reconciliation event, not a promise to resume GPU computation after a crash or reboot. Do not auto-retry uncertain jobs. The bootstrap must explain what happens on logout and offer the explicit user-service persistence setup needed for unattended operation; do not silently change system policy.</p>
+<p>Data root: <code>${XDG_DATA_HOME:-$HOME/.local/share}/music-video-studio/</code>; tools under that root's <code>tools/</code>, configuration under <code>${XDG_CONFIG_HOME:-$HOME/.config}/music-video-studio/</code>. Environment overrides permit another local disk. Do not put the SQLite database on a network share or commit media, credentials or personal state to Git.</p>
+<p><strong>Access boundary:</strong> no app accounts, roles or private per-user projects. Every reachable LAN user can generate, delete and authorise host-changing Debug. Ordinary Generate also launches a full-authority creative agent, without the separate Debug confirmation; its normal tools can affect files or shared services outside the project workspace. Project directories organise work, not access control. Keep native generators bound to loopback, reject unexpected Host/Origin and cross-origin mutation requests, validate paths/IDs, and use no permissive CORS. Those are request safeguards, not user authentication. Do not expose this service publicly or claim LAN reachability makes it secure against reachable users. Provider authentication and OS permissions remain separate.</p>
+<p><strong>Demo/ship:</strong> bootstrap on a clean supported host, use setup panels, make a song and roughly three clips, show history/timing, export, play in VLC. Timelapse waits honestly. A short demo video and public GitHub repository are required; public hosting is not. The new bootstrap, startup scripts and service do not exist yet.</p>
+</div></details><details class="chapter" data-source-heading="Look and Feel" id="look-and-feel"><summary><span class="chapter-no">05</span><span>Look and Feel</span></summary><div class="chapter-content">
+<p>Carry forward <code>prd.md &gt; Look and Feel</code> and <code>Screens and Layout</code>: Projects/Config navigation; shared setup strip above project work; music, video generation, waveform timeline, library, preview/export, archive and expandable history.</p>
+<p>Use Kirsty for top-level titles <strong>once the specific asset's web embedding and redistribution terms are verified</strong>; use a system sans-serif for ordinary UI and a system monospace for times/logs. Do not call an unbundled local fallback a verified Kirsty rendering. <a href="https://typodermicfonts.com/kirsty/">The official Kirsty page</a> identifies the font; downloading or assuming a permissive licence is not part of this planning work.</p>
+<p><strong>Accepted styling direction:</strong> graphite surfaces, warm neutral text, amber for unfinished/advisory states and a restrained cool accent for selection. Hazard stripes mark work still needed and gaps; movement marks actual activity or the next essential action, not every panel. Respect reduced-motion preferences, provide text/icon status rather than colour alone, visible focus and keyboard-operated dialogs/disclosures. Numeric controls distinguish source frames from song positions. On narrow screens stack panels and allow the timeline's own horizontal scrolling rather than shrinking timing text. This review page is a document, not a finished product mockup.</p>
+</div></details><details class="chapter" data-source-heading="Components" id="components"><summary><span class="chapter-no">06</span><span>Components</span></summary><div class="chapter-content">
+<h3 id="c1-studio-ui-and-project-workspace">C1 — Studio UI and Project Workspace</h3>
+<p>Implements <code>prd.md &gt; Projects and Shared Tools</code>, <code>Frontier Agent Setup and Selection</code>, and <code>Screens and Layout</code>.</p>
+<p>React renders server-owned snapshots; local component state holds unsent edits, selection focus and disclosure state. Save project style and selected song to the server. Accepted draft-form persistence is per project/song in the server record, debounced with a revision; refreshing restores saved drafts, but a draft is never a submitted request. A visible dirty form is not overwritten by polling.</p>
+<p>Shared setup/provider status sits outside the project route. Provider selection opens from its indicator and updates only the default for new submissions. Tool queue counts include all projects and count waiting attempts, not completed/cancelled work or the active item. Show missing-sign-in guidance on hover and keyboard focus. Track installation, authentication and usability separately. A successfully installed provider collapses into its navbar indicator even if it still needs sign-in; that indicator shows the named authentication error and guidance until usable. Generator/analysis panels collapse after their installation readiness checks pass. Reduced-motion users get the same state change without animation.</p>
+<p>Project selection and manual song selection are durable. Successful song ingestion selects the new song exactly once; reopening does not replay that selection side effect. Server completion never changes whichever different project the browser is currently displaying. Coverage is labelled coverage, not “finished”.</p>
+<h3 id="c2-api-persistence-and-mutation-boundary">C2 — API, Persistence and Mutation Boundary</h3>
+<p>Implements <code>prd.md &gt; Projects and Shared Tools</code>, <code>Song Selection and Saved Arrangements</code>, and the continuity requirements in <code>Music and Video Generation</code>.</p>
+<p>Fastify is the only application writer to SQLite. Use foreign keys, migrations, short transactions, a single connection and WAL on local storage. Media is not a BLOB in the database. A transaction creates a generation intent, attempt, reservation, placeholder and history event together. An idempotency key makes a repeated browser submission return the existing attempt; it is not a second creative generation.</p>
+<p>All project-owned lookups validate project membership even without accounts, preventing accidental cross-project references. Arrangement edits use an expected revision: concurrent/stale edits receive a conflict and refreshed data rather than overwriting silently. This is basic lost-update protection, not collaborative editing or undo.</p>
+<p>Results are ingested with unique attempt/artifact and placement-origin constraints. Verify files first, then commit the artifact and placement once. A recorded “publish pending” step bridges filesystem moves and DB commits; reconciliation can finish that step without rerunning the generator. Never treat filesystem and SQLite operations as one magically atomic transaction.</p>
+<h3 id="c3-provider-adapters-and-product-owned-generator-knowledge">C3 — Provider Adapters and Product-Owned Generator Knowledge</h3>
+<p>Implements <code>prd.md &gt; Frontier Agent Setup and Selection</code>, <code>Music and Video Generation</code>, <code>Persistent Visual Style</code>, and <code>Generation Seeds and Variations</code>.</p>
+<p><strong>Agreed P2 replacement — unrestricted creative agents.</strong> Keep the agent in charge of the creative process and actual tool calls. Ship versioned music/H3 guidance, score/lyric conventions, timing examples, working environment paths and receipt-producing helpers. Do not require a predefined plan, schema-shaped final reply or a closed set of tools. It may use its normal web/research tools, plugins/MCP connections, installed skills, relevant chat histories and shell, and write or edit scripts/scores when useful. Preserve normal provider configuration; product instructions add project/tool knowledge rather than replacing its normal capabilities.</p>
+<p>Provider adapters expose <code>runTask(input)</code>, <code>cancel(handle)</code> and <code>checkReadiness()</code>, not a mandatory <code>preparePlan()</code> phase. A submitted request snapshots provider/model, project/song, creative inputs, timing, assigned seeds and product guidance revisions. Switching the shared default does not retarget queued/running work. Missing provider/model access is a visible failure, not a silent substitution.</p>
+<p>Start ordinary project agents with cwd <code>&lt;data-root&gt;/projects/&lt;project-id&gt;/workspace/</code>. Keep shared project references, research notes, scores and reusable scripts there; put request-specific artifacts under <code>runs/&lt;attempt-id&gt;/</code>. All project workers can find this context. Record session IDs against project/attempt; never implicitly resume a globally "latest" session or inject another project's conversation. An agent may deliberately consult relevant history using its normal tools; we do not disable that capability. Multiple workers use distinct run paths for intermediate files and publish shared updates deliberately, avoiding accidental overwrites without restricting their tool access.</p>
+<p>This directory is an organisational starting point, <strong>not a sandbox or security boundary</strong>. Normal creative tasks and confirmed Debug run without product-added confinement, subject to the OS account and provider's own capabilities/policies. Shared-tool Debug retains its previously agreed tool-directory cwd and explicit confirmation; it is a global maintenance task, not an ordinary project worker.</p>
+<p><strong>Observability is separate from creative constraints.</strong> Helpers and Comfy output nodes can write machine-readable receipts automatically while the agent speaks normally. Record actual prompts/settings, seeds, native job IDs, workflow/model versions and outputs from those receipts and native logs. Agent-written scripts may call the helpers or register equivalent execution details. JSON inside the internal API or a helper-generated receipt is not a requirement that the agent answer in JSON. Inspect/validate actual files independently. Missing evidence is marked incomplete and investigated, not invented from a confident completion message. Uncertain native ownership stays <code>reconciling</code>, holds the GPU lane and cannot be labelled cancelled. If process completion is verified but required provenance remains missing, show an explicit incomplete-integration failure rather than ordinary verified success; retain discovered media for investigation without automatic placement. These are rules for application claims, not agent permissions.</p>
+<p>Instructions still communicate the user's requested project, seeds, timing and GPU-sharing policy. They are task requirements, not a hidden permission filter. <strong>Gate:</strong> arbitrary uninstrumented or detached tool calls may evade job tracking, seed capture and immediate cancellation; unrestricted operation cannot honestly promise universal interception. The supported generation path must demonstrate the PRD guarantees with the supplied integration, and any observed deviation is reported rather than "fixed" by silently reintroducing a sandbox/tool denylist.</p>
+<h3 id="c4-durable-jobs-gpu-scheduler-and-cancellation">C4 — Durable Jobs, GPU Scheduler and Cancellation</h3>
+<p>Implements <code>prd.md &gt; Music and Video Generation</code>, <code>Generation Seeds and Variations</code>, and <code>Default Clip Timing</code>.</p>
+<p>Use a persisted state machine: <code>queued → preparing → waiting_gpu → running → validating → succeeded</code>; failures become <code>failed</code>; cancellation goes through <code>cancel_requested</code> until stopped, then <code>cancelled</code>. <code>reconciling</code> means ownership or outcome is uncertain. UI groups these as queued/running/failure/cancelled with readable stage details, never invented progress percentages.</p>
+<p>Allocate monotonically ordered submission numbers. The supplied helper path acquires one shared GPU lease spanning native heavy stages, cancellation and resource release. Give agents the queue protocol and let their scripts use it; do not remove their normal shell or alternative tools to enforce it. Model switches explicitly unload the owned previous model/process and check completion before admitting the next. If unload fails, hold the lane and show recovery information; do not kill unrelated GPU applications. Installation or Debug that can alter a tool takes a maintenance lock against its active generation, and GPU readiness probes use the same lease.</p>
+<p>Record attempt and tool-call intent <strong>before</strong> launch. Immediately persist actual Comfy <code>prompt_id</code> or process identity (PID, process-group/session, start time and boot identity). On a crash between launch and acknowledgement, reconcile the attempt's tagged external job; if identity cannot be established, block new GPU work rather than blindly submitting again. A PID number by itself is not proof of ownership.</p>
+<p>Cancel first marks the attempt stopped-for-submission in application/helper state and asks/stops its agent so no further work should be dispatched; helpers reject subsequent work for that cancelled attempt. Remove a specific queued Comfy job or interrupt its specific running job; stop owned direct-process groups and escalate to termination only for that verified identity if graceful stop fails. Killing the agent alone is insufficient. Tracking owned descendants and registered remote/service jobs is process ownership, not filesystem/network confinement; detached or unregistered work is an explicit observability gap, not proof of cancellation. Confirm the native queue/process is stopped and resources released before offering Restart/Discard/Restore. A race with completion is serialised: success committed first remains success; cancellation accepted first prevents automatic placement and cleans up partial results.</p>
+<p><strong>Gate:</strong> the PRD asks for immediate active cancellation. Source-level interrupt support is not evidence of preemption latency. Measure it on both tools; if cooperative interruption is too slow, investigate owned-worker termination or explicitly revisit the requirement. A permanent “cancelling” label does not satisfy it.</p>
+<p>On failure/cancellation release timing reservations only after work cannot complete into the arrangement. Retry/Restart creates a new attempt, preserving parameters and seeds; no automatic retry of expensive generation. Failed-call Retry reuses the recorded resolved call, not a new agent reinterpretation. Restart begins the cancelled generation again, not partial-state resume. Restore parameters removes a cancelled/failed placeholder and copies editable non-seed inputs into the correct project/song form; the next explicit Generate is a fresh variation. Successful outputs also expose Reuse parameters: copy their editable non-seed inputs into the form without deleting their output, changing history, or starting work; Generate then assigns new seeds.</p>
+<h3 id="c5-setup-manager-and-confirmed-debug">C5 — Setup Manager and Confirmed Debug</h3>
+<p>Implements <code>prd.md &gt; Tool Setup and Failure Recovery</code> and <code>Debug Confirmation and Agent Authority</code>.</p>
+<p>Persist one installation record per shared tool/version and a list of recipe steps with logs and exit outcomes. Install All retains the provider-first tool flow, shared prerequisites, separate music and Comfy environments, H3 assets/nodes/workflows and analysis environment. The specific host-versus-tool installation split is Accepted P9 below. The visible H3 panel can depend on ComfyUI without installing a second copy. Serialize conflicting package operations and deduplicate repeated Install clicks. Refresh only reconnects to monitoring.</p>
+<p>Recipes are versioned and idempotent, with explicit download URLs, checksums where available, terms and disk requirements. Resume a verified partial download or rerun the failed step on Retry. Readiness tests check executables/imports, required model assets and workflow nodes, then the relevant tiny contract check. Merely finding a directory or trusting the agent's “fixed” summary is not readiness.</p>
+<p>Debug preparation creates a durable, short-lived confirmation record with provider/model, full prompt, argument array, working directory, failure-log digest and a readable command. Confirm launches exactly that record; if context/config changed, show the updated request and require a new confirmation. Cancel launches nothing. The dialog discloses autonomous changes outside the tool directory and impact on all projects. Credentials are never included in the displayed prompt/arguments.</p>
+<p>Debug runs the requested YOLO/no-per-action-approval mode as the service account, starting in the tool directory but <strong>not sandboxed to it</strong>. OS rights still limit what it can do. Keep its transcript/report, then independently rerun readiness. If the selected provider cannot start at all, say so and give verified local sign-in/install guidance; a broken agent cannot repair itself through a fictional running job. See the exact planned CLI forms under External Services.</p>
+<h3 id="c6-native-generation-adapters-and-media-validation">C6 — Native Generation Adapters and Media Validation</h3>
+<p>Implements <code>prd.md &gt; Music and Video Generation</code>, <code>Raw Frame Preservation</code>, and <code>Continue From End</code>.</p>
+<p>The agent uses its music knowledge and the pinned YuE2 interface, directly or through the supplied helper, to create/edit scores and generate audio. There is no required JSON-plan handoff to a separate executor. Retain original audio and verify decoded duration, channels, sample rate and playable content; do not select a new song on failure. Native staged music generation remains internal to one user request, with separate actual calls/seeds recorded. No mandatory user score review or batch variation interface is added.</p>
+<p>Supply a versioned Comfy graph and callable helper for the video agent. The agent can use or adapt these and may construct its own tool-call script; the provided graph demonstrates the supported media/receipt contract. Branch the full decoded image batch into an ordered PNG sequence and the encoded viewing output. Persist frame count, dimensions, exact rate, ordered filenames/checksums, graph/node/model identities, prompt and actual seeds. Standard SaveImage preserves 8-bit pixels without lossy video encoding; it is <strong>not</strong> a bit-exact floating-point VAE dump. The complete batch, not only endpoint images, belongs to the artifact.</p>
+<p>Extract conditioning audio from the captured realised frame interval. Use a lossless working WAV, silence-pad only beyond the song, and tag source song/hash, sample offsets, channel/rate conversion and padding in provenance. For wholly post-song clips the input is an explicitly recorded silent interval; whether H3 accepts it and still produces useful output is a gate. Supply the continuation image from the retained PNG frame, never by decoding the viewing MP4. Creative timing instructions to H3 are relative to this clip's start, derived from the same beat map.</p>
+<p>Output validation uses FFprobe plus the frame manifest: real duration/frame count, 24/1 rate, dimensions, decodability, file ownership and expected audio. Missing original frames or wrong rate is a failed integration result, not a successful clip with a quiet workaround. Missing generated audio leaves the original-song path available but the clip-audio choice unavailable with an explanation; do not invent sound.</p>
+<p><strong>Accepted P5 — native length reconciliation:</strong> if the pinned H3 graph requires discrete frame counts, generate the smallest supported count at least as long as the realised request, retain every source frame, and initialise the placement to only the requested realised count. Report the extra generated frames separately. This is the accepted handling of native granularity, <strong>not the rejected blanket four-second padding policy</strong>, not rate conversion and not permission for timeline overhang. Never stretch a short result; too few frames fails validation. Record a separate native execution interval starting at the same realised start and extending for the native source count. Its conditioning WAV covers that whole native interval, using the corresponding additional song samples if available and silence only beyond the actual song. The agent receives both requested and native lengths; extra conditioning/output samples are excluded from initial placement, not shifted into the requested edit. This is accepted as design and must still be tested before claiming support; the observed prototype's <code>17k+5</code> rule is not automatically the final adapter rule.</p>
+<h3 id="c7-audio-analysis-and-exact-timing-engine">C7 — Audio Analysis and Exact Timing Engine</h3>
+<p>Implements <code>prd.md &gt; Linked Timing Units</code>, <code>Default Clip Timing</code>, <code>Frame-Based Trimming and Locked Frame Rate</code>, and <code>Timeline and Music Coverage</code>.</p>
+<p>A CPU Python worker produces waveform peak buckets, decoded sample count/rate, estimated BPM and monotonically increasing detected beat positions. Store analysis version and source hash. Librosa's analysis frames are not video frames. Preserve beat positions as sample indices with sample rate so their times have an exact stored representation; estimation accuracy is still limited by the detector.</p>
+<p><strong>Accepted P4 — beat map:</strong> number the first detected beat 1; interpolate piecewise between detected beat anchors. Extrapolate before/after the detected region using the nearest valid interval, marking extrapolated markers visibly. The first generation still starts at time 0, which may be a fractional/pre-first beat on a track with a lead-in; do not invent an onset at 0. Post-song extrapolation enables indefinite suggestions but is not evidence of music beyond the song. Save the map with that song; reanalysis never silently retimes saved edits or submitted attempts.</p>
+<p>With missing/invalid beat analysis, show the actual song and waveform where available, explain the analysis failure and offer retry; seconds/frames remain editable, but beat presets/fields are unavailable rather than displaying an invented BPM. Preserve arbitrary entered decimals as strings and exact rational arithmetic (BigInt numerator/denominator internally); JSON serialises integers/rationals as strings, not rounded JavaScript Numbers. Derived repeating decimals may be displayed with an approximation marker while retaining their exact rational value. No five-digit cap or repeated rounding through displayed values.</p>
+<p>The common rules are specified in Time and Edit Semantics below and implemented once in shared pure TypeScript functions, reused by UI, API and renderer.</p>
+<h3 id="c8-library-arrangements-coverage-and-provenance">C8 — Library, Arrangements, Coverage and Provenance</h3>
+<p>Implements <code>prd.md &gt; Song Selection and Saved Arrangements</code>, <code>Artifact Archive, Restore, and Delete</code>, <code>Generation History</code>, <code>Timeline and Music Coverage</code>, and <code>Clip Audio</code>.</p>
+<p>Separate an immutable generated artifact from editable placements using it. A project has songs and a clip library; each song owns one arrangement. A new successful song starts empty, old arrangements remain. Editing a placement never rewrites generation inputs. Placing a library clip creates a placement; removing it does not delete media. Accepted audio choice belongs to the placement so two uses need not silently change one another.</p>
+<p>Archive is a logical media lifecycle change plus removal of <strong>all</strong> that clip's placements across the project's song arrangements in one DB transaction. Raw frames and encoded media stay together. Restore only changes library visibility, creating no placements. <strong>Accepted P6 song policy:</strong> archiving a song hides/deselects it but preserves its saved arrangement; if selected, persist no selected song rather than silently choosing another. Previously submitted clip attempts continue into that song's preserved arrangement, even while hidden. Restoring the song makes it selectable again, without automatically selecting it; its arrangement is still saved. This differs from restoring a clip, which is always unplaced. Deleting a song removes its arrangement after the dependency checks below; derived clips remain separate library artifacts, not silently deleted. These first-draft song-lifecycle details were accepted in the learner's "all the other proposals" response and are reconciled into the PRD.</p>
+<p>Delete requires the PRD confirmation, removes placements immediately from current edits, and runs a durable purge of full media, raw frames, working copies and stale assembled previews that could otherwise recover that media. Keep only permitted lightweight thumbnail/history/text logs plus a deletion event. Mark <code>deleting</code> until the filesystem purge succeeds; failure is not “deleted”. Previously exported files remain independent under A6; the confirmation must explain that deletion does not recall earlier exports or external copies.</p>
+<p><strong>Accepted P6 — busy media:</strong> prevent deletion while any nonterminal attempt/render depends on that artifact, including queued work that has not started reading. Register input dependencies transactionally with submission, and test them transactionally when accepting deletion so a concurrent submission cannot race the purge. Identify the dependencies and ask the user to finish/cancel them first. This avoids secretly retaining a full “deleted” source as a job snapshot. Archive can remove current placement immediately while a previously submitted generation uses its captured source; a stale render must never be presented as the new edit. This busy-delete policy was accepted in that same review and is reconciled into the PRD.</p>
+<p><strong>Agreed P8 correction — Continue From End is on each clip.</strong> The clicked clip card identifies the predecessor. Pass that card's clip ID, displayed song/timing context, current trim bounds and edit revision; take its last retained original frame and current edited end directly. Do not introduce a separate "which clip?" picker, a global selection dependency or a requirement to place/re-place the clip merely to invoke its own control.</p>
+<p>Implementation convention for the per-card action: keep the card's editable reference interval even when its placement is removed: an unplaced card shows that it is unplaced and retains its last edit, initially the generation's captured interval. This is saved edit context, not a hidden placement and contributes no coverage. Restore still creates no placement. If the same source is shown through multiple edit instances, each instance's own action carries its displayed context. The form clearly shows the song and start/end it will use; switching projects or later edits cannot silently retarget a submitted continuation. If that referenced song has been deleted, retain the card's image/trim context but show the missing soundtrack and require an explicit replacement-song choice before Generate; never silently borrow the currently selected song.</p>
+<p>History is append-only event/provenance data, not event-sourced undo. Record user inputs, actual provider and tool calls, resolved seeds, workflow/model revisions, outputs and failures. Store redacted text logs, not credentials or claimed hidden model reasoning. Failed/cancelled attempts have no fake thumbnail; audio success can use a retained small waveform thumbnail. Deletion retains historical associations via tombstones rather than breaking references.</p>
+<h3 id="c9-edit-plan-preview-and-export">C9 — Edit Plan, Preview and Export</h3>
+<p>Implements <code>prd.md &gt; Timeline and Music Coverage</code>, <code>Clip Audio</code>, and <code>Preview, Black Gaps, and Export</code>.</p>
+<p>Compile an immutable edit plan for one arrangement revision. Partition time at placement boundaries; choose the highest visual priority in every span, or black if none. Default newly placed clips to highest priority; a front/behind swap changes only ordering. Only the winner's audio option matters. It selects that clip's soundtrack <strong>instead of</strong> the song; otherwise use the song within its duration and silence afterward. Hidden audio is never a fallback and no mixing, fades, gain or mastering is added.</p>
+<p><strong>Accepted P7:</strong> a server-rendered MP4 is the assembled preview as well as the export source. CPU FFmpeg renders one plan at a time with progress; cache by plan/media/version hash. This prioritises editorial parity and simple browser playback over instant editor playback. Edits invalidate the preview; debounce regeneration, clearly label any stale playable preview and never export it as current. The approved specialised fast-preview/HQ split stays deferred. Individual source previews and the timing UI remain responsive during render.</p>
+<p>Accepted first validation format: 640×480, 24 fps H.264/yuv420p MP4 with AAC 48 kHz stereo, no upscaling or claim of mastering. This modest first-build profile was accepted with the other proposals; it is not proof on 16 GB or a promise of a later distribution-quality mode. Render from retained frames plus the selected original audio sources, not repeated decoding/re-encoding of already edited videos. Native graph compatibility still requires a measured contract check. If native output differs, revisit the format rather than silently convert frame rates or pretend quality equivalence.</p>
+<p>Output length is <code>max(ceil(songSeconds × 24), latest included placement endFrame)</code> frames. The song is not cut off to match the last clip; uncovered tails are black. Pad only the final partial audio/video-grid interval with silence as needed. Download uses range-capable media routes and a safe filename. Export completion requires a verified output file, not an agent sentence or successful process exit alone.</p>
+</div></details><details class="chapter" data-source-heading="Data Model" id="data-model"><summary><span class="chapter-no">07</span><span>Data Model</span></summary><div class="chapter-content">
+<p><strong>Accepted P1:</strong> a relational core with JSON snapshots/receipts for tool-specific details, not required agent responses, not dozens of tables for every prompt parameter. All IDs are opaque UUIDs; UTC timestamps are for audit, ordered event sequence numbers for polling.</p>
+<div aria-label="Scrollable specification table" class="table-scroll" role="region" tabindex="0"><table>
+<thead>
+<tr>
+<th>Record</th>
+<th>Ownership and important fields</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>settings</code>, <code>tool_installations</code></td>
+<td>Global provider default; tool/version/recipe pins, readiness, install step/log references. No credentials in these rows.</td>
+</tr>
+<tr>
+<td><code>projects</code></td>
+<td>Name, persistent visual style, selected song ID, per-song form drafts, revision.</td>
+</tr>
+<tr>
+<td><code>artifacts</code></td>
+<td>Project, kind music/video, generating attempt, active/archived/deleting/deleted lifecycle, media manifest, thumbnail, source hash. Deleted rows remain tombstones.</td>
+</tr>
+<tr>
+<td><code>songs</code></td>
+<td>Music artifact, project, analysis status/map/peaks, exact decoded sample duration; one saved arrangement/revision.</td>
+</tr>
+<tr>
+<td><code>clip_edit_contexts</code>, <code>placements</code></td>
+<td>Stable edit-context ID, project/source clip, song/reference origin, trim bounds and revision remain available when unplaced. An included placement references one context and supplies dominance/audio choices; multiple uses have independent contexts. Removing a placement never creates coverage from its retained card context.</td>
+</tr>
+<tr>
+<td><code>generation_intents</code>, <code>attempts</code></td>
+<td>Immutable creative snapshot, origin song, planned frame range and input intent, provider/model/knowledge pins, assigned seed root; attempt state, queue sequence, retry/restart parent, placeholder visibility, cancellation flag.</td>
+</tr>
+<tr>
+<td><code>tool_calls</code></td>
+<td>Attempt/stage, assigned seed versus actual submitted seed, exact prompt/settings/command/graph, external job/process identity, timestamps, observed result/error.</td>
+</tr>
+<tr>
+<td><code>history_events</code></td>
+<td>Project/global setup scope, ordered type/payload, attempt/artifact links, retained log/thumbnail references.</td>
+</tr>
+<tr>
+<td><code>renders</code></td>
+<td>Song/arrangement revision, immutable edit-plan hash, status, media references, preview/export output and validation receipt.</td>
+</tr>
+</tbody>
+</table></div>
+<p>A reservation is derived from a nonterminal attempt's stored planned interval; do not keep an independently editable second interval. Only actual included placements contribute coverage. Use constraints for project/song membership and unique ingestion; deleting an artifact must not cascade-delete provenance. Selected-song changes and arrangement mutations carry revisions.</p>
+<p><strong>Seed identity:</strong> fresh generation allocates a fresh root and distinct actual per-stage seeds within each tool's supported integer domain. Persist their decimal-string values before dispatch; do not record <code>-1</code>/“random” as the resolved seed. Retry copies a resolved failed call unchanged. Restart reuses the original intent's seed mapping and already captured native inputs; if cancelled before those inputs were produced, retain assigned intent/seeds and distinguish them from nonexistent actual calls. Reusing parameters creates a new intent/root only when Generate is clicked. Preserve all parent links and tool/model/environment fingerprints; seeds do not guarantee bit-identical output.</p>
+<p><strong>File-backed input identity:</strong> each registered call records a manifest with hashes and retained snapshots of the exact scripts, scores, workflow graphs and conditioning assets it read, not only mutable workspace paths. Retry/Restart uses those snapshots where the original inputs were already resolved; if the required inputs are missing, report exact recovery as unavailable rather than silently using a later edit. These application-owned snapshots do not make the agent workspace read-only. They obey the same dependency/deletion policy as other full-media copies; keep lightweight text provenance where permitted.</p>
+<p><strong>Application media ownership:</strong> catalogued output belongs to an artifact, active attempt, render, installation or permitted history thumbnail/log. Agents may create working material elsewhere using their normal tools. Register/import delivered outputs into managed storage and validate files rather than treating a reported path as proof. HTTP media routes resolve registered asset IDs inside the managed data root and reject traversal/symlink escape; those web-route checks do not confine the agent's filesystem access. Track known full-media derivatives in project workspaces for deletion, but do not claim to erase unknown copies created elsewhere by unrestricted tools; surface that limitation rather than silently overriding agent authority. No content-addressed deduplication of full media in v1; it would complicate irreversible deletion.</p>
+</div></details><details class="chapter" data-source-heading="Time and Edit Semantics" id="time-and-edit-semantics"><summary><span class="chapter-no">08</span><span>Time and Edit Semantics</span></summary><div class="chapter-content">
+<h3 id="one-grid-two-kinds-of-frame-labels">One grid, two kinds of frame labels</h3>
+<p><strong>Agreed:</strong> exact <code>24/1</code> fps, source frames one-based/inclusive, entered beats/seconds retained, containing-frame quantisation. <strong>Accepted P4:</strong> use zero-based half-open frame intervals internally: <code>[startFrame, endFrame)</code>. A frame index <code>i</code> covers <code>[i/24, (i+1)/24)</code>; the corresponding containing-frame label is <code>i+1</code>. Exact boundary instants belong to the frame starting there.</p>
+<p>For a requested time interval <code>[s,e)</code>, preserve the exact rational intent and realise start as <code>floor(24s)</code>, end as <code>ceil(24e)</code>. Show the realised boundaries and discrepancies; reject nonpositive or negative-time intervals, not merely short or over-15-second intervals. No pre-song negative timeline in v1.</p>
+<p>The linked <strong>timeline containing-frame</strong> field for an entered instant is <code>floor(24t)+1</code>. A direct edit of this field to K means its start boundary <code>(K−1)/24</code>; label that convention. At an exact end boundary this names the first excluded frame, not the last retained source frame. Keep <strong>source trim end</strong> as a separate inclusive control: source end N has an exclusive boundary N/24. Do not present these distinct meanings as an unlabelled “end frame”.</p>
+<p>Example: <code>12.3456789</code> seconds remains that exact input and selects containing timeline frame 297. An end there realises to 297/24; an end exactly at 12.5 seconds realises to frame boundary 300, without adding another frame. A direct source trim to frame 300 retains frame 300. No conversion round-trip through approximate display decimals.</p>
+<h3 id="trimming-moving-and-continuation">Trimming, moving and continuation</h3>
+<p>Store an edit context's <code>sourceOriginFrame</code> (an included placement references that context): the timeline boundary where source frame 1 would start. Retaining source <code>[a,b]</code> yields timeline <code>[origin+a−1, origin+b)</code>. Thus 1–80 changed to 6–75 retains 70 frames at their original times, leaving five frames empty at the start and end unless covered elsewhere. Moving changes origin; trimming does not. Validate integer source bounds within <code>1…N</code>, <code>a ≤ b</code>; equality retains one frame. Explain invalid input without silently correcting it.</p>
+<p>The historical initial origin and originating song remain immutable. Warn for clip audio if the current origin differs, or if placed against another song whose audio did not condition it; trimming alone does not warn. Returning to original alignment clears only that warning, not a claim about generated audio fidelity.</p>
+<p>Continue From End snapshots the clicked edit-context ID/revision, song, source PNG frame <code>b</code>, trim and origin, and starts at <code>origin+b</code>, the next frame boundary with no blank frame. Calculate its end by adding the adaptive count in the same beat map from that exact possibly off-beat instant, then realise the new interval once. Later edits to the predecessor do not alter this submitted request.</p>
+<h3 id="presets-free-gaps-and-warnings">Presets, free gaps and warnings</h3>
+<p>For each preset start <code>s</code>, choose count 8 if estimated BPM ≥50, otherwise 4. Convert <code>beat(s)+count</code> with the saved map; halve the count while duration is strictly over 15 seconds and count &gt;1. Missing/invalid BPM is not zero-BPM music.</p>
+<p>Ordinary presets find the earliest free realised frame interval from time zero, considering included placements and queued/running reservations. Express that position in the beat map, apply the adaptive count, then stop at the next occupied boundary if sooner. Starting at a residual off-beat boundary avoids leaving small trim/quantisation gaps permanently unfillable. Do not round the realised end beyond the next occupied frame. Continue From End uses its explicit adjacent-frame start instead of the gap search. Neither path automatically submits another clip.</p>
+<p>At constant tempo: ≥50 BPM →8; 16–&lt;50 →4; 8–&lt;16 →2; 0–&lt;8 →1. At 15 BPM use two beats/eight seconds. At 3 BPM use one beat/20 seconds and warn. At 30 BPM a 16-second gap proposes eight seconds, leaving the rest for another request. Test irregular maps with the same function, not a separate constant-BPM shortcut.</p>
+<p>Do not clamp at song end. Extend beat references beyond it and keep suggesting further windows. Independently show: requested duration &gt;15 seconds; start ≥song duration; end &gt;song duration. Exactly 15 seconds has no duration warning. Preserve manual/submitted ranges and Retry/Restart parameters; no automatic splitting, stretching or four-second padding. Realised frame rounding can add less than one frame at either side; disclose it, do not reinterpret it as a new user duration.</p>
+<h3 id="coverage-and-deterministic-audio">Coverage and deterministic audio</h3>
+<p>Coverage is the measure of the union of included realised intervals intersected with <code>[0, exactSongDuration)</code>, divided by exact song duration. No pending placeholders, archived/library-only media, overlap double-counting or beyond-song inflation. Unknown duration gives N/A; known music with no placements gives 0%.</p>
+<p>The edit plan maps each visible frame span to a source frame offset. For audio, use that same source offset converted to samples; accepted render working rate 48 kHz gives exactly 2,000 samples per 24 fps frame. Resampling for format compatibility is recorded, not loudness processing. Audio switching is a hard source switch under the PRD, so seams may be audible; do not silently add crossfades to conceal them.</p>
+</div></details><details class="chapter" data-source-heading="Internal API Contracts" id="internal-api-contracts"><summary><span class="chapter-no">09</span><span>Internal API Contracts</span></summary><div class="chapter-content">
+<p>These are <strong>planned internal application contracts</strong>, not an implemented public/headless agent API. JSON requests are schema-validated; mutation responses carry revision and operation ID. Invalid input returns 400/422, missing resources 404, stale revision/busy conflict 409. Asynchronous operations return 202 with their stable job ID; reusing an idempotency key returns the same operation, and using it with different inputs conflicts.</p>
+<div aria-label="Scrollable specification table" class="table-scroll" role="region" tabindex="0"><table>
+<thead>
+<tr>
+<th>Route family</th>
+<th>Request / response responsibility</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GET /api/state?projectId=…&amp;after=…</code></td>
+<td>Shared tool/provider status plus selected project's revision, songs/library/attempts/arrangement and event cursor. No full media blobs or credentials.</td>
+</tr>
+<tr>
+<td><code>POST /api/projects</code>; <code>PATCH /api/projects/:id</code></td>
+<td>Create/name/style/selection/draft changes with expected revision; no job migration.</td>
+</tr>
+<tr>
+<td><code>PUT /api/config/provider</code></td>
+<td>Provider enum and expected config revision; return actual readiness, not invented successful login.</td>
+</tr>
+<tr>
+<td><code>POST /api/setup/:tool/install</code> or <code>/retry</code>; <code>POST /api/setup/install-all</code></td>
+<td>Stable installation job(s), deduplicated shared dependency steps.</td>
+</tr>
+<tr>
+<td><code>POST /api/setup/:tool/debug-plan</code>; <code>POST /api/debug/:id/confirm</code></td>
+<td>Exact disclosed immutable launch plan, then confirmed execution. No side effect from opening the dialog.</td>
+</tr>
+<tr>
+<td><code>POST /api/projects/:id/generations</code></td>
+<td>Kind, song ID where relevant, creative inputs, exact timing intent/realisation, continuation asset plus edit-context ID/revision and captured context, idempotency key. Server snapshots provider and assigns seeds. Returns attempt + reservation.</td>
+</tr>
+<tr>
+<td><code>POST /api/attempts/:id/cancel</code>, <code>/retry</code>, <code>/restart</code>, <code>/restore-parameters</code>, <code>/discard</code></td>
+<td>Validate legal lifecycle transition; restore/discard starts no work. Cancel does not report stopped prematurely.</td>
+</tr>
+<tr>
+<td><code>POST /api/songs/:id/placements</code>; <code>PATCH/DELETE /api/placements/:id</code></td>
+<td>Place/trim/move/audio/priority or remove use only; transaction returns revised arrangement and coverage.</td>
+</tr>
+<tr>
+<td><code>POST /api/artifacts/:id/archive</code> or <code>/restore</code>; <code>DELETE /api/artifacts/:id</code></td>
+<td>Archive/restore semantics above; delete requires the current confirmation digest and performs durable purge.</td>
+</tr>
+<tr>
+<td><code>PATCH /api/clip-edit-contexts/:id</code>; <code>POST /api/clip-edit-contexts/:id/continue</code></td>
+<td>Expected context revision; edit source bounds/origin or prepare continuation from the clicked card. Return captured context/song/frame inputs to the form, not a queued generation. A missing source song is explicit.</td>
+</tr>
+<tr>
+<td><code>POST /api/songs/:id/preview</code> or <code>/exports</code></td>
+<td>Expected revision; freeze and render the corresponding edit plan; export does not silently use stale cached content.</td>
+</tr>
+<tr>
+<td><code>GET /api/history?projectId=…&amp;cursor=…</code>; <code>GET /api/assets/:id</code></td>
+<td>Paginated provenance and registered media with range support; deleted media unavailable while permitted thumbnails remain.</td>
+</tr>
+</tbody>
+</table></div>
+</div></details><details class="chapter" data-source-heading="External Services and Dependencies" id="external-services-and-dependencies"><summary><span class="chapter-no">10</span><span>External Services and Dependencies</span></summary><div class="chapter-content">
+<h3 id="provider-terminal-contracts">Provider terminal contracts</h3>
+<p>Checked 21 October 2026: local <code>codex-cli 0.163.0</code> help supports noninteractive exec, explicit working directory and <code>--dangerously-bypass-approvals-and-sandbox</code>. Claude's invocation below is documentation-derived, not locally executed. These observations do not establish Dundee's installed CLIs, login or account access.</p>
+<p>Keep the requested exact model IDs <strong><code>gpt-6.1-sol</code></strong> and <strong><code>claude-opus-5-5</code></strong>; no silent model substitution. Official pages establish names, not account entitlement. <a href="https://developers.openai.com/api/docs/models/gpt-6.1-sol">Sol documentation</a>, <a href="https://code.claude.com/docs/en/model-config">Claude model configuration</a>.</p>
+<p>Creative-task invocation templates, to verify against pinned CLIs on Dundee:</p>
+<pre><code class="language-text">cwd = &lt;data-root&gt;/projects/&lt;project-id&gt;/workspace/
+codex exec --model gpt-6.1-sol --dangerously-bypass-approvals-and-sandbox
+  --skip-git-repo-check --cd &lt;project-workspace&gt; -
+
+cwd = &lt;data-root&gt;/projects/&lt;project-id&gt;/workspace/
+claude -p --model claude-opus-5-5 --dangerously-skip-permissions
+</code></pre>
+<p>Supply the creative brief and paths to project guidance over stdin; collect normal text output and native session/tool logs. Do not add <code>--output-schema</code>, <code>--json-schema</code>, forced JSON final output, <code>--bare</code>, tool-disable lists, read-only sandbox flags, <code>--ignore-user-config</code>, <code>--ignore-rules</code> or ephemeral history suppression. Preserve installed skills, tools, MCP/plugin integrations, research access and normal usable configuration. The adapter launches the chosen executable with an argument array and <code>shell:false</code>; that prevents accidental shell interpolation in our launcher, <strong>not</strong> the agent's ability to invoke a shell or author scripts. <a href="https://learn.chatgpt.com/docs/non-interactive-mode">Codex noninteractive interface</a>, <a href="https://code.claude.com/docs/en/cli-reference">Claude CLI reference</a>.</p>
+<p>Confirmed shared-tool Debug uses the same autonomous capability policy, but starts in <code>&lt;affected-tool-directory&gt;</code> as previously agreed and receives the disclosed repair context. Its full actual command/cwd/prompt are shown before confirmation; no fresh confirmation is added to ordinary Generate. Provider-native policies and OS account rights remain real; no product-added restrictions are intended. Keep credentials in supported provider stores, not browser prompts/commands or public history. Preserve project session identity explicitly rather than automatically resuming another project's run.</p>
+<p>These are documented templates, not commands launched during planning. Live verification must check authentication, model identity, normal tool availability, retained project history, helper receipts and cancellation. Account-specific costs/limits remain setup information; open-source application code does not make provider usage free.</p>
+<h3 id="comfyui-h3-contract">ComfyUI / H3 contract</h3>
+<p>The supplied helper and agent-accessible product-owned loopback instance use <code>POST /prompt</code> with <code>{prompt: workflowGraph, client_id: attemptClientId}</code> and records returned <code>prompt_id</code> or node errors. Observe <code>/queue</code>, <code>/history/{prompt_id}</code> and native progress events. Tag the graph/output namespace with attempt identity so crash reconciliation can distinguish owned work.</p>
+<p>At inspected upstream revision <code>b1a247c9cf9dbfda4b2c0a0c1d50950667eeaa0c</code>, <code>POST /queue</code> with <code>{"delete":[prompt_id]}</code> removes a specific queued job; <code>POST /interrupt</code> with <code>{"prompt_id":prompt_id}</code> targets a matching running job. Never omit the ID and globally interrupt unrelated work. HTTP 200 alone does not prove cancellation. This revision is evidence, not the selected production pin. <a href="https://docs.comfy.org/development/comfyui-server/comms_routes">Routes</a>, <a href="https://github.com/Comfy-Org/ComfyUI/blob/b1a247c9cf9dbfda4b2c0a0c1d50950667eeaa0c/server.py#L1242-L1286">inspected server implementation</a>.</p>
+<p>Graph inputs include model/node pins, text/multimodal prompt, assigned seed, requested/native frame count, conditioning WAV and optional continuation PNG. Native filenames are created by the adapter in the owned input directory, not arbitrary browser paths. Result history plus an ordered frame manifest links encoded video/audio and all image outputs. Validate the full branch, frame order and audio origin. <a href="https://github.com/Comfy-Org/ComfyUI/blob/b1a247c9cf9dbfda4b2c0a0c1d50950667eeaa0c/nodes.py#L1669-L1728">Inspected SaveImage implementation</a>, <a href="https://www.minimax.io/news/minimax-h3-open-source">MiniMax H3 description</a>, <a href="https://huggingface.co/Comfy-Org/MiniMax-H3">Comfy H3 model card</a>.</p>
+<p><strong>Gate:</strong> choose and pin an appropriate checkpoint and licence. The personal prototype's derivative checkpoint is evidence only, not automatically shipped. Verify no minimum-four-second or hard-15-second policy leaks in from its wrapper.</p>
+<h3 id="yue2-and-analysis-contracts">YuE2 and analysis contracts</h3>
+<p>Supplied helper interface: <code>&lt;tool-venv&gt;/bin/python &lt;owned-wrapper&gt; --request &lt;run/request.json&gt; --result &lt;run/receipt.json&gt;</code>, with optional equivalent command-line inputs. It records schema version, attempt/stage, actual native inputs, seed map, output directory, job identity and media manifest; logs carry observed progress/errors. The helper writes this receipt automatically; the agent is not required to produce JSON or use this helper exclusively. Custom scripts may use the native interface and supply equivalent registration/receipts. <strong>This is a product helper to write, not an existing upstream CLI.</strong></p>
+<p>The exact YuE2 native entrypoints, model revision, staged score/audio interfaces and 16 GB recipe remain an early executable contract gate. Existing prototype evidence and upstream guidance differ on memory baseline; do not claim fresh-machine support from a previously generated file. Sources: <a href="https://github.com/multimodal-art-projection/YuE">YuE repository</a>, <a href="https://huggingface.co/m-a-p/YuE2-3B">YuE2 model card</a>, <a href="https://github.com/multimodal-art-projection/YuE/blob/main/skills/yue2-music/SKILL.md">upstream skill</a>.</p>
+<p>Analysis uses an analogous owned JSON-in/JSON-out process, calling the pinned Librosa beat tracker and recording its parameters. Source reference: <a href="https://github.com/librosa/librosa/blob/main/librosa/beat.py">Librosa beat implementation</a>. Do not confuse native analysis-hop indices with output video frames or assume detected beats prove exact musical timing.</p>
+<h3 id="python-isolation-and-installation-ownership">Python isolation and installation ownership</h3>
+<p><strong>Agreed:</strong> ComfyUI/H3 and YuE2 have separate isolated Python environments, not one combined ML environment and not global/system pip installs. Custom Comfy nodes install their Python dependencies in Comfy's environment; YuE2 dependencies remain in YuE2's. Use explicit <code>&lt;env&gt;/bin/python</code> / <code>&lt;env&gt;/bin/python -m pip</code>, no <code>sudo pip</code>, <code>--break-system-packages</code>, replacement of <code>/usr/bin/python*</code> or <code>--system-site-packages</code>. This is the learner's host-Python preservation requirement, not an agent sandbox. Use a tested interpreter version for each tool; if Ubuntu's interpreter is unsuitable, install a separate managed interpreter rather than changing the host default. Exact compatible versions remain a gate. <a href="https://docs.python.org/3/library/venv.html">Python virtual environments</a>.</p>
+<p><strong>Accepted P9 — host prerequisites plus managed tool setup:</strong></p>
+<div aria-label="Scrollable specification table" class="table-scroll" role="region" tabindex="0"><table>
+<thead>
+<tr>
+<th>Dependency</th>
+<th>Installation location and method</th>
+<th>Setup ownership and proof</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ComfyUI + H3 Python/node dependencies</td>
+<td><code>tools/comfyui/venv/</code>, separate from source/models</td>
+<td>Existing ComfyUI/H3 setup panels; verify env interpreter, imports, required graph nodes and actual tiny workflow.</td>
+</tr>
+<tr>
+<td>YuE2 Python dependencies</td>
+<td><code>tools/yue2/venv/</code></td>
+<td>Music setup panel; verify env/imports/model assets and native generation contract.</td>
+</tr>
+<tr>
+<td>Librosa + NumPy/SciPy/SoundFile/Numba dependencies</td>
+<td>Dedicated third environment <code>tools/audio-analysis/venv/</code>, pinned pip installation</td>
+<td>Existing Audio analysis panel; import/version check plus analyse a tiny known audio fixture. No Librosa package installation into Ubuntu's system Python.</td>
+</tr>
+<tr>
+<td>FFmpeg and FFprobe</td>
+<td>Native executables from Ubuntu's <strong><code>ffmpeg</code> APT package</strong>, shared across tools; not Python libraries</td>
+<td>Bootstrap checks the exact paths/build/capabilities and installs a missing compatible package through the previously authorised local host-package step. Setup panels show this shared dependency and can recheck it; do not install duplicate binaries per venv.</td>
+</tr>
+<tr>
+<td>Interpreter/venv support and native libraries</td>
+<td>Host preflight checks what's available; install only required native packages through that explicit prerequisite step</td>
+<td>Avoid unnecessary blanket upgrades. If a pinned Python wheel already supplies a required native library, verify it rather than blindly adding another host dependency.</td>
+</tr>
+</tbody>
+</table></div>
+<p>Librosa supports installation through PyPI; the product chooses an isolated interpreter and pinned requirements rather than upstream examples that install system-wide. FFmpeg/FFprobe are separate native programs; installing a Python package called <code>ffmpeg</code> or <code>ffmpeg-python</code> is not a replacement for those executable checks. <a href="https://librosa.org/doc/0.11.0/install.html">Librosa installation</a>, <a href="https://packages.ubuntu.com/en/resolute/ppc64el/ffmpeg/filelist">Ubuntu 26.04 ffmpeg package file list</a>. The fetched Ubuntu list establishes the package's executable grouping; Dundee's architecture-specific candidate/build must still be verified locally rather than inferred from that listing.</p>
+<p>This split keeps host privileges in a visible bootstrap/prerequisite action while preserving the requested Audio analysis setup panel and Install All experience. It adds no mandatory new navigation panel. Verify from the <strong>service account's environment</strong>, not only an interactive shell: <code>ffmpeg -version</code>, <code>ffprobe -version</code>, required encoders/filters, an encode/decode/probe fixture and the isolated Python imports. File existence alone does not prove usability. Record resolved executable paths and versions; a later missing/broken dependency returns a real setup error with retry/debug. No installation is being performed as part of this specification revision.</p>
+<h3 id="what-librosa-can-provide-beyond-bpm">What Librosa can provide beyond BPM</h3>
+<p>The required first build still computes duration/sample count, waveform data, beat timestamps and a tempo estimate. The following are available analysis possibilities, <strong>not silently added editor features or mandatory new scope</strong>. An unrestricted agent may use its installed analysis tools for a particular creative task.</p>
+<div aria-label="Scrollable specification table" class="table-scroll" role="region" tabindex="0"><table>
+<thead>
+<tr>
+<th>Information</th>
+<th>Possible creative use and limit</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Individual beat positions and local pulse</td>
+<td>Align events to detected beats rather than assuming the whole song follows a perfect metronome. Beat detection is estimated, not a guarantee of bar/downbeat labels.</td>
+</tr>
+<tr>
+<td>Onsets and onset strength</td>
+<td>Candidate note/drum attacks for accents, impacts or cuts; these are not necessarily every musical beat.</td>
+</tr>
+<tr>
+<td>RMS energy over time</td>
+<td>Suggest calmer versus more energetic visual passages; RMS is not mastered loudness/LUFS.</td>
+</tr>
+<tr>
+<td>Chroma and spectral features</td>
+<td>Describe pitch-class activity, brightness and texture changes; key/chord labels require additional interpretation.</td>
+</tr>
+<tr>
+<td>Recurrence/self-similarity and temporal clustering</td>
+<td>Find repeated passages or candidate section boundaries; automatic verse/chorus names require extra logic/evidence.</td>
+</tr>
+<tr>
+<td>Non-silent intervals and harmonic/percussive decomposition</td>
+<td>Find pauses and inspect rhythmic versus sustained content; not instrument-perfect stem separation.</td>
+</tr>
+</tbody>
+</table></div>
+<p>Sources: <a href="https://librosa.org/doc/0.11.0/beat.html">beat/pulse</a>, <a href="https://librosa.org/doc/0.11.0/onset.html">onsets</a>, <a href="https://librosa.org/doc/0.11.0/feature.html">features</a>, <a href="https://librosa.org/doc/0.11.0/segment.html">segmentation</a>, <a href="https://librosa.org/doc/0.11.0/effects.html">silence and harmonic/percussive tools</a>. Do not silently trim silence, retime audio, add effects or replace the song just because a library can do so. The approved assembly behaviour remains unchanged.</p>
+<h3 id="media-framework-and-licence-references">Media, framework and licence references</h3>
+<p>FFmpeg/FFprobe are local processes, not a hosted rendering API. Build filter graphs from validated edit-plan values; use frame trims and timestamp resets, audio trims/padding and concatenation from the same spans. Pin the executable build and codec availability; verify final files independently. <a href="https://ffmpeg.org/ffmpeg-filters.html">FFmpeg filters</a>, <a href="https://ffmpeg.org/ffprobe.html">FFprobe</a>.</p>
+<p>Framework references: <a href="https://react.dev/learn/typescript">React with TypeScript</a>, <a href="https://vite.dev/guide/">Vite</a>, <a href="https://vite.dev/guide/features.html#typescript">Vite TypeScript checking</a>, <a href="https://fastify.dev/docs/latest/Reference/TypeScript/">Fastify TypeScript</a>, <a href="https://nodejs.org/api/child_process.html">Node child processes</a>, <a href="https://www.freedesktop.org/software/systemd/man/latest/systemd.service.html">systemd user-service concepts</a>, <a href="https://vitest.dev/guide/">Vitest</a>, <a href="https://playwright.dev/docs/intro">Playwright tests</a>.</p>
+<p>Record code licences, model/checkpoint terms, redistribution/download conditions, output-related conditions, font embedding and codec/build obligations separately in <code>THIRD_PARTY_NOTICES.md</code> and the tool manifest. Do not flatten them into “all CC-NC” or “all outputs unrestricted”. The project's own open-source licence still needs selection before publication. A dedicated licensing/about UI is deferred, not this investigation or required notices. No legal compatibility conclusion is asserted by this draft.</p>
+</div></details><details class="chapter" data-source-heading="File Structure" id="file-structure"><summary><span class="chapter-no">11</span><span>File Structure</span></summary><div class="chapter-content">
+<p><strong>Planned application files, not files already implemented.</strong> Use one repository and npm workspaces only for browser/server/shared contracts; native integrations stay visibly separate.</p>
+<pre><code class="language-text">.
+├── devpost/                         # Canonical scope, PRD, spec; HTML review companions
+├── apps/
+│   ├── web/
+│   │   ├── src/App.tsx              # Studio routing: Projects / Config
+│   │   ├── src/api.ts               # Validated snapshots, mutation and revision handling
+│   │   ├── src/components/          # SetupStrip, ProviderSelector, StatusBar, dialogs
+│   │   ├── src/features/projects/   # Project/song selector and per-project drafts
+│   │   ├── src/features/generation/ # Music/video forms, placeholders, timing fields
+│   │   ├── src/features/timeline/   # Waveform, beats, gaps, placements, priority/audio
+│   │   ├── src/features/library/    # Frames, trim/move, continuation, archive/delete
+│   │   ├── src/features/history/    # Actual input/call/seed disclosures
+│   │   ├── src/features/render/     # Player, stale/current preview, export jobs
+│   │   └── src/styles/              # Industrial tokens, responsive/reduced-motion rules
+│   └── server/
+│       ├── src/main.ts              # Fastify + built assets + worker lifecycle
+│       ├── src/routes/              # The internal API families above
+│       ├── src/db/                  # Connection, migrations, transactions/repositories
+│       ├── src/projects/            # Selection, isolation and arrangement mutations
+│       ├── src/jobs/                # State machine, FIFO GPU lease, cancellation/reconcile
+│       ├── src/providers/           # Codex/Claude autonomous task launch, sessions and confirmed Debug
+│       ├── src/setup/               # Install graph, recipes, readiness/confirmation
+│       ├── src/generation/          # Tool helpers/receipts, seeds, native jobs and media ingestion
+│       ├── src/media/               # Owned assets, manifests, validation, purge
+│       ├── src/history/             # Append-only events and redacted logs
+│       └── src/render/              # Edit-plan compiler, FFmpeg runner, cache/export
+├── packages/core/src/
+│   ├── contracts/                  # HTTP/helper types and schemas, not forced agent-response formats
+│   ├── time/                       # Exact rationals, beat maps, 24 fps boundaries/presets
+│   ├── timeline/                   # Interval union, dominance and source mapping
+│   └── jobs/                       # Legal transitions and immutable request types
+├── integrations/
+│   ├── knowledge/                  # Versioned music/H3 guidance; no personal Pi paths
+│   ├── workflows/h3/               # Supplied adaptable graph + raw-frame/receipt output branch
+│   ├── python/                     # YuE/analysis wrappers and contract tests
+│   └── tool-manifest.json          # Verified versions, assets/hashes, terms, capabilities
+├── scripts/                        # Bootstrap, service installation and diagnostics
+├── tests/
+│   ├── domain/                     # Timing, presets, coverage, seeds, state transitions
+│   ├── integration/                # DB/API/adapter contracts and recovery
+│   ├── e2e/                        # Actual browser journeys and refresh/switch cases
+│   └── fixtures/                   # Clearly labelled tiny synthetic media/CLI responses
+├── .env.example                    # Paths/ports only, never credentials
+├── package.json / package-lock.json # Reproducible TS dependencies and scripts
+├── README.md                       # Supported host, startup, access warning and demo
+├── THIRD_PARTY_NOTICES.md           # Code/model/font/codec evidence, not output guarantees
+└── LICENSE                         # Project licence selected before release
+</code></pre>
+<p>Runtime storage is outside the repository:</p>
+<pre><code class="language-text">music-video-studio/
+├── studio.sqlite                   # Projects, arrangements, jobs, tool state and history
+├── tools/
+│   ├── comfyui/venv/               # Isolated ComfyUI + H3/custom-node Python packages
+│   ├── yue2/venv/                  # Separate YuE2 Python packages
+│   └── audio-analysis/venv/        # Isolated Librosa environment
+├── setup-jobs/&lt;job-id&gt;/            # Global installs/Debug logs, not creative project cwd
+├── projects/&lt;project-id&gt;/
+│   ├── workspace/                 # Stable cwd for this project's creative agents
+│   │   ├── references/            # Research material shared within this project
+│   │   ├── notes/                 # Project context and creative decisions
+│   │   ├── scores/                # Agent-created/edited music scores
+│   │   ├── scripts/               # Agent-authored reusable tool-call scripts
+│   │   └── runs/&lt;attempt-id&gt;/      # Per-attempt inputs, logs, intermediates and receipts
+│   ├── artifacts/&lt;artifact-id&gt;/     # Original song or video + audio + complete PNG sequence
+│   ├── history/                    # Permitted retained text logs and small thumbnails
+│   └── renders/&lt;render-id&gt;/         # Revision-bound previews and explicit exports
+└── trash-work/                      # In-progress purge bookkeeping, NOT recoverable archive
+</code></pre>
+<p>A purge queue must finish removing known managed full files, including registered workspace/run copies, before claiming deletion; <code>trash-work</code> is not a restore feature. Backups, previous exports/downloads and unknown copies created outside the managed lifecycle by unrestricted tools are not recalled by an in-app delete. This capability tradeoff is disclosed; it is not a reason to confine the agents.</p>
+</div></details><details class="chapter" data-source-heading="Important Failure Modes" id="important-failure-modes"><summary><span class="chapter-no">12</span><span>Important Failure Modes</span></summary><div class="chapter-content">
+<div aria-label="Scrollable specification table" class="table-scroll" role="region" tabindex="0"><table>
+<thead>
+<tr>
+<th>Failure</th>
+<th>Required observable response / technical ownership</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Missing provider sign-in/model access</td>
+<td>Named provider error and verified sign-in instructions; no silent alternative. C1/C3.</td>
+</tr>
+<tr>
+<td>Interrupted download or missing node/model</td>
+<td>Failed setup step with Retry or separately confirmed Debug; ready panels remain collapsed. C5.</td>
+</tr>
+<tr>
+<td>OOM, native error or overlong request failure</td>
+<td>Retain exact inputs/call/seed and logs; Retry same call or Restore for new variation. Duration warning is not permission to fake success. C4/C6.</td>
+</tr>
+<tr>
+<td>Browser disappears</td>
+<td>Server work continues; reopened UI fetches same attempt/install and eventual result. C1/C2/C4.</td>
+</tr>
+<tr>
+<td>Server crashes or external job identity uncertain</td>
+<td>Reconcile against owned jobs/output receipts; never duplicate an unknown expensive call. Show uncertain/interrupted status. C4.</td>
+</tr>
+<tr>
+<td>Cancel acknowledged but generator still active</td>
+<td>Keep cancellation pending, revoke further submissions and hold GPU lane; measure/resolve immediate-stop gap. C4.</td>
+</tr>
+<tr>
+<td>Missing frames, wrong rate, bad output manifest</td>
+<td>Validation failure; no successful placement or MP4-only “raw frame” claim. C6.</td>
+</tr>
+<tr>
+<td>No reliable beat analysis</td>
+<td>Keep playable song, explicit unavailable beat controls and retry; seconds/frames still work. C7.</td>
+</tr>
+<tr>
+<td>Disk fills or media purge fails</td>
+<td>No success/deleted claim; retain actionable error and durable recovery record. Never delete unrelated files to free space. C5/C8.</td>
+</tr>
+<tr>
+<td>Edit occurs during preview/export</td>
+<td>Immutable render revision; stale preview visibly marked, new export tied to requested revision. C9.</td>
+</tr>
+</tbody>
+</table></div>
+</div></details><details class="chapter" data-source-heading="Verification and Build Gates" id="verification-and-build-gates"><summary><span class="chapter-no">13</span><span>Verification and Build Gates</span></summary><div class="chapter-content">
+<p>No application tests or live generations were run to write this blueprint. Existing prototype assets, read-only source inspection and published interfaces are evidence of possibilities, not completed new-product acceptance tests. See <code>prototype-investigation.md</code> for hashes, sources and exact observation limits.</p>
+<p><strong>Gate G1 — clean-host toolchain and terms.</strong> Pin runtime/CLI/Python/node/model versions; verify downloads, licences and checkpoint suitability. Verify Dundee as the actual deployment host and also test the clean Ubuntu 26.04/16 GB installation path without assuming existing personal generators. Check separate Comfy/YuE2/analysis interpreters and that installation leaves host Python packages/defaults unchanged. Do not inherit the personal prototype's remote-generator topology. Record GPU peak memory, system RAM, disk use, timings and real outputs. If the target fails, report the constraint and revisit the plan; do not silently require 24 GB.</p>
+<p><strong>Gate G2 — provider contracts.</strong> Run a real research/script-or-score/media task through both fixed CLI/model pairings, checking actual model identity, login, ordinary tool availability, natural-language responses, project cwd/history and cancellation. Confirm no product-added sandbox, tool filtering or JSON response constraint. Validate helper receipts rather than agent prose against machine schemas. Check exact Debug invocation/authority against the confirmation in an appropriate controlled test. No hidden provider substitution.</p>
+<p><strong>Gate G3 — media contracts.</strong> Prove song generation, audio-conditioned short H3 output, complete ordered original frames, frame-count granularity handling, native 24 fps, same-seed retries, a continuation from a trimmed original frame, and partially/wholly post-song conditioning. A &gt;15-second request must reach the adapter without a product cap; success on constrained hardware is not guaranteed.</p>
+<p><strong>Gate G4 — interruption and resource ownership.</strong> Test queued/running cancellation in each tool, completion races, provider cancellation before dispatch, project-workspace separation/default context, cooperative custom-script registration, uninstrumented-call limitations, cross-project FIFO, music→video and video→music unloading, failed unload and server-restart reconciliation. Record stop latency; source inspection does not pass <strong>PRD G9</strong>'s immediate-stop requirement.</p>
+<p><strong>Gate G5 — editing and output parity.</strong> Review tests first for decimal <code>12.3456789</code>→frame 297, exact boundaries, 1–80→6–75, moved/trimmed continuation, all BPM thresholds and irregular maps, pending reservations versus coverage, overlap priority/audio replacement, black gaps, post-song output, archive/restore/delete and current-render invalidation. Compare emitted frame/source identities and audio intervals, then watch/listen to the real export.</p>
+<p><strong>Gate G6 — real newcomer demonstration.</strong> From no generator tools, set up one provider, generate a song and approximately three clips, inspect provenance, export and play independently in VLC. Exercise the other provider separately. Show actual errors and real files; fixture-only tests, an old prototype export or a timelapse are not substitutes for this proof.</p>
+<p>The first build work should be contract tests and narrow integration investigations, not a polished UI wrapped around guessed generator behaviour. Before each implementation slice, present the tests for the learner's review. Maintain a PRD-ID coverage matrix; automated checks complement, not replace, live GPU/browser/listening proof. The learner has approved the blueprint including P9, so it is ready for <code>5-build</code>; do not require another ceremonial sign-off. The gates remain visible prerequisites to declaring features complete, not unresolved planning approvals.</p>
+</div></details><details class="chapter" data-source-heading="PRD Traceability" id="prd-traceability"><summary><span class="chapter-no">14</span><span>PRD Traceability</span></summary><div class="chapter-content">
+<p>Every approved feature heading has an implementation owner. These ranges cover <strong>160 acceptance criteria</strong>, not 160 already passing tests.</p>
+<div aria-label="Scrollable specification table" class="table-scroll" role="region" tabindex="0"><table>
+<thead>
+<tr>
+<th>PRD feature heading</th>
+<th>Acceptance IDs</th>
+<th>Components / verification</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Projects and Shared Tools</td>
+<td>P1–P7</td>
+<td>C1, C2, C4; G4/G6</td>
+</tr>
+<tr>
+<td>Frontier Agent Setup and Selection</td>
+<td>F1–F13</td>
+<td>C1, C3, C5; G2/G6</td>
+</tr>
+<tr>
+<td>Tool Setup and Failure Recovery</td>
+<td>S1–S10</td>
+<td>C4, C5; G1/G6</td>
+</tr>
+<tr>
+<td>Debug Confirmation and Agent Authority</td>
+<td>D1–D4</td>
+<td>C3, C5; G2</td>
+</tr>
+<tr>
+<td>Music and Video Generation</td>
+<td>G1–G15</td>
+<td>C2–C6; G2/G3/G4/G6</td>
+</tr>
+<tr>
+<td>Generation Seeds and Variations</td>
+<td>SD1–SD5</td>
+<td>C3, C4, C6, C8; G3/G5</td>
+</tr>
+<tr>
+<td>Persistent Visual Style</td>
+<td>V1–V4</td>
+<td>C1, C3; G2/G5</td>
+</tr>
+<tr>
+<td>Linked Timing Units</td>
+<td>U1–U5</td>
+<td>C7; G5</td>
+</tr>
+<tr>
+<td>Frame-Based Trimming and Locked Frame Rate</td>
+<td>FT1–FT8</td>
+<td>C6–C9; G3/G5</td>
+</tr>
+<tr>
+<td>Raw Frame Preservation</td>
+<td>RF1–RF4</td>
+<td>C6, C8; G3/G5</td>
+</tr>
+<tr>
+<td>Continue From End</td>
+<td>R1–R6</td>
+<td>C6–C8; G3/G5</td>
+</tr>
+<tr>
+<td>Song Selection and Saved Arrangements</td>
+<td>M1–M7</td>
+<td>C1, C2, C8; G5/G6</td>
+</tr>
+<tr>
+<td>Default Clip Timing</td>
+<td>B1–B21</td>
+<td>C4, C7; G3/G5</td>
+</tr>
+<tr>
+<td>Generation History</td>
+<td>H1–H8</td>
+<td>C2–C6, C8; G2/G3/G5</td>
+</tr>
+<tr>
+<td>Artifact Archive, Restore, and Delete</td>
+<td>A1–A12</td>
+<td>C2, C8, C9; G5</td>
+</tr>
+<tr>
+<td>Timeline and Music Coverage</td>
+<td>T1–T9</td>
+<td>C7–C9; G5</td>
+</tr>
+<tr>
+<td>Clip Audio</td>
+<td>C1–C13</td>
+<td>C6, C8, C9; G3/G5</td>
+</tr>
+<tr>
+<td>Preview, Black Gaps, and Export</td>
+<td>E1–E9</td>
+<td>C7–C9; G5/G6</td>
+</tr>
+</tbody>
+</table></div>
+<p>Component IDs C1–C9 and gate IDs G1–G6 are local to this spec; PRD criteria such as C1 or G1 are identified as PRD IDs in the table, not silently conflated with them.</p>
+</div></details><details class="chapter" data-source-heading="What Was Simplified and Why" id="what-was-simplified-and-why"><summary><span class="chapter-no">15</span><span>What Was Simplified and Why</span></summary><div class="chapter-content">
+<ul>
+<li>One host, one database, one application server and one owned GPU lane; no distributed discovery, remote workers, Redis, hosted storage or account system.</li>
+<li>Product-owned skills, helper scripts and workflows reduce routine effort without narrowing agent capability. Agents can research and author their own scripts/scores; receipts and actual-file checks establish what happened. No forced planner/executor split or JSON final reply.</li>
+<li>One fixed frame rate and accepted initial output profile; no frame-rate conversion, multitrack transitions or mastering.</li>
+<li>One renderer/edit-plan path for preview and export, with explicit render waiting; specialised proxy/HQ modes remain later.</li>
+<li>Bounded history, not undo/event replay or workflow sharing. A small relational model is justified by saved songs, immutable jobs and media lifecycle, not speculative scale.</li>
+<li>No image generator, separate foley tool, speech feature, pre-song editor, general headless API or licensing UI in v1.</li>
+</ul>
+<p>This is still a substantial integration project, not a credible 2–4-hour build. Much of the complexity comes from approved recovery, provenance and precise-editing behaviour rather than the TypeScript framework. No required behaviour has been quietly downgraded because the demo will be short.</p>
+</div></details><details class="chapter" data-source-heading="Decisions and Open Issues" id="decisions-and-open-issues"><summary><span class="chapter-no">16</span><span>Decisions and Open Issues</span></summary><div class="chapter-content">
+<h3 id="already-agreed">Already agreed</h3>
+<p>React/TypeScript/Vite + Node/TypeScript/Fastify; Dundee as the deployment target for the Ubuntu 26.04/16 GB server with LAN browsers; no app accounts; native tools remain native; product-owned knowledge; one cross-project GPU-heavy queue with explicit handoff; exact 24 fps; complete pre-lossy frame retention; captured job ownership and seed rules; adaptive 8/4/2/1 presets everywhere; no blanket four-second minimum; advisory only above 15 seconds. The approved PRD governs all other product behaviour.</p>
+<h3 id="review-decisions-recorded">Review decisions recorded</h3>
+<p>The learner said "other than that i like all the other proposals". Treat the retained first-draft recommendations as accepted, not an invitation to ask them all again.</p>
+<div aria-label="Scrollable specification table" class="table-scroll" role="region" tabindex="0"><table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Review outcome</th>
+<th>Consequence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>P1 — SQLite + filesystem</td>
+<td>Accepted</td>
+<td>Transactional metadata, local media and purge reconciliation.</td>
+</tr>
+<tr>
+<td>P2 — constrained plan/execute split</td>
+<td><strong>Rejected and replaced</strong></td>
+<td>Agents retain their normal tools, research, shell, history and creative freedom; no sandbox/read-only/JSON-response requirement. Supply useful skills/helpers/workflows.</td>
+</tr>
+<tr>
+<td>P3 — bootstrap + user service</td>
+<td>Accepted; deployment host corrected to <strong>Dundee</strong></td>
+<td>One host, port 9122, browser clients; Artigas is reference only.</td>
+</tr>
+<tr>
+<td>P4 — exact timing representation</td>
+<td>Accepted</td>
+<td>Rationals, containing-frame labels, half-open cuts and one beat map.</td>
+</tr>
+<tr>
+<td>P5 — native frame granularity</td>
+<td>Accepted, implementation test still required</td>
+<td>Retain extra native frames; initially place only requested realised frames. Not four-second padding.</td>
+</tr>
+<tr>
+<td>P6 — media dependencies/song lifecycle</td>
+<td>Accepted</td>
+<td>Protect queued/running input dependencies; preserve archived-song arrangements and retained history.</td>
+</tr>
+<tr>
+<td>P7 — one render path/profile</td>
+<td>Accepted</td>
+<td>Server-rendered MP4 preview/export; first profile 640×480/24 fps/H.264/AAC.</td>
+</tr>
+<tr>
+<td>P8 — placement picker/place-first restriction</td>
+<td><strong>Replaced by per-clip action</strong></td>
+<td>The clicked card supplies its current edit context; no extra clip-selection gate or required re-placement.</td>
+</tr>
+<tr>
+<td>Separate Python environments</td>
+<td>Explicitly requested</td>
+<td>ComfyUI and YuE2 must not install packages into or replace host Python.</td>
+</tr>
+<tr>
+<td>Project-specific agent cwd</td>
+<td>Explicitly requested</td>
+<td>Stable project workspace shared among its workers; no generic shared creative cwd and no security-confinement claim.</td>
+</tr>
+<tr>
+<td>P9 — host/tool dependency setup split</td>
+<td><strong>Accepted, 21 October 2026</strong></td>
+<td>Check/install native FFmpeg prerequisites through host bootstrap; manage isolated Librosa in the existing Audio analysis panel; recheck both from the service account.</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="still-needs-evidence-not-another-opinion-survey">Still needs evidence, not another opinion survey</h3>
+<p>Exact generator/environment/model pins, practical 16 GB behaviour, cancellation latency, true raw-frame/audio alignment, silent post-song conditioning, provider account access and actual unrestricted CLI/tool behaviour, and licence/redistribution compatibility remain gates. Pin them through small executable checks before building assumptions on them. A failed gate can require a visible PRD/scope amendment; it cannot authorise one silently.</p>
+<h3 id="useful-unknown-clarified-during-planning">Useful unknown clarified during planning</h3>
+<p>The learner initially expected configurable video fps and wondered whether raw VAE frames and per-job cancellation could be exposed. Inspection separated desired behaviour from native capabilities: 24 fps was explicitly adopted; saving the decoded batch and targeted Comfy cancellation have source-level support, but quantised PNGs are not floating-point tensor dumps and interruption requests are not measured stopping. Native frame counts remain the clearest example of a spec decision that needs both learner review and a real contract test.</p>
+<p><strong>Approval and handoff:</strong> the learner approved the complete revised blueprint with "perfect, all sounds great" on 21 October 2026, including P9. Earlier proposals are accepted or explicitly replaced as above. <code>4-spec</code> is complete; the next stage is <code>5-build</code>, preserving test review before feature implementation. Extra Librosa capabilities are informational, not added requirements. No application implementation, Dundee installation, generation or repair agent has been launched during planning.</p></div></details></article></section><div class="back-top"><a href="#top">Back to blueprint overview ↑</a></div></main><footer><div>Technical specification · Approved · 21 October 2026<br><a href="spec.md">Canonical Markdown</a> · <a href="prd.html">Approved requirements</a><br>No application code or generation run.</div><div>Source fingerprint <code id="source-fingerprint">f945eb3592bc</code><br>Self-contained HTML · No external assets<br>Review typography is a fallback, not verified Kirsty.</div></footer>
+<script>(()=>{const panels=[...document.querySelectorAll('[data-panel]')],steps=[...document.querySelectorAll('[data-step]')],details=[...document.querySelectorAll('details.chapter')];document.getElementById('journey-buttons').hidden=false;function show(i){panels.forEach((p,n)=>p.hidden=n!==i);steps.forEach((b,n)=>b.setAttribute('aria-pressed',String(n===i)));}show(0);steps.forEach(b=>b.addEventListener('click',()=>show(Number(b.dataset.step))));document.getElementById('disclosure-controls').hidden=false;document.getElementById('expand-all').addEventListener('click',()=>details.forEach(d=>d.open=true));document.getElementById('collapse-all').addEventListener('click',()=>details.forEach(d=>d.open=false));function reveal(hash){const t=document.getElementById(decodeURIComponent(hash.slice(1)));if(!t)return;let n=t;while(n){if(n.tagName==='DETAILS')n.open=true;n=n.parentElement;}t.scrollIntoView({block:'start'});}document.addEventListener('click',e=>{const a=e.target.closest('a');if(!a)return;const href=a.getAttribute('href');if(href&&href.startsWith('#')){e.preventDefault();history.replaceState(null,'',href);reveal(href);}});if(location.hash)reveal(location.hash);let before;window.addEventListener('beforeprint',()=>{before=details.map(d=>d.open);details.forEach(d=>d.open=true);});window.addEventListener('afterprint',()=>{if(before)details.forEach((d,i)=>d.open=before[i]);});})();</script></body></html>

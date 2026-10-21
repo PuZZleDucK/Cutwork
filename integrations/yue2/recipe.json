@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "status": "dependency-recipe-pending-live-check",
+  "scope": "Isolated interpreter, dependencies and YuE2 imports only; no model download or generation",
+  "python": {
+    "version": "3.10.19",
+    "build": "20260211",
+    "directory": "cpython-3.10.19-20260211-linux-x86_64",
+    "url": "https://github.com/astral-sh/python-build-standalone/releases/download/20260211/cpython-3.10.19%2B20260211-x86_64-unknown-linux-gnu-install_only_stripped.tar.gz",
+    "sha256": "d71df61d1cdb59af4443912da8eeca744a52e782ff5deefa966ead893235a39e",
+    "checksumSource": "https://github.com/astral-sh/uv/blob/0.12.21/crates/uv-python/download-metadata.json"
+  },
+  "source": {
+    "revision": "1647252d68b70cbead046ffd3f7caf036dde47ee",
+    "url": "https://codeload.github.com/multimodal-art-projection/YuE/tar.gz/1647252d68b70cbead046ffd3f7caf036dde47ee",
+    "sha256": "54e9debf77b7a32bb807e6e8d3f781450e3952ee57a264115520b22eb5c031c4",
+    "checksumProvenance": "Locally computed SHA256 of the pinned official GitHub source archive, not an upstream signature",
+    "package": "yue2-infer",
+    "version": "0.1.6"
+  },
+  "lock": {
+    "file": "requirements.lock",
+    "resolver": "uv 0.12.21",
+    "target": "CPython 3.10.19 / Linux x86_64 / torch 2.10.0+cu128",
+    "indexes": ["https://pypi.org/simple"],
+    "torch": "Direct checksum-pinned official PyTorch wheel"
+  },
+  "minimumFreeGiB": 30,
+  "sourceDateEpoch": 946684800,
+  "licensing": "Source includes Apache-2.0 code and separate model notices; dependency notices and model-use eligibility remain a release gate"
+}

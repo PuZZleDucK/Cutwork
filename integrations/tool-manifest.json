@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "status": "partial-slice-1-contract-proof",
+  "supportedHost": {
+    "os": "Ubuntu",
+    "release": "26.04",
+    "architecture": "x86_64",
+    "targetVramGB": 16
+  },
+  "node": {
+    "version": "24.22.0",
+    "archive": "node-v24.22.0-linux-x64.tar.xz",
+    "url": "https://nodejs.org/dist/v24.22.0/node-v24.22.0-linux-x64.tar.xz",
+    "sha256": "cc2f601cee82d9a5a233302fe307abc600727035fd7d2c3a3571755989e95008",
+    "checksumSource": "https://nodejs.org/dist/v24.22.0/SHASUMS256.txt"
+  },
+  "providers": {
+    "codex": {
+      "package": "@openai/codex",
+      "version": "0.163.0",
+      "model": "gpt-6.1-sol",
+      "access": "requires-live-account-check"
+    },
+    "claude": {
+      "package": "@anthropic-ai/claude-code",
+      "version": "2.1.306",
+      "model": "claude-opus-5-5",
+      "access": "requires-live-account-check"
+    }
+  },
+  "native": {
+    "comfyui": {
+      "status": "not-installed-or-verified",
+      "sourceCandidate": "https://github.com/Comfy-Org/ComfyUI",
+      "observedRevision": "f5c611e3849ff7219dfb7d7b251092ab8a9b51dc"
+    },
+    "h3": {
+      "status": "checkpoint-and-recipe-unverified",
+      "sourceCandidate": "https://huggingface.co/Comfy-Org/MiniMax-H3"
+    },
+    "yue2": {
+      "status": "16gb-recipe-unverified",
+      "sourceCandidate": "https://github.com/multimodal-art-projection/YuE",
+      "observedRevision": "1647252d68b70cbead046ffd3f7caf036dde47ee",
+      "dependencyRecipe": "yue2/recipe.json",
+      "dependencyProof": {
+        "host": "dundee",
+        "date": "2026-10-21",
+        "result": "Isolated install, repeat install, pip check and user-service imports passed; model loading and 16 GB generation remain unverified"
+      }
+    },
+    "analysis": {
+      "status": "recipe-unverified",
+      "sourceCandidate": "https://librosa.org/doc/0.11.0/install.html"
+    }
+  }
+}

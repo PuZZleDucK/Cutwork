@@ -197,10 +197,456 @@ The learner asked to proceed. No licence decision, model substitution, agent res
 ### Requested partial checkpoint — 21 October 2026
 
 The learner approved the progress and explicitly requested “commit and proceed”.
-The `Checkpoint native media setup and verified Comfy output branch` commit
+Commit **`49dac9b`**, `Checkpoint native media setup and verified Comfy output branch`,
 saves the YuE2 native helper/model preparation, isolated Comfy recipe, pinned
 H3 downloader/graph, synthetic output proof and associated documentation/tests.
 It is a partial recovery point, not the slice-1 completion commit. Course assets,
 screenshots, private learner context, runtime media and raw execution logs are
 excluded. At the pre-commit check (21:27 AEDT), H3's first weight was still
 downloading (9,607,716,864 partial bytes); no H3 inference had run.
+
+### Owned runner and real-song conditioning — 21 October 2026
+
+Continuation after `49dac9b` is implemented and verified at the boundary below,
+but **not yet committed**. Slice 1 remains unchecked. No product scope, agent
+capabilities or licence decision changed.
+
+- **Request preparation:** `scripts/h3-proof-request.ts` calls the existing
+  TypeScript timing planner and fresh-seed allocator. The first two-second
+  placement is [0,48) at 24 fps, with 56 native frames. It captures a real
+  prior YuE2 source hash and prompt; it does not start generation. Its prompt
+  was developer-authored, not a provider-authored chain. The seed remains an
+  exact decimal string (`3132518588584125900` for this test request).
+- **Conditioning:** `integrations/h3/media.py` captures and verifies the source
+  PCM WAV, cuts exact samples and pads only beyond the song. It separately
+  handles wholly post-song silence. Tests cover normal intervals, native
+  overshoot, partial/whole silence, changed input hashes, invalid plans and
+  unsupported compressed input. The current proof accepts 48 kHz stereo PCM
+  WAV only; broader import conversion is not implemented.
+- **Execution:** `integrations/h3/generate.py` owns a temporary loopback Comfy
+  service, saves PID/group/start/boot identity and exact argv, records prompt
+  ID before polling, preserves the native graph/history and validates all
+  output branches. It observes resources and stops only its own service
+  group. The `--fixture` CPU mode is explicit and never a model-failure
+  fallback. Native mode also rehashes all six model files/notices, but has
+  not been executed. Neither this helper nor its lock is the durable GPU
+  scheduler or the full cancellation API.
+- **First real failure retained:** attempt
+  `3e2f313b-d6d4-4219-acd0-40c5ba77bdcb` completed its CPU workflow but strict
+  PNG graph comparison failed: Comfy adds a captured-audio `is_changed`
+  fingerprint to saved prompt metadata. The validator now verifies that
+  fingerprint against the conditioning WAV and still requires exact semantic
+  inputs. The owned service exited; its failed receipt was not rewritten.
+- **Second failure retained:** attempt
+  `f9dc6379-2f3c-44f4-8b03-ce7e4dce8b6a` validated media but reported
+  `reconciling` during cleanup. `/proc` showed the Comfy leader as a zombie
+  before `waitid` could collect its exit. A regression reproduced this gap;
+  cleanup now waits boundedly while preserving the unreaped process-group
+  anchor. Independent reconciliation found the old PID/group and GPU process
+  absent and port 8198 available, with matching boot identity. No process
+  was killed in that reconciliation. Its marker and observation were archived
+  alongside the original failed receipt, not erased from history.
+- **Successful run:** attempt **`ed38cdf6-5b3f-4d4e-b450-41c8be60138f`**, prompt
+  **`f52f85cf-9dac-4f53-a18d-9324a55e59b5`**, ended `succeeded`. It used the
+  actual prior YuE2 audio and synthetic coloured visuals. The conditioning WAV
+  contains **112,000 samples/channel**, with no padding for this interval.
+  Independent local float32 decoding matched the source prefix bit-for-bit.
+  Its SHA-256 is
+  `0cc19c554465b8f5e4a4fa2b8fbb4ac3eae02e6c9cb219518fbddee77b682a0e`.
+  All 56 ordered original RGB PNGs, metadata and file hashes checked, as did
+  640×480 H.264/yuv420p at exact 24/1 fps and the full stereo FLAC. MP4 hash:
+  `65941212d6a035608f8b34476879abf8fefe4757264ff52be0f56f65e03d49b8`;
+  FLAC hash:
+  `50d1f8f8b551516896988aaba69ba5dea1d27057f33e86e8da52975b3cd5fef3`.
+  The synthetic receipt correctly records no actual H3 seed execution.
+- **Native-audio distinction:** pinned H3 source produces 32 kHz audio on an
+  800-sample grid: 56 frames imply 74,400 samples (2.325 s). Comfy may crop
+  only the mux input to video duration while retaining the full FLAC. The
+  validator now distinguishes those counts and bounded AAC padding; a
+  22-frame regression covers a case where the crop matters. These are
+  source-checked expectations, not observed H3 decode results. No mastering,
+  loudness change or final 48 kHz export resampling was added.
+- **Elapsed time and resources:** Comfy reported 2.93 s for the synthetic
+  workflow; complete helper execution took **127.62 s**. During this run a
+  read-only observation saw FFprobe waiting on disk IO while the background
+  model download continued. It completed without restart or unrelated
+  cleanup. Synthetic cached image-batch nodes used approximately 6.72 GiB
+  RSS; this is **not an H3 RAM/VRAM measurement**.
+- **Owned exit:** service PID/group 1191986 exited 0 after SIGINT; the observer
+  exited and the owned GPU PID was absent. The receipt's final group snapshot
+  can contain the leader's zombie immediately before reaping; an independent
+  subsequent observation found the PID absent. The personal Comfy PID
+  1216557 remained at 234 MiB and continued listening on 8188. Port 8198 was
+  closed and no unresolved proof marker remained.
+- **Checks/review:** **78/78 approved contract cases**, typechecking and
+  **25 additional H3 diagnostics** passed (7 graph, 13 conditioning/metadata/
+  audio-profile, 5 Linux ownership). Focused independent review closed the
+  metadata, audio-count/mux-crop, descendant cleanup and zombie/wait race
+  findings. Final executed source hashes match local source: runner
+  `a80ff88e22c291de05cc586f3a64c4a1e3fd19862bd9b15f72f81e700253e18a`,
+  media `3bc133064af13e21e9af78010f6411ffb76b575f919f683377fda8643e06273a`,
+  workflow `1ad58c03b204c51cd933c879b319bc17d0ea438fce08b83e33f421ca66023d1b`.
+- **Evidence locations:** native evidence is under Dundee's
+  `projects/native-h3-proof/runs/<attempt>/`. The successful and reconciled
+  attempts are copied to ignored `.local-evidence/slice-1/h3/runner/`; the
+  successful folder includes `independent-local-check.json`. Earlier failures
+  and logs are retained. No runtime media or private context is staged.
+- **Latest host/download observation, 21:54:38 AEDT:** all three owned probe
+  PIDs were absent. The original model-download unit remained active/running.
+  The model card and **15,983,746,636-byte diffusion weight** were verified;
+  the text encoder had **3,031,715,840 partial bytes**. Remaining files were
+  pending. This is not a completed model installation. No H3 inference is
+  queued to start automatically.
+
+**Resume:** inspect the existing download unit/receipt and require all six
+verified files plus completed repeat verification before native inference.
+Then use the reviewed runner without `--fixture` for the real song-conditioned
+H3 attempt, retaining actual seeds, frames, resource observations and owned
+exit. Provider-authored generation, the analysis environment, same-seed
+replay, queued/running cancellation, music→H3→music handoff, final export,
+the 12 formal live cases and learner media review are still outstanding.
+
+Final download-only recheck at **21:59:56 AEDT**: the same unit and receipt
+remain running, with the same two verified files and **4,987,559,936 partial
+bytes** of the text encoder. No native H3 run was started.
+
+### Completed H3 assets and first native attempt — 22 October 2026
+
+At 07:42 AEDT the overnight model-download receipt was `succeeded`, with all
+six files (35,087,235,076 bytes) verified; its user unit was inactive/dead with
+success. The full initial download/verification took 6,015.15 seconds. A
+separate completed-install check in `setup-jobs/h3-models.nwq38bci/` passed in
+238.36 seconds, rehashing all six existing files without a new download.
+Installer/manifest/helper hashes match the reviewed local files. Copies of
+both receipts are in ignored `.local-evidence/slice-1/h3/native/models/`.
+
+All 78 contract tests, typechecking and 25 H3 development diagnostics passed
+again before native execution. A focused native-only source review found no
+concrete wiring/path/frame-count blocker. It noted that the RTX 4060 Ti uses
+the pinned Comfy implementation's dequantized computation for the NVFP4 text
+encoder rather than native FP4 matmul. This is supported source behavior,
+not a model substitution, and leaves actual memory/speed to live measurement.
+
+The explicit user-service attempt `4ee70e27-3649-4749-8572-2f8197b9fae4`
+started at 07:46 AEDT with fresh seed `13039281409138935984`, the prior real
+YuE2 audio, 48 requested/56 native frames, 640×480, 24 fps and the reviewed
+20-step graph. Unit: `studio-h3-native-4ee70e27-3649-4749-8572-2f8197b9fae4`.
+Request: `setup-jobs/h3-native-request.NlFJPnqz/request.json`. Evidence goes to
+`projects/native-h3-proof/runs/4ee70e27-3649-4749-8572-2f8197b9fae4/`.
+This is a direct native probe, not provider orchestration or a full live-suite
+pass. Initial observation showed 330 MiB total GPU usage, personal Comfy at
+234 MiB on port 8188, no listener on 8198 and approximately 12 GiB available
+host RAM. No personal service or host-Python configuration was modified.
+The outcome and independent post-run checks are recorded below when observed.
+
+#### Native outcome and independent verification
+
+The attempt **succeeded**. Comfy prompt ID
+`973c23ff-2b3f-43f4-b1c8-387346878cca` completed normally; its native history and
+all saved PNG prompt metadata contain exact seed `13039281409138935984`.
+All six model hashes were checked again by the runner before service startup.
+
+- **Inputs:** conditioning is exactly 112,000 samples/channel at 48 kHz and
+  independently matches the captured prior YuE2 source prefix after float32
+  decoding. No silence was required for this interval. This song was the
+  earlier token-truncated sample; the new video does not make it a complete
+  composition or an agent-authored song.
+- **Original images:** all **56** original 640×480 RGB PNGs decode, match file
+  and pixel hashes, and appear in the recorded native order. Both SaveImage
+  and CreateVideo consume the same VAE IMAGE output. They are pre-encode
+  8-bit originals, not a floating-point tensor dump. The intended placement
+  remains [0,48); no extra frames have been placed into a product timeline.
+- **Encoded media:** independent FFprobe/FFmpeg confirms H.264/yuv420p,
+  **24/1 fps**, **56 frames**, duration **56/24 seconds**, plus stereo AAC.
+  Video SHA-256:
+  `8cf19c96e5322104388fcbcf01ff04d6d48eec0c8e786f94170f1c2f754c1496`.
+  The full separate FLAC contains **74,400 samples/channel at 32 kHz**,
+  matching the source-checked native audio grid. Its decoded values are finite
+  and nonzero; absolute peak is approximately 0.638153. FLAC SHA-256:
+  `eda98cb284c89e60ec2d3c9de3457ec8e263588e8bbf14ac27d3e3bdc0b64db1`.
+  The native audio is **1/120 second shorter** than the native video; no hidden
+  retiming, normalization or mastering was applied.
+- **Timing:** native history records **189.455 seconds** of prompt execution
+  (service log rounds to 189.49). Complete helper time was **341.65 seconds**,
+  including model hashing, service startup, validation and owned shutdown.
+  These are different measurements, not conflicting generation-speed claims.
+- **Resource observations:** 109 samples with no observer errors. Owned-process
+  GPU peak sampled at **15,354 MiB**, RSS peak sampled at **12,044,056 KiB**,
+  process high-water RSS **12,126,436 KiB**, process swap peak sampled at
+  **2,386,196 KiB** (about 2.28 GiB). The host had approximately 22 GiB RAM
+  and 207 GiB configured swap. The log confirms dynamic VRAM loading, CPU
+  offloading and emulated NVFP4. Sampling can miss peaks; these numbers prove
+  neither VRAM-only inference nor a minimum host RAM/swap requirement. The
+  retained attempt occupied approximately 34 MiB on disk.
+- **Owned exit:** Comfy PID/group 1564180 exited 0 following its SIGINT; the
+  helper's observer exited and its post-check found no owned GPU process.
+  At **07:52:55 AEDT**, independent observation found helper PID 1562769 and
+  Comfy PID 1564180 absent, unit inactive/dead with success/exit 0, port 8198
+  closed and no unresolved marker. GPU usage returned to **330 MiB / 0%**,
+  including the same untouched personal Comfy PID 1216557 at **234 MiB** on
+  port 8188. No model installer or native proof remains running.
+- **Inspection/review:** first/middle/final frames were actually viewed and
+  show the requested friendly robot at a synthesizer. This is not a playback,
+  listening or audio-sync-quality review. An independent reviewer rechecked
+  all PNG hashes/pixels/order, graph provenance, native seed, fresh media
+  probes/decoding, conditioning equality and resource calculations; no
+  contradictory success evidence was found.
+- **Retained evidence:** complete local copy at ignored
+  `.local-evidence/slice-1/h3/native/4ee70e27-3649-4749-8572-2f8197b9fae4/`.
+  `independent-local-check.json` and `independent-*-probe.json` accompany the
+  original receipt/history/frames/media/resource logs. The post-run observation
+  is `native/post-run-observation.txt`. Original media remains on Dundee at
+  the identical run-relative paths.
+
+**Provider-path preparation:** added versioned, product-owned references under
+`integrations/knowledge/` for music, video and evidence/resource coordination.
+They are not injected or live-tested yet. Their purpose is to communicate the
+native tool knowledge while preserving ordinary agent tools, scripts, research
+and natural-language responses. The references explicitly identify current
+helper layout differences, unimplemented scheduler/cancellation, captured seeds,
+native versus placed length, song conditioning and truncation/quality limits.
+Pinned upstream music-generation and H3 base-prompting documentation was read;
+no personal Pi installation or skill was copied into the product.
+
+**Next:** exercise that knowledge through the real provider path and finish the
+isolated analysis setup, native replay/cancellation/handoff, validation export,
+12-case live binding and learner playback/listening check. Slice 1 is still
+open. Changes after `49dac9b` are uncommitted; no completed-slice commit or UI
+readiness is claimed.
+
+### First real provider-driven media task — 22 October 2026
+
+**Outcome: useful recovered media, not a clean pipeline pass.** The learner
+approved proceeding with the ordinary creative agent. A new supervised launcher,
+`scripts/provider-media-proof.ts`, captured the brief, four exact seed strings,
+separate native IDs and complete product-guidance bytes/hashes before launching
+Codex in the project workspace. It uses the existing full-access provider runner,
+not a JSON-response requirement, tool allowlist, sandbox or replacement agent
+configuration. Default invocation is plan-only; live use requires explicit
+`--run`, `STUDIO_LIVE=1`, Dundee and Node 24. The experiment is not the durable
+scheduler or the missing formal live-suite binding.
+
+Five local launcher diagnostics pass, separate from the 78 approved cases.
+Review found and corrected two issues before live use: uncertain provider exit
+must remain `reconciling`, and runtime-root selection must honor the native
+helpers' XDG precedence and absolute-path rule. The initial missing-module run
+was not a meaningful behavioral red test. All 78 approved tests, typechecking,
+25 H3 diagnostics and the five launcher diagnostics passed before execution
+and again during this task. They did not cover the polling failure below.
+
+#### Captured identity and creative work
+
+- Project `provider-media-codex`; outer attempt
+  `4888eb4f-f116-4a55-86e6-3789af081de6`; unit
+  `studio-provider-media-33ab9c81-e9ce-4c30-9348-b2d0d50edf78.service`.
+  Started **08:17:30 AEDT**, provider exited **08:29:18 AEDT**.
+- Actual native Codex session `01a16053-8fd6-71c3-b426-99d89e65aa91`,
+  CLI 0.163.0, model **gpt-6.1-sol**, ordinary `danger-full-access`, approval
+  `never`, cwd `projects/provider-media-codex/workspace`. Native session
+  metadata and CLI trace were inspected; this is not inferred from requested
+  flags alone. Only Codex has exercised this media path so far; the earlier
+  Claude capability probe is not equivalent evidence.
+- Launcher SHA-256
+  `2a332df3dc176529a8da5c5c761fad25560b2796e55c9c0015d742cf0fd749b5`.
+  Captured guidance SHA-256: README
+  `8f9b2232682ac801382da0b24255be21153306158d5139b81bd87ad969999353`,
+  music `39d65543cf3da591b34e1a46b4db0cd054b2509962b520dacc10bbd3156f8d6f`,
+  video `be21c27b214c682be7d064d3c7b74fbb94c597a8b26eb5782f117e0c51f0f05b`.
+  Those exact snapshots remain unchanged. The source guidance README was
+  subsequently updated to describe this result; its current hash differs.
+- Codex wrote original programming lyrics, detailed musical styling/sampling
+  inputs, a miniature robot-workshop H3 prompt using native modality fields,
+  and its own preparation/export/recovery scripts. There was one new YuE2
+  request and one native H3 submission; no automatic generation retry or
+  synthetic/model fallback. The agent retained natural-language reporting.
+
+#### Music and H3 outcomes
+
+YuE2 attempt `46f3bba9-abda-4b4e-ad02-2d0791f77457` succeeded in **126.26 s**
+(helper measurement). Its 48 kHz stereo float WAV contains **1,576,256
+samples/channel = 32.8386667 s**. This exceeds the requested approximate
+15–25 seconds; prompt duration is not an exact output constraint. Both ABC
+and semantic truncation flags are false, unlike the earlier short probe.
+This is not listening approval or a claim that every requested musical detail
+was realized. Every captured artifact hash and stage seed was independently
+checked. Seeds: ABC `8441299191990296173`, semantic `7089773537548395557`,
+NAR `5723634299345447891`. Source WAV SHA-256:
+`fedb8b6fe88d996e27f3182691ddd7ad055246ca39dc546f08c5fe792c0255ac`.
+
+H3 attempt `381d3ae2-1c5d-44ee-9401-5f1e2425da6c`, prompt
+`e89a16e2-de2e-4711-bef6-987bef40fb6c`, seed `11187851132846900587`, used
+**640×480, 24 fps, 20 steps**, 48 requested/56 native frames. Its conditioning
+independently matches the new song's first **112,000 samples/channel** exactly.
+The native service logged completion in **240.66 s** and wrote 56 original
+PNGs, a 56-frame H.264/AAC MP4 and a 74,400-sample/channel 32 kHz stereo FLAC.
+
+However, the helper failed with **`TimeoutError: timed out`**, elapsed
+**422.50 s**. It did not save final native history or its normal frame manifest.
+The receipt remains **failed**, with no invented history or `actualSeeds`
+completion field. Source inspection and the submitted-but-uncollected state
+identify the unhandled ten-second completion GET as the failure path. The
+overall job deadline had not elapsed. Memory pressure was observed, but is
+not proof of the HTTP delay's cause. Cleanup sent SIGINT then SIGTERM; the
+owned service exited **-15** and released its GPU allocation. This was failure
+cleanup, not a measured user-cancellation test or a normal exit-0 success.
+
+Codex noticed the existing outputs and independently used the product PNG
+inspector to recover them **without regenerating**. Its separate recovery
+manifest/receipt expressly retain the failed native state and missing history.
+Independent post-run inspection then checked every PNG byte/pixel hash,
+unique sequential filenames, full semantic graph, exact seed and LoadAudio
+fingerprint. All 56 decoded native video frames corroborate that filename
+sequence within expected H.264 loss (maximum RGB MSE 12.9121). This tolerance
+does not uniquely establish order between near-identical frames. Native history
+order remains unavailable; recovered order is not misrepresented as a saved
+history response. First and 48th original stills were actually viewed and show
+the robot operating the lit music machine. No motion/listening judgment is made.
+
+#### Recovered validation export and resource evidence
+
+The agent's FFmpeg export is **789 frames / 32.875 s**, H.264/yuv420p,
+640×480 at 24 fps, AAC 48 kHz stereo. All frames were independently decoded:
+frames 1–48 agree with their original PNGs; all remaining **741 frames are
+black** (decoded RGB maximum zero). The extra eight native H3 frames were
+retained but not placed. Original song audio is preserved through AAC encoding,
+with **1,744 samples** of silence padding to the final video frame boundary.
+An independently executed reference encode from the unchanged song with only
+that padding matched **all 1,543 encoded AAC packet hashes**. Thus the claim is
+stronger than correlation alone; no hidden fade, leveling, H3 audio replacement
+or mastering was needed. Export SHA-256:
+`ccd4078b3cbe2e3920ce2bfba8ec8f941d596ce505f6b0c24522fbaff2bb0433`.
+This intentionally sparse file is not a complete music video.
+
+An outside observer captured **329** resource samples, with no reported
+observation errors and maximum sample spacing 4.62 s. Sampled process GPU
+peaks: music **7,776 MiB**, H3 **15,314 MiB**. H3 high-water RSS observed was
+11,998,728 KiB and sampled process swap peak 2,413,264 KiB. The complete unit's
+cgroup peak was 12,828,090,368 bytes with swap peak 2,646,831,104 bytes. These
+are different measurement scopes, not hardware minimums. The same 22 GiB RAM /
+207 GiB configured-swap host used CPU offloading; this does not certify 8 GB
+hardware or VRAM-only operation.
+
+There was no sampled music/H3 process overlap; **72** independent between-stage
+observations found the music process absent and GPU at the personal-service
+baseline before the H3 service began. This is one sequential music→video
+handoff, not the required bidirectional scheduler/cancellation proof.
+At **08:29:50 AEDT**, the outer unit was inactive/dead, provider/helper/native
+PIDs absent, port 8198 closed, no unresolved-work marker, total GPU use back to
+**330 MiB / 0%**. The same personal Comfy PID 1216557 remained untouched at
+234 MiB on 8188. The outside observer exited without signaling anything.
+
+Complete evidence/media is copied into ignored
+`.local-evidence/slice-1/provider-media/`. `project/` preserves the runtime
+layout; `verify-recovered.py`, `independent-recovered-media-check.json`,
+`audio-reference/`, `independent-resources.json` and `post-run-observation.txt`
+contain the separate audit. The ordinary clean-success verifier is not used
+to turn this failure into a pass. Local convenience links `validation-export.mp4`
+and `song.wav` point at the retained originals. No credentials or runtime
+media are tracked/staged.
+
+**Next, in learn mode:** learner playback/listening feedback and review of the
+five proposed [completion-polling regressions](h3-polling-test-review.md), then
+repair and independently verify before advancing. Those new regression tests
+and the correction are not implemented yet. Analysis setup, same-seed replay,
+queued/running cancellation, full music→video→music handoff, Claude's media
+path and the 12 formal live cases remain outstanding. Slice 1 stays unchecked;
+no UI, completed-slice commit or clean provider-chain pass is claimed.
+
+A focused independent final review found no blocker to this limited recovery
+audit, corroborated all AAC packet hashes/timing/skip metadata and resource
+figures, and agreed with the bounded polling regression proposal. It explicitly
+retained the missing-history, lossy-order and sampled-resource limitations.
+
+### Approved polling repair and native replay — 22 October 2026
+
+The learner replied “perfect, video looks great too”: polling-regression review
+approved and recovered-video playback feedback recorded. Slice 1 remains open;
+this does not invent separate lyric/audio critiques or approve unfinished gates.
+
+Nine polling regression methods now exercise the actual runner with deterministic
+native/transport/clock fixtures and one bounded local alarm subprocess. The
+initial seven methods ran before the fix: the no-POST-retry guard passed, while
+six methods produced eight failing subassertions. The behavior failures included
+single-read abort, absent bounded retry, accepting a late success and missing
+internal history-ID validation. Some stop/empty-poll failures concerned diagnostic
+wording, not previously demonstrated duplicate generation. The fix preserves the
+one submission and original deadline, records transient read failures and retries
+only GETs. Status/graph/media validation remains independent of agent prose.
+
+Focused review caught a further issue: socket inactivity timeout is not a whole
+response deadline. A slow-body fixture failed before the additional correction;
+an owned main-thread Linux alarm now bounds opening/reading/decoding the response.
+It restores its handler, refuses another active timer, and never wraps POST. A
+separate Python child verifies real interruption/restoration with a five-second
+parent backstop. The reviewer closed that finding before deployment.
+
+All **78 approved contract tests**, typechecking, **34 H3 diagnostics** and
+**five launcher diagnostics** pass. Tests/implementation are in
+`tests/diagnostics/test_h3_polling.py` and `integrations/h3/generate.py`. Before/after
+logs and the preserved pre-repair helper are under ignored
+`.local-evidence/slice-1/h3/polling/`. No provider/GPU runs occur in those tests.
+
+At **08:46:39 AEDT**, a supervised live replay was explicitly started on Dundee:
+attempt `f8e01f65-ece6-4812-b220-204001a3fb9a`, unit
+`studio-h3-polling-f8e01f65-ece6-4812-b220-204001a3fb9a.service`. Only the attempt
+ID differs from failed request `381d3ae2-1c5d-44ee-9401-5f1e2425da6c`: same song,
+prompt, seed `11187851132846900587`, native graph, 48 requested/56 native frames,
+640×480, 24 fps and 20 steps. No new song or agent reinterpretation is involved.
+The failed request/receipt/media remain untouched. This is a direct native replay
+to isolate the helper repair, not a rerun of the complete provider task.
+
+Deployed helper SHA-256:
+`7bf75e52d1ff62e189722ebd2cc0a948544f13f7b508b818e6b9cffd74191619`.
+Replay request SHA-256:
+`137dbb3d5f45479952eadf746caf11714c426b1e4c736a24a17b23c400c42dab`.
+Preflight found no running studio units or unresolved-work marker, port 8198
+free, 330 MiB total GPU baseline, personal Comfy unchanged on 8188, about
+13 GiB available host memory and 195 GiB disk available. A separate read-only
+observer monitors the attempt. Its outcome is recorded below after verification.
+
+#### Replay outcome and independent verification
+
+The replay **succeeded**, with prompt ID
+`f57699a4-a03f-4a3a-9a39-2247b030bb15`. Final native history, prompt identity,
+graph, seed, output order and an empty final queue are captured. Independent
+verification checked every original PNG file/pixel hash and full prompt/audio
+fingerprint, sample-exact conditioning, media decoding and actual rate/counts.
+All **56 PNG files and their pixels, the native MP4 and the full FLAC are
+byte-identical to the failed attempt's retained media**. This is narrow evidence
+of reproducibility for this request/environment, not a universal determinism
+promise. The new successful history does not rewrite the old missing history.
+The old receipt is still failed and its SHA-256 remains
+`362d8be890087415b4f0afb08d141845a21c9903898b062f209177aa7ab3b898`.
+
+Native execution took **187.671 s** (service rounds to 187.70); total helper
+elapsed **369.289 s**. No transient read error occurred during this live replay.
+Thus this proves normal native operation with the repair installed; the
+transient-error recovery itself is verified by the explicit fault fixtures,
+not misrepresented as observed native fault recovery.
+
+The native observer recorded 109 samples without errors: GPU sampled peak
+**15,314 MiB**, process high-water RSS **12,320,620 KiB**, sampled process swap
+peak **2,221,424 KiB**. CPU offloading/host RAM/swap still matter; no VRAM-only
+or minimum-hardware guarantee is inferred. An outside observer recorded 170
+samples without errors, ending with an inactive/dead unit, empty cgroup and
+only the personal Comfy GPU allocation. Both observers finished.
+
+At **08:53:32 AEDT**, independent checks confirmed service exit 0, owned Comfy
+PID 1607421 absent, no listener on 8198, no unresolved-work marker, GPU back to
+**330 MiB / 0%**, and unchanged personal Comfy PID 1216557 at 234 MiB on 8188.
+This is normal exit/resource release, not user-cancellation latency proof.
+
+Complete local evidence is in ignored `.local-evidence/slice-1/h3/polling/`:
+`native/`, `job/`, `verify-replay.py`, `independent-replay-check.json`, independent
+media probes and `post-run-observation.txt`. A focused independent reviewer
+corroborated identity, file/pixel/audio equality, native/history timings, empty
+queue and release, and found no blocker to this limited native-replay result.
+No provider was launched for this replay, and the previous export remains the
+learner-reviewed output rather than an unnecessary new edit.
+
+**Checkpoint boundary:** the provider-media tooling/guidance, independently
+verified recovered export, approved polling repair and successful H3 replay
+form a working partial checkpoint. Slice 1 remains unchecked. Next are the
+isolated analysis setup, remaining music replay/cancellation and bidirectional
+handoff, clean provider-chain/Claude media checks and formal 12-case live
+binding. No running generation, finished UI or completed-slice claim remains.

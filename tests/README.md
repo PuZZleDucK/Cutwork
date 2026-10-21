@@ -27,25 +27,62 @@ The facade in `support/slice1-contract.ts` is bound directly to application modu
 
 The two assertions in `contracts/provider-runner-review.test.ts` were approved and now pass after fixes. They launch only harmless local Node fixtures, not Codex/Claude or native generators. A failed prompt delivery now produces an explicit failed application outcome while preserving the actual CLI exit code. SIGINT/SIGTERM handling performs bounded, identity-checked cleanup; unconfirmed termination stays `reconciling`. Fixture teardown uses independent ownership evidence and a self-expiry backstop. These local checks do not measure GPU stopping latency or certify unregistered native descendants.
 
-## Additional H3 graph diagnostics
+## Additional H3 diagnostics
 
-Additional graph diagnostics (not part of the 78 approved contract cases):
+Additional development diagnostics (not part of the 78 approved contract cases):
 
 ```sh
-python3 -m unittest discover -s tests/diagnostics -p 'test_h3_workflow.py' -v
+python3 -m unittest discover -s tests/diagnostics -p 'test_h3_*.py' -v
 ```
 
-These seven cheap tests check H3 graph wiring, exact 64-bit seed serialization,
-native frame-grid validation and the shared synthetic output branch. They load
-no models and run no services. The separate opt-in CPU output probe is described
-in [the H3 integration](../integrations/h3/README.md); its real Comfy outputs still
-do not constitute H3 inference or a native live-suite pass.
+All **34** pass: seven graph cases, 13 conditioning/metadata/audio-profile
+cases, five Linux process-ownership cases and nine approved polling-regression
+methods (with subcases). They check exact 64-bit seeds,
+native frame-grid wiring, sample-exact audio intervals and post-song silence,
+Comfy metadata fingerprints, native audio/mux length differences, and owned
+group cleanup even when the leader exits first. A regression covers the
+observed interval when `/proc` shows a zombie before its exit is waitable.
+The polling fixtures reproduce transient history/final-queue failures, immutable
+deadlines, late/invalid responses, stop/exit handling and no POST resubmission.
+A separate owned Python child checks actual whole-body alarm interruption and
+handler restoration; it has a five-second parent teardown backstop. See the
+[approved regression review](../devpost/h3-polling-test-review.md).
+
+These diagnostics require local FFmpeg/FFprobe and launch only their own
+short-lived process fixtures. They load no models, call no providers and start
+no Comfy service. Separate opt-in CPU probes are described in
+[the H3 integration](../integrations/h3/README.md); their real Comfy outputs
+still do not constitute H3 inference or a native live-suite pass.
 
 ## Separate provider capability probes
+
+Additional local launcher diagnostics, separate from the 78 approved cases:
+
+```sh
+node --test tests/diagnostics/test_provider_media.mjs
+```
+
+All **five** pass. They check read-only planning, exact guidance snapshots and
+64-bit seed strings, fresh attempt identity, ordinary full-access launch flags,
+runtime-root precedence, opt-in gates, and retaining `reconciling` when process
+exit is uncertain. They invoke harmless local Node subprocesses only. The
+initial missing-module run was scaffolding evidence, not a behavioral failure.
 
 `scripts/provider-smoke.ts` runs a real, billed provider task, gated by `STUDIO_LIVE=1` and the Dundee hostname. It is not part of the default test suite. The successful Codex and Claude attempts are recorded in [slice 1 progress](../devpost/slice-1-progress.md), including how the pinned runtime was selected. Both created research, score and script artifacts; native session metadata was inspected separately for actual model/tool identity, and the scripts were independently rerun. Those two regressions are now approved and fixed; normal opt-in and pin checks still apply.
 
 The probe itself checks launch/input success and nonempty output/files, **not** native model identity or musical quality. Do not treat that exit code alone as provider-contract completion. `runProvider` records the provider CLI's Linux process identity; it is not yet a durable scheduler, a cancellation API, or proof of ownership of arbitrary descendants. Provider cancellation/Debug and the native live suite remain outstanding.
+
+`scripts/provider-media-proof.ts` is the separate opt-in real-media task. It
+captures a creative brief, exact guidance bytes/hashes, seeds and native attempt
+IDs before invoking the ordinary provider runner. The agent authors native
+requests, calls YuE2 and H3 sequentially, and writes a sparse FFmpeg export.
+Its successful CLI result is deliberately only
+`provider-exited-awaiting-independent-validation`: independently inspect the
+session, native receipts, media and resource release. See the
+[operator instructions](../integrations/knowledge/README.md) and
+[observed results](../devpost/slice-1-progress.md). This script is not the
+missing formal live-suite binding and must not run concurrently with other
+studio GPU tasks; a durable cross-tool scheduler is still outstanding.
 
 ## Separately authorised live execution
 

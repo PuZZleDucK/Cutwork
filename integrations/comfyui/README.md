@@ -17,7 +17,8 @@ establish public-release compliance.
 - The full upstream dependency list, including frontend/templates, is retained.
   Transformers is deliberately pinned at **4.57.6**, satisfying upstream's
   minimum and providing the Qwen tokenizer used by Comfy's own text-encoder
-  implementation. Native inference compatibility still needs execution proof.
+  implementation. A first short native H3 run now passes; broader workloads
+  remain unverified.
 - `requirements.lock` records 92 package versions and distribution hashes.
   The 90 PyPI package hash sets were checked against official release metadata;
   torch/torchvision hashes match the official wheel index. No alternate index
@@ -111,7 +112,7 @@ uv --no-config pip compile integrations/comfyui/requirements.in \
 ```
 
 This recipe used uv **0.12.21**. Review changes and rerun live checks before
-replacing the project lock. Tool-specific model manifests/workflows and measured
-16 GB inference still need execution proof; pinned assets are now downloading
-and the H3 graph/output branch is in [the H3 integration](../h3/README.md).
+replacing the project lock. Broader workloads on the 16 GB target still need
+execution proof; pinned assets and one short
+offloaded native run are verified in [the H3 integration](../h3/README.md).
 See [current progress](../../devpost/slice-1-progress.md).

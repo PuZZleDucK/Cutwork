@@ -2,7 +2,9 @@
 
 The learner approved continuing with the install-on-demand H3 prototype; see
 [the decision and public-release boundary](../../devpost/h3-feasibility-review.md).
-These files do not establish licence clearance or a working 16 GB recipe.
+These files do not establish licence clearance or general 16 GB compatibility.
+One short native run has now passed on Dundee with CPU offloading and swap;
+its exact evidence and limits are below.
 
 ## Pinned assets
 
@@ -34,12 +36,14 @@ files are refused. Space accounting includes remaining bytes plus a 2 GiB
 reserve. A repeated successful invocation rehashes files without downloading
 them again. Receipts/logs live in `setup-jobs/h3-models.*/`.
 
-**Current checkpoint:** the real Dundee download is still in progress. Only
-the small model card has completed verification; no weight loading or H3
-inference has passed. See [the timestamped progress log](../../devpost/slice-1-progress.md)
-for the active unit and exact continuation point. Do not launch another
-installer while its lock is held, or confuse systemd's current `Result=success`
-with a finished installation: require the receipt's `state: succeeded`.
+**Current checkpoint (22 October):** all six files completed downloading on
+Dundee; a separate completed-install invocation rehashed every file successfully
+without downloading again (238.36 seconds). The first native GPU probe then
+passed; see [the timestamped progress log](../../devpost/slice-1-progress.md)
+for its media, memory and cleanup evidence. Model-byte verification and native
+execution are separate checks.
+Do not launch another installer during owned generation or confuse a running
+systemd unit's `Result=success` with a finished operation.
 
 ## Workflow and original-frame branch
 
@@ -64,11 +68,124 @@ that source is separate from the final renderer's recorded resampling to the
 accepted 48 kHz working/export rate. No mastering or extra loudness processing
 has been added; upstream audio decoding itself can attenuate samples.
 
-This H3 graph has source/contract checks, **not an executed model proof yet**.
+This H3 graph has source/contract checks and **one executed short model proof**.
 It is a helper, not a constraint on creative agents or a requirement that an
-agent answer in JSON. The durable adapter, conditioned-audio preparation,
-actual seed capture/replay, ownership/cancellation and GPU scheduling remain
-integration work.
+agent answer in JSON. The temporary runner below now prepares conditioning
+and records owned execution. The durable adapter, native seed replay,
+queued/running cancellation and cross-project GPU scheduling remain integration
+work; none is certified by the CPU fixture.
+
+## Temporary generation runner
+
+`scripts/h3-proof-request.ts` uses the existing TypeScript timing planner and
+fresh-seed allocator; `media.py` performs sample-exact conditioning and output
+validation; `generate.py` owns a temporary Comfy service and its evidence.
+From the repository root on Dundee, with the pinned Node 24 runtime on PATH:
+
+```sh
+# Preparation only: reads/probes the song; exclusively creates a new request.
+node scripts/h3-proof-request.ts /absolute/song.wav /absolute/prompt.txt /absolute/new-request.json
+
+# Plan only; no service or generation starts without --run.
+python3 -I integrations/h3/generate.py --request /absolute/new-request.json
+
+# Explicit CPU diagnostic: synthetic visuals, real captured song interval.
+python3 -I integrations/h3/generate.py --request /absolute/new-request.json --fixture --run
+```
+
+Each execution requires a fresh attempt ID/directory. A retry retains the
+original seed and captured inputs but uses a new attempt ID; do not overwrite
+earlier evidence. Once the six model files and completed installer recheck
+have passed, the native command is the same runner with `--run` **without
+`--fixture`**. This mode passed the short probe below. The fixture is explicit, never an
+automatic fallback for failed model generation.
+
+The first proof accepts native **48 kHz stereo PCM WAV** and records the source
+hash and captured copy. It cuts the precise sample interval for all native
+frames, pads only past the song end, and supports wholly post-song silence.
+Broader imported-audio conversion is not implemented. The request places
+48 frames while preserving all 56 generated frames; it does not stretch or
+silently place the extra eight frames.
+
+The runner records the exact graph and Comfy prompt ID before polling,
+checks history/output identity, hashes and decodes every original PNG, and
+validates encoded video and separate lossless audio. Comfy adds an audio-file
+fingerprint (`is_changed`) to PNG prompt metadata: the validator checks that
+fingerprint against the captured WAV rather than mistaking it for a changed
+generation request. This does not relax semantic graph-input equality.
+
+Native H3 audio uses a different grid from video: the pinned decoder produces
+`800 * round(nativeFrames * 40 / 24)` samples/channel at **32 kHz**. For
+56 frames that is 74,400 samples (2.325 s), not 56/24 s. The full decoded FLAC
+is retained; Comfy crops only the mux input when audio exceeds video length.
+Validation accounts for that crop and bounded AAC encoder padding separately.
+The 56-frame/74,400-sample case now matches real H3 inference; the 22-frame
+cropping case remains a diagnostic, not a second native run. No unrecorded
+resampling, mixing or mastering is introduced.
+
+Runtime files go under `projects/<projectId>/runs/<attemptId>/` within
+`STUDIO_DATA_ROOT` (default: the XDG data directory's `music-video-studio`).
+Project workspace, captured request, hashes, service argv, PID/group/start/boot
+identity, graph/history, outputs and resource samples are retained. Cleanup
+signals only the owned group and keeps its leader unreaped until descendants
+are stopped, preventing process-group ID reuse. Unconfirmed cleanup writes a
+durable reconciliation marker and blocks another proof. No global Comfy
+interrupt or personal-service cleanup is used. The helper lock is **not** the
+future application-wide GPU scheduler.
+
+The corrected Dundee CPU run `ed38cdf6-5b3f-4d4e-b450-41c8be60138f` passed:
+112,000 samples/channel of the real YuE2 source matched the conditioning WAV
+bit-for-bit after float32 decoding, all 56 original frames and encoded media
+validated, and the owned service exited. This verifies runner plumbing with
+synthetic visuals, not H3 quality, native seeds, GPU memory or cancellation.
+
+## Executed native proof — 22 October 2026
+
+Attempt `4ee70e27-3649-4749-8572-2f8197b9fae4`, Comfy prompt
+`973c23ff-2b3f-43f4-b1c8-387346878cca`, succeeded with actual seed
+`13039281409138935984` and the real prior YuE2 song interval. Independent checks
+confirmed all 56 original PNG file/pixel hashes and order, the VAE-to-PNG/video
+branch, 640×480 H.264/yuv420p at exact 24/1 fps and 56/24-second duration, and
+74,400 finite/nonzero stereo FLAC samples at 32 kHz. The generated audio is
+8⅓ ms shorter than the native video; this is retained and recorded, not hidden
+by stretching. First/middle/final frame inspection showed the requested robot
+at a synthesizer. Listening, audio-sync quality and motion-quality approval
+remain separate from these mechanical checks.
+
+Native prompt execution took 189.455 s; the complete helper took 341.65 s,
+including model hashing, startup, validation and shutdown. Of 109 resource
+observations, the highest sampled owned-process GPU value was **15,354 MiB**;
+process high-water RSS was **12,126,436 KiB**, and sampled process swap peaked
+at **2,386,196 KiB**. Sampling can miss brief peaks. The host had approximately
+22 GiB RAM and 207 GiB configured swap. This used dynamic VRAM/CPU offloading
+and emulated NVFP4, not VRAM-only inference; it is not a minimum-RAM/swap
+recommendation or proof of longer-duration/8 GB compatibility.
+
+The service exited 0 after its owned SIGINT, its process/group was subsequently
+absent, port 8198 closed, and GPU use returned to 330 MiB including the untouched
+personal Comfy process at 234 MiB. This is normal completion/resource release,
+not cancellation, same-seed replay, GPU handoff or the full provider-driven
+media path. The 12 native-suite cases remain unrun.
+
+## Later provider attempt: completion-observation failure
+
+The 22 October Codex-driven attempt generated new song-conditioned media but
+exposed a runner bug: a single ten-second history GET timeout aborts observation
+and triggers cleanup, independently of the overall job deadline. Final queue
+inspection has the same exposure. The native service had saved 56 originals,
+MP4 and FLAC, but no final history was captured; the helper receipt remains
+failed. Codex recovered the saved outputs into a separately verified export
+without another generation. That recovery does not turn the native attempt
+into a clean pass.
+
+The [approved polling repair](../../devpost/h3-polling-test-review.md) now
+retries only transient GET observations within the original deadline, including
+whole-response decoding, while preserving every read error. It never retries
+POST. Nine regression methods pass, and a supervised same-input native replay
+completed with final history, exit 0 and identical PNG/MP4/FLAC hashes. No natural
+read timeout occurred during that replay; transient recovery is fixture-tested.
+The earlier failed receipt remains unchanged. Full evidence and remaining limits
+are in [slice 1 progress](../../devpost/slice-1-progress.md).
 
 ## Executed synthetic output proof
 

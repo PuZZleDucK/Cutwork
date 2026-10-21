@@ -1,0 +1,44 @@
+# Full upstream requirements at the pinned ComfyUI revision, with explicit
+# CPython 3.12 / Linux x86_64 / CUDA 13.0 torch pair and Transformers 4.x.
+# Direct official torch wheels; all other packages resolve only from PyPI.
+comfyui-frontend-package==1.57.1
+comfyui-workflow-templates==0.11.93
+comfyui-embedded-docs==0.5.14
+torch @ https://download-r2.pytorch.org/whl/cu130/torch-2.13.0%2Bcu130-cp312-cp312-manylinux_2_28_x86_64.whl#sha256=8db7338e6895c3d4bd89a02ff4209507d1f0cf2ffeb3b898538b5a07d1ea8c1e
+torchsde
+torchvision @ https://download-r2.pytorch.org/whl/cu130/torchvision-0.28.0%2Bcu130-cp312-cp312-manylinux_2_28_x86_64.whl#sha256=8a0008d34ccc4e81066b97ff0ae5a34c676bfdf3464baf40c01b320dc9a45ce0
+numpy>=1.25.0
+einops
+transformers==4.57.6
+tokenizers>=0.13.3
+sentencepiece
+safetensors>=0.4.2
+aiohttp>=3.11.8
+yarl>=1.18.0
+pyyaml
+Pillow>=10.1.0
+scipy
+tqdm
+psutil
+alembic
+SQLAlchemy>=2.0.0
+filelock
+av>=17.0.0
+comfy-kitchen==0.2.39
+comfy-aimdo==0.5.6
+requests
+simpleeval>=1.0.0
+blake3
+
+#non essential dependencies:
+kornia>=0.7.1
+spandrel
+pydantic~=2.0
+pydantic-settings~=2.0
+PyOpenGL>=3.1.8
+comfy-angle
+
+# Managed environment tooling, not host pip.
+pip==25.3
+setuptools==80.9.0
+wheel==0.45.1

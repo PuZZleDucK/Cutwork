@@ -27,6 +27,20 @@ The facade in `support/slice1-contract.ts` is bound directly to application modu
 
 The two assertions in `contracts/provider-runner-review.test.ts` were approved and now pass after fixes. They launch only harmless local Node fixtures, not Codex/Claude or native generators. A failed prompt delivery now produces an explicit failed application outcome while preserving the actual CLI exit code. SIGINT/SIGTERM handling performs bounded, identity-checked cleanup; unconfirmed termination stays `reconciling`. Fixture teardown uses independent ownership evidence and a self-expiry backstop. These local checks do not measure GPU stopping latency or certify unregistered native descendants.
 
+## Additional H3 graph diagnostics
+
+Additional graph diagnostics (not part of the 78 approved contract cases):
+
+```sh
+python3 -m unittest discover -s tests/diagnostics -p 'test_h3_workflow.py' -v
+```
+
+These seven cheap tests check H3 graph wiring, exact 64-bit seed serialization,
+native frame-grid validation and the shared synthetic output branch. They load
+no models and run no services. The separate opt-in CPU output probe is described
+in [the H3 integration](../integrations/h3/README.md); its real Comfy outputs still
+do not constitute H3 inference or a native live-suite pass.
+
 ## Separate provider capability probes
 
 `scripts/provider-smoke.ts` runs a real, billed provider task, gated by `STUDIO_LIVE=1` and the Dundee hostname. It is not part of the default test suite. The successful Codex and Claude attempts are recorded in [slice 1 progress](../devpost/slice-1-progress.md), including how the pinned runtime was selected. Both created research, score and script artifacts; native session metadata was inspected separately for actual model/tool identity, and the scripts were independently rerun. Those two regressions are now approved and fixed; normal opt-in and pin checks still apply.

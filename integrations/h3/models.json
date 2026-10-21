@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 1,
+  "scope": "Pinned H3 feasibility assets; not a verified 16 GB recipe or licence-clearance claim",
+  "comfyRevision": "f5c611e3849ff7219dfb7d7b251092ab8a9b51dc",
+  "selection": "Smallest official pruned fl2va w6a8, nvfp4 text encoder, int8 video VAE and fp32 audio VAE; no turbo/acceleration extras",
+  "models": [
+    {
+      "role": "weights",
+      "repository": "Comfy-Org/MiniMax-H3",
+      "revision": "e5eb578a89295337b8ff433a035929ce0279e0b6",
+      "license": "minimax-h3-community-license-agreement",
+      "files": [
+        {
+          "path": "README.md",
+          "bytes": 8293,
+          "sha256": "cfe1e532856bc48fc2a6de64b5db0aa68282476f5488975bf3d1519438515fe9",
+          "upstreamBlobId": "22cfc37cd46b546fafa23ff61babb916da400b94",
+          "hashProvenance": "Locally hashed pinned bytes, verified against upstream Git blob ID"
+        },
+        {
+          "path": "diffusion_models/minimax_h3_fl2va_pruned_w6a8.safetensors",
+          "bytes": 15983746636,
+          "sha256": "ac746a2e41628ab25afd44d2b22a7fab8d7e66cd07a01bf89ed9d74b0d3f0c35",
+          "upstreamBlobId": "1b229603beec5ca2d5442631d087783ea1c448c2",
+          "hashProvenance": "Hugging Face LFS SHA256 at pinned revision"
+        },
+        {
+          "path": "text_encoders/qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
+          "bytes": 15687142551,
+          "sha256": "35a88d51044231fe332301d7a62aa81e3f2cba62febeb446e2c1e3e0ef76f2c6",
+          "upstreamBlobId": "c8148bfabfef79b69607053f977a39e0736429c0",
+          "hashProvenance": "Hugging Face LFS SHA256 at pinned revision"
+        },
+        {
+          "path": "vae/minimax_h3_video_vae_int8_convrot.safetensors",
+          "bytes": 2811065184,
+          "sha256": "52a2c8c73583c86e4f41cdcce3a6ad0ea562987bc0bf3d60a0cef5f5c8e60c0e",
+          "upstreamBlobId": "6f2cfdd92cc282a93a288b0dad6b58fb833f5b74",
+          "hashProvenance": "Hugging Face LFS SHA256 at pinned revision"
+        },
+        {
+          "path": "vae/minimax_h3_audio_vae_fp32.safetensors",
+          "bytes": 605254808,
+          "sha256": "8e505d95dd1561d47abd43d4238fd40d9bb1ae9e147ed0a4cba778d76ae4db48",
+          "upstreamBlobId": "90bf58595930e7d56cbe9fecb4ea647d5c0e3aec",
+          "hashProvenance": "Hugging Face LFS SHA256 at pinned revision"
+        }
+      ]
+    },
+    {
+      "role": "upstream-notice",
+      "repository": "MiniMaxAI/MiniMax-H3",
+      "revision": "42ed227ee7df40d41602854ae760620d6eb651fe",
+      "license": "minimax-h3-community-license-agreement",
+      "files": [
+        {
+          "path": "LICENSE",
+          "bytes": 17604,
+          "sha256": "59b99642b95ea21630e311198ddbfffbfe05aadba0c2f5d884cbdf4efcc90f44",
+          "upstreamBlobId": "c389b45855337ccec8ddeb389f4fe902abcd0b19",
+          "hashProvenance": "Locally hashed pinned bytes, verified against upstream Git blob ID"
+        }
+      ]
+    }
+  ]
+}

@@ -12,6 +12,8 @@ node_modules/
 coverage/
 test-results/
 *.tsbuildinfo
+__pycache__/
+*.pyc
 
 # Local runtime/evidence: real media and machine-specific execution logs
 /.runtime/

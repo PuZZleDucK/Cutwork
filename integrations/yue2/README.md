@@ -1,6 +1,6 @@
 # YuE2 dependency recipe — slice 1
 
-This is a **dependency/import proof**, not a working music setup panel or verified 16 GB generation recipe. On Dundee, installation, a repeat invocation, `pip check`, imports and transient user-service imports passed; host-Python observations matched. Model downloads, actual stage seeds, native cancellation, memory measurements and generated audio remain separate gates.
+This directory contains **dependency/model preparation and an initial direct generation proof**, not a working music setup panel or complete generation/recovery integration. On Dundee, installation, a repeat invocation, `pip check`, imports and transient user-service imports passed; host-Python observations matched. Separate model installation/recheck and a short native generation with distinct stage seeds passed on the 16 GB Dundee GPU. Native cancellation, replay, full orchestration and broader memory/duration behavior remain separate gates.
 
 ## Install boundary
 
@@ -49,3 +49,29 @@ Re-resolution can change transitive packages: review that diff and repeat the na
 **Observed installer failure and correction:** the first attempt rejected Triton 3.6.0 because the existing output lock retained hashes from an earlier PyTorch-index resolution, while installation used PyPI. The [PyTorch index](https://download.pytorch.org/whl/triton/) and [PyPI metadata](https://pypi.org/pypi/triton/3.6.0/json) identify different wheel hashes for the same version/platform. A fresh output lock agreed with independently fetched PyPI metadata for all 50 PyPI packages; the explicit torch wheel stayed pinned to its official URL/hash. The original failed attempt and environment were retained, not silently overwritten, and hash enforcement stayed enabled. Resolve into a fresh output when changing index provenance; do not merely add whatever hash an error reports.
 
 Current recheck limitation: the direct-URL PyTorch requirement can download the large wheel again even when installed. Successful repeat execution proves consistent versions/build output, not minimal network use. A separate lightweight readiness check and improved download reuse belong in the setup integration.
+
+## Separate pinned model preparation
+
+```sh
+/usr/bin/python3 -I scripts/prepare-yue2-models.py           # plan only
+/usr/bin/python3 -I scripts/prepare-yue2-models.py --install # explicit download/check
+```
+
+[`models.json`](models.json) allowlists **21 files / 7,794,656,016 bytes** from immutable revisions of the [official model](https://huggingface.co/m-a-p/YuE2-3B/tree/8f24312f187763b9854adeec87e437e2b03bbff1) and [official VAE](https://huggingface.co/m-a-p/YuE2-Vae/tree/152733a19ad43aa67e367f9b5503ef8075bb5126). Weight hashes come from upstream LFS metadata; smaller files were independently hashed and checked against the pinned upstream Git blob IDs. It retains model licences/notices and skips example media and bundled older wheels. Model licence identifiers are recorded separately from package licences; this is not a commercial-use or output-rights clearance.
+
+The downloader uses public HTTPS without accessing Hugging Face credentials, verifies size and SHA256 before promoting each `.part`, and records an attempt under `setup-jobs/yue2-models.*/`. It only reuses matching, marked model directories. Complete corrupt partials are retained with the failed/repair attempt instead of being endlessly resumed; shorter partial downloads can resume. Changed installed files are refused and retained for investigation. The free-space calculation includes remaining download bytes plus a 2 GiB reserve, not already downloaded partial bytes. A successful recheck hashes existing files without downloading them again. Setup completion here means verified model bytes, not working inference.
+
+## Staged native helper — integration proof in progress
+
+```sh
+<data-root>/tools/yue2/venv/bin/python -I -u \
+  integrations/yue2/generate.py --request <request.json> --result <new-attempt>/receipt.json
+```
+
+The helper accepts a version-1 request with `attemptId`, native `parameters` (style, lyrics, optional score/COT controls), a decimal-string `seeds` map, optional `sampling` overrides and optional native `execution` settings. It does not assign new seeds itself: the caller uses the application seed allocator for a fresh request and preserves assigned seeds for recovery. Stochastic stages are `abc`, `semantic`, and `nar`; provided-score/COT-off requests omit the unused `abc` seed. Deterministic decoding has no seed.
+
+YuE2's ordinary combined call reuses its request seed across stages. This helper instead uses its staged API and separate dataclass copies of each request/plan, preserving the original score/tokens while passing the recorded seed to each stochastic stage. It saves each stage's inputs before calling the native API and retains the generated score, exact semantic tokens, latents, effective configuration and original floating-point WAV. It does not use the combined upstream result saver, which would incorrectly describe this multi-seed run as a single-seed request. There is no product fade, normalization or mastering; upstream decoding's own sample clamping remains upstream behavior.
+
+The receipt records supplied seeds and stage outcomes, model/helper identities, process PID/group/start/boot identity, elapsed times, peak Torch allocation/reservation, process high-water RSS and output hashes. An interrupted receipt is **not** proof that the process exited or released the GPU. Parent observation and durable scheduling/cancellation remain outstanding. A requested token range is an explicit generation setting, not an exact song-duration guarantee; truncation is retained. Helpers are optional agent tools, not restrictions on normal agent tools, configuration, scripts or response format.
+
+Development diagnostics have used tiny synthetic files/fake pipelines for installer recovery and seed handoff checks. Those checks are not real-model compatibility or audio-quality proof, and are not additional cases in the 78-test approved local suite. The first live generation is recorded in [slice-1 progress](../../devpost/slice-1-progress.md): approximately 20 seconds, 48 kHz stereo, decoded/hash-checked, with semantic truncation at the probe token ceiling; the complete native suite remains unrun.

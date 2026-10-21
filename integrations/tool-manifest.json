@@ -30,16 +30,55 @@
   },
   "native": {
     "comfyui": {
-      "status": "not-installed-or-verified",
+      "status": "isolated-dependencies-cpu-nodes-and-synthetic-output-passed-h3-inference-unverified",
       "sourceCandidate": "https://github.com/Comfy-Org/ComfyUI",
-      "observedRevision": "f5c611e3849ff7219dfb7d7b251092ab8a9b51dc"
+      "observedRevision": "f5c611e3849ff7219dfb7d7b251092ab8a9b51dc",
+      "dependencyRecipe": "comfyui/recipe.json",
+      "dependencyProof": {
+        "host": "dundee",
+        "date": "2026-10-21",
+        "result": "Fresh install, completed repeat, all 92 pinned versions, pip check and imports passed; before/after host-Python observations matched"
+      },
+      "nodeProbe": {
+        "host": "dundee",
+        "date": "2026-10-21",
+        "attemptId": "39591609-5d4f-4123-af68-a23a9c1e8ac3",
+        "registeredNodeCount": 996,
+        "requiredNodesVerified": 20,
+        "serviceExitCode": 0,
+        "scope": "Temporary CPU service on loopback8198, exact endpoint identity, H3/audio-guide/raw-image/video-save schemas and owned server exit; not model loading, GPU generation or native job cancellation"
+      },
+      "outputProbe": {
+        "host": "dundee",
+        "date": "2026-10-21",
+        "attemptId": "b4a21eff-2372-4514-b042-bc8111ff01a5",
+        "promptId": "cd2d89b6-0afc-4b35-b6b2-17acf090838d",
+        "frames": 56,
+        "fps": "24/1",
+        "width": 640,
+        "height": 480,
+        "fixtureAudioSamplesPerChannel": 112000,
+        "serviceExitCode": 0,
+        "scope": "Synthetic CPU frames/audio through the shared output branch: exact original pixels/order/hashes, independently decoded video order and duration, H264/AAC, lossless fixture PCM. No H3 model, GPU inference, cancellation or full live-suite proof."
+      }
     },
     "h3": {
-      "status": "checkpoint-and-recipe-unverified",
-      "sourceCandidate": "https://huggingface.co/Comfy-Org/MiniMax-H3"
+      "status": "pinned-assets-download-in-progress-h3-graph-not-executed",
+      "sourceCandidate": "https://huggingface.co/Comfy-Org/MiniMax-H3",
+      "modelManifest": "h3/models.json",
+      "workflow": "h3/workflow.py",
+      "downloadObservation": {
+        "host": "dundee",
+        "observedAt": "2026-10-21T21:12:15+11:00",
+        "state": "running",
+        "verifiedFiles": 1,
+        "plannedFiles": 6,
+        "plannedBytes": 35087235076,
+        "scope": "Model card verified; first weight partially downloaded. No model loading or H3 inference."
+      }
     },
     "yue2": {
-      "status": "16gb-recipe-unverified",
+      "status": "short-native-audio-probe-passed-full-integration-unverified",
       "sourceCandidate": "https://github.com/multimodal-art-projection/YuE",
       "observedRevision": "1647252d68b70cbead046ffd3f7caf036dde47ee",
       "dependencyRecipe": "yue2/recipe.json",
@@ -47,6 +86,18 @@
         "host": "dundee",
         "date": "2026-10-21",
         "result": "Isolated install, repeat install, pip check and user-service imports passed; model loading and 16 GB generation remain unverified"
+      },
+      "modelManifest": "yue2/models.json",
+      "nativeProbe": {
+        "host": "dundee",
+        "date": "2026-10-21",
+        "attemptId": "11c1be95-7114-4009-b67d-73b7fff2f126",
+        "audioSamplesPerChannel": 959936,
+        "sampleRate": 48000,
+        "channels": 2,
+        "semanticTruncated": true,
+        "sampledProcessGpuPeakMiB": 7756,
+        "scope": "Direct helper, stage seed/file/hash/decode checks and normal exit; not agent orchestration, cancellation, replay or complete media chain"
       }
     },
     "analysis": {

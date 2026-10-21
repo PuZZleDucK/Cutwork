@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "status": "dependency-recipe-pending-live-check",
+  "scope": "Isolated interpreter, pinned source and dependencies; model downloads and H3 inference are separate checks",
+  "python": {
+    "version": "3.12.14",
+    "build": "20260929",
+    "directory": "cpython-3.12.14-20260929-linux-x86_64",
+    "url": "https://github.com/astral-sh/python-build-standalone/releases/download/20260929/cpython-3.12.14%2B20260929-x86_64-unknown-linux-gnu-install_only_stripped.tar.gz",
+    "sha256": "ef605200f8174e87ecfc308e52a88127543f85dd5c940dc5e92cab244b98a003",
+    "checksumSource": "https://github.com/astral-sh/uv/blob/0.12.21/crates/uv-python/download-metadata.json"
+  },
+  "source": {
+    "revision": "f5c611e3849ff7219dfb7d7b251092ab8a9b51dc",
+    "version": "0.42.0",
+    "url": "https://codeload.github.com/Comfy-Org/ComfyUI/tar.gz/f5c611e3849ff7219dfb7d7b251092ab8a9b51dc",
+    "sha256": "a8b098364547eaba668eff2245eb2e53c03f789b9a04e4bb0339977846afee74",
+    "checksumProvenance": "Locally computed SHA256 of pinned official GitHub archive, not an upstream signature"
+  },
+  "lock": {
+    "file": "requirements.lock",
+    "resolver": "uv 0.12.21",
+    "target": "CPython 3.12.14 / Linux x86_64 / torch 2.13.0+cu130 / torchvision 0.28.0+cu130",
+    "indexes": [
+      "https://pypi.org/simple"
+    ],
+    "torch": "Direct checksum-pinned official PyTorch wheels; torchvision metadata requires torch ==2.13.0"
+  },
+  "minimumFreeGiB": 35,
+  "licensing": "Code, dependencies and model terms are distinct; preserve upstream notices. Public-release review remains open."
+}

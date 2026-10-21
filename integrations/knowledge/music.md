@@ -1,4 +1,4 @@
-# YuE2 music guidance — revision 1
+# YuE2 music guidance — revision 2
 
 Read the supplied user music description and optional lyrics together. Preserve
 provided words; when lyrics are absent, use the creative brief to decide whether
@@ -58,3 +58,23 @@ compression should disguise truncation. Check audio decoding, sample counts
 and hashes, then listen when a listening tool is available; otherwise explicitly
 leave quality/listening unverified. Await process exit and resource release
 before H3. A printed receipt path alone does not establish those observations.
+
+## Analyse the retained audio without changing it
+
+The separate CPU environment is `<data-root>/tools/audio-analysis/venv/`.
+Use its Python with `-I <integration-root>/integrations/analysis/analyze.py
+--request <analysis-request.json> --result <new-analysis-receipt.json>`; the full
+request/receipt contract is in `integrations/analysis/README.md`. Retain a new
+attempt UUID, actual source hash, versions/settings and receipt in this project's
+workspace. Analysis has no stochastic generation seed and does not replace the
+song or its generation seeds. These are supplied tools, not restrictions on
+normal research, scripts or creative decisions.
+
+Beat positions are estimated **source sample indices**, stored as integer
+strings alongside sample rate, not 24 fps video frames. Do not use the
+tracker's initial 120 BPM estimate as a detected/fallback tempo. A `partial`
+receipt preserves usable audio/waveform facts while reporting unavailable beats;
+it is not a reason to regenerate, trim or retime the user's music. Later editor
+placement uses the captured analysis version, not whichever new analysis is
+currently available. Musical accuracy still needs judgement; successful decoding
+and monotonic anchors do not prove every musical beat was detected correctly.

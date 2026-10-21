@@ -160,8 +160,38 @@
       }
     },
     "analysis": {
-      "status": "recipe-unverified",
-      "sourceCandidate": "https://librosa.org/doc/0.11.0/install.html"
+      "status": "isolated-setup-and-cpu-analysis-verified-application-integration-pending",
+      "sourceCandidate": "https://librosa.org/doc/0.11.0/install.html",
+      "dependencyRecipe": "analysis/recipe.json",
+      "runner": "analysis/analyze.py",
+      "readinessProbe": "analysis/probe.py",
+      "dependencyProof": {
+        "host": "dundee",
+        "date": "2026-10-22",
+        "python": "3.12.14",
+        "librosa": "0.11.0",
+        "pinnedPackages": 30,
+        "firstReceipt": "setup-jobs/analysis.Mh8oUQ/probe/readiness.json",
+        "repeatReceipts": [
+          "setup-jobs/analysis.lSQW8u/probe/readiness.json",
+          "setup-jobs/analysis.pQ5JPS/probe/readiness.json"
+        ],
+        "pureAndSetupTests": 13,
+        "nativeCpuTests": 10,
+        "scope": "Separate new venv using existing managed interpreter; actual imports, pins, pip check, shared host media fixture, synthetic analysis and two repeats in transient user services. Host-Python observations matched. Not fresh APT installation, app service/UI or formal native-generation-suite completion."
+      },
+      "realSongProbe": {
+        "attemptId": "f0aec922-e164-43a6-a7ff-16dfcf4ac499",
+        "state": "succeeded",
+        "sourceSha256": "fedb8b6fe88d996e27f3182691ddd7ad055246ca39dc546f08c5fe792c0255ac",
+        "samplesPerChannel": "1576256",
+        "sampleRate": 48000,
+        "channels": 2,
+        "waveformBucketsIndependentlyMatched": 3079,
+        "estimatedBpm": 119.68085106382979,
+        "detectedBeatAnchors": 65,
+        "scope": "Retained original YuE2 song, no new generation or modification. Independent source/hash/PCM/waveform checks; musical beat accuracy and later edit-map behavior are unverified."
+      }
     }
   },
   "providerMediaProbe": {

@@ -1,6 +1,20 @@
 # Slice 1 — implementation checkpoint
 
-21 October 2026. **Incomplete; learner-requested partial checkpoint, not slice completion. Do not advance to slice 2.**
+## Current continuation — isolated analysis verified, 22 October 2026
+
+The provider-media/polling checkpoint below is committed as `91a8db9`. Following
+the learner's request to continue and approval of the [analysis tests](analysis-test-review.md),
+the separate CPU environment/helper now pass **23 methods: 9 pure, 4 setup and
+10 actual native analysis cases**. A real Dundee install and two completed repeats
+passed in transient user services with unchanged host-Python observations.
+Independent decoding of the retained song matches all 3,079 waveform peaks and
+its original 1,576,256 samples/channel. Its 65 detected anchors and approximately
+119.68 BPM are estimates, not a musical-accuracy guarantee. Detailed evidence is
+at the end. The learner accepted this result with “looks good, move forward.” It is being
+saved as a partial checkpoint; no slice completion, browser integration or formal
+12-case native-suite pass is claimed.
+
+21 October 2026 historical baseline. **Incomplete; learner-requested partial checkpoint, not slice completion. Do not advance to slice 2.**
 
 The learner approved the original test batch and then the eight implementation-review regressions, and completed provider authentication. Those eight fixes now pass. Real tasks through both requested provider/model pairings also succeeded. A subsequent launcher review found two failure paths. The learner approved their local-process assertions; both fixes now pass. A subsequent direct YuE2 probe generated real audio on Dundee; H3 and the complete agent-driven media path remain unverified (continuation below).
 
@@ -650,3 +664,84 @@ form a working partial checkpoint. Slice 1 remains unchecked. Next are the
 isolated analysis setup, remaining music replay/cancellation and bidirectional
 handoff, clean provider-chain/Claude media checks and formal 12-case live
 binding. No running generation, finished UI or completed-slice claim remains.
+
+## Isolated analysis setup and retained-song proof — 22 October 2026
+
+The learner approved the analysis test batch with “looks good.” Implementation:
+
+- `integrations/analysis/analyze.py`: captured-byte hash/decode, native sample
+  rate/count/channels, exact rational duration, all-channel peak buckets, derived
+  mono Librosa tracking, explicit unavailable-map diagnostics and exclusive
+  new receipts. Source audio and earlier receipts are never rewritten.
+- `integrations/analysis/recipe.json` / `requirements.lock`: managed Python
+  **3.12.14**, Librosa **0.11.0** and **30** exact checksum-pinned packages.
+  The base interpreter was already installed for Comfy; the new analysis venv
+  and its packages are separate. No host pip/APT, driver or GPU changes.
+- `scripts/prepare-analysis.sh`: plan-only default, explicit owned installation,
+  actual readiness/repeat checks and host-Python before/after evidence.
+- `integrations/analysis/probe.py`: real isolated imports/pins/`pip check`, shared
+  native FFmpeg/FFprobe and synthetic media/beat fixtures. The probe refuses
+  optimized Python, which would disable its assertions.
+- Music guidance revision 2 explains the analysis tool, provenance, units and
+  partial results without changing normal creative-agent capabilities.
+
+### Actual outcomes
+
+| Check | Observed result |
+|---|---|
+| Initial isolated install | Exit 0 in transient user service `studio-analysis-setup-20261022a`, **09:20:54–09:22:19 AEDT**; 85.702 s wall clock, reported 1.2 G service memory peak. New analysis venv is about 514 MiB. |
+| Repeat checks | Units `20261022b` and `20261022c` passed in **10.981 s** and **11.898 s**. Matching pins avoided package reinstall/download; imports and real fixtures ran again. The final repeat used the final installer source. |
+| Host/service proof | All three host-Python snapshots matched before/after. Actual user-service imports came from the dedicated venv with system-site packages disabled. Shared `/usr/bin/ffmpeg` and `/usr/bin/ffprobe` **8.0.1-3ubuntu2**, native package ownership, required codec/filter inventory and 12-frame synthetic H.264/AAC encode/decode/probe passed. This rechecked an existing package, not a fresh APT install or production application service. |
+| Analysis tests | **23 passed**: 9 pure beat-result cases, 4 setup/readiness cases and 10 actual native Librosa/environment cases. The native suite took **86.851 s** in a transient user service. No GPU/provider was used. |
+| Review regressions | Before correction, the owned stale-ready-marker and optimized-probe tests failed; both now pass. The missing-dependency test is explicitly intercepted preflight, not a natural host failure. |
+| Negative setup observations | Actual installer refused a prepared unowned directory, different recipe and corrupt cached Python archive; protected bytes remained, no venv/ready marker appeared. Failed evidence retained. No network outage was induced or claimed. |
+| Existing checks | **78/78** Vitest contracts, TypeScript, **34** H3 diagnostics and **5** provider-launcher diagnostics passed. The formal 12 native-generation cases remain unrun. |
+
+The synthetic 120 BPM fixture produced **22** detected anchors and estimated
+**120.185319… BPM** on its native 44.1 kHz grid. Its first anchor was sample
+44,544, after the one-second lead-in. All anchors met the reviewed 60 ms
+onset tolerance. These are real detector observations on synthetic audio, not
+proof of exact musical beats on generated songs.
+
+### Retained real song
+
+Analysis attempt **`f0aec922-e164-43a6-a7ff-16dfcf4ac499`** used the existing
+Codex/YuE2 song under project `provider-media-codex`; no new generation occurred.
+The user-service run took **7.950 s**, with a reported 327.9 M memory peak.
+
+- Original SHA-256 still
+  `fedb8b6fe88d996e27f3182691ddd7ad055246ca39dc546f08c5fe792c0255ac`.
+- **1,576,256 samples/channel**, **48,000 Hz**, **stereo float WAV**; duration
+  exactly **24,629/750 seconds** (approximately 32.8386667 seconds).
+- **3,079** waveform buckets; independent FFmpeg decoding plus a standard-library
+  computation reproduced **every peak exactly**, including the shorter last bucket.
+- **65 estimated anchors**, approximately **119.680851 BPM**. First sample
+  **3,072** (0.064 s); last **1,528,832** (31.8506667 s). No time-zero beat or
+  trailing musical content was invented. These estimates still need musical
+  judgement; the independent verifier did not run a second beat detector.
+- Independent decoded-PCM SHA-256:
+  `4821519f5fab5c82f30425c8cbb7e40c859f904af2953a18f0b8a7d4e40569e8`.
+
+Receipt on Dundee:
+`projects/provider-media-codex/workspace/analysis/f0aec922-e164-43a6-a7ff-16dfcf4ac499/receipt.json`
+relative to `/home/puzzleduck/.local/share/music-video-studio/`.
+
+Evidence is retained, ignored by Git, under `.local-evidence/slice-1/analysis/`:
+`first/`, `repeat/`, `final-repeat/`, service logs, native/local test logs,
+negative setup inputs/results, `real-song/receipt.json` and independent waveform
+verification. A focused reviewer independently corroborated isolation, versions,
+test counts, original PCM hash and every waveform peak; no remaining blocker
+was found for this bounded result.
+
+At **09:26:41 AEDT**, no studio unit remained running. GPU baseline was unchanged
+at **330 MiB / 0%**, with the same personal Comfy PID **1216557** at 234 MiB on
+8188 and no listener on 8198. About 194 GiB disk space remained. This step did
+not start/stop GPU services or run providers.
+
+**Boundary and next step:** the isolated analysis gate is mechanically verified;
+the learner accepted this working step with “looks good, move forward.” Save the
+partial checkpoint before starting cancellation/handoff work. No browser
+setup/analysis UI, exact editor beat-map arithmetic, persistence/reanalysis
+selection or formal native-generation-suite completion is claimed. Slice 1
+remains unchecked; next are its remaining music replay/cancellation, bidirectional
+GPU handoff and clean provider-chain/Claude media/live-suite gates.

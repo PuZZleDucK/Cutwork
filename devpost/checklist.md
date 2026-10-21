@@ -20,7 +20,7 @@ The scope, PRD and technical specification are approved. The learner approved th
 - Each slice includes test review, implementation, mechanical verification, the appropriate learner check and a commit. In learn mode, wait for hands-on feedback before that commit. Inspect the staged diff and stage only intended project files; keep private context, credentials, runtime state and generated media out of Git. Record completion evidence and the commit when checking a slice off.
 - Missing access or a failing native contract stops the dependent work for diagnosis; do not mark the slice done or build a convincing UI around fake success. Changes to product promises, chosen architecture or the creative kernel require agreement and reconciliation with the planning documents.
 
-## Current Checkpoint — Polling Repaired and Native Replay Verified
+## Current Checkpoint — Polling Replay and Isolated Analysis Verified
 
 Read [slice-1-progress.md](slice-1-progress.md). The learner approved the two provider-runner assertions with "yeah, looks good". Both are fixed; **78/78 local tests and typechecking pass**. A source review found no blocker. Real tasks previously verified the requested `gpt-6.1-sol` and `claude-opus-5-5` models and normal tools on Dundee. Those remain capability evidence, not native generation/cancellation proof. The 12 native live cases remain unrun.
 
@@ -36,7 +36,21 @@ The checksum-pinned, isolated YuE2 dependency installation, repeat invocation, `
 
 **New provider checkpoint:** Codex `gpt-6.1-sol` used the captured product guidance and normal full-access tools to write lyrics/native prompts, generate a new 32.84-second song and request real song-conditioned H3 media. The H3 helper timed out on completion observation; the native log and saved files show output generation. Codex preserved the failed receipt, verified the saved files and exported them without a generation retry. Independent checks confirm 56 original PNGs, exact conditioning, a 789-frame sparse export with 48 visual frames then black, original-song AAC and released owned resources. Missing native history and the failed helper mean this is **not a clean pipeline pass**. The learner approved the [polling regressions](h3-polling-test-review.md) and reported that the video looks great. The repair now passes nine polling methods, including whole-response deadlines, and a same-input native H3 replay with final history, exact seed, identical outputs and clean exit. All 78 approved cases, typechecking, 34 H3 diagnostics and five launcher diagnostics pass. No natural read timeout occurred in the replay; fault recovery is tested with explicit fixtures.
 
-**Next:** continue the remaining slice-1 gates: isolated analysis environment, music replay and native cancellation, complete music→video→music handoff, clean provider-chain/Claude media verification and the 12 formal live cases. The successful captured-input H3 replay is narrower than these gates. No UI or completed slice is claimed. The provider-media work and polling repair form a partial checkpoint, not the final slice commit.
+**Next:** continue the remaining slice-1 gates after the analysis learner check: music replay and native cancellation, complete music→video→music handoff, clean provider-chain/Claude media verification and the 12 formal live cases. The successful captured-input H3 replay and CPU analysis are narrower than these gates. No UI or completed slice is claimed. The provider-media work and polling repair form a partial checkpoint, not the final slice commit.
+
+**Current analysis checkpoint:** `91a8db9` saves the preceding provider-media/polling
+work. The learner approved the [21 analysis assertions](analysis-test-review.md);
+implementation and two review-driven readiness regressions now give **23 passing
+methods**, including 10 actual native CPU tests. The separate Python 3.12.14 /
+Librosa 0.11.0 environment passed installation and two repeats in Dundee user
+services, with all 30 pinned packages, shared native media capabilities and
+unchanged host-Python observations. A retained real song was analysed without
+generation or alteration; independent decoding reproduced all 3,079 waveform
+peaks, original duration/sample count, and receipt identity. Estimated beats are
+not musical ground truth. See the progress record for evidence and limitations.
+The learner accepted this working analysis step with “looks good, move forward.”
+It is being saved as a partial checkpoint before cancellation/handoff work; it
+does not complete slice 1 or implement the browser setup panel.
 
 ## Slices
 

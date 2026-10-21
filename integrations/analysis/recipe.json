@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "status": "pinned-recipe-readiness-rechecked-at-install",
+  "scope": "Separate CPU audio analysis environment; no host pip, APT, models or GPU",
+  "python": {
+    "version": "3.12.14",
+    "build": "20260929",
+    "directory": "cpython-3.12.14-20260929-linux-x86_64",
+    "url": "https://github.com/astral-sh/python-build-standalone/releases/download/20260929/cpython-3.12.14%2B20260929-x86_64-unknown-linux-gnu-install_only_stripped.tar.gz",
+    "sha256": "ef605200f8174e87ecfc308e52a88127543f85dd5c940dc5e92cab244b98a003",
+    "checksumSource": "https://github.com/astral-sh/uv/blob/0.12.21/crates/uv-python/download-metadata.json"
+  },
+  "lock": {
+    "file": "requirements.lock",
+    "resolver": "uv 0.12.21",
+    "target": "CPython 3.12.14 / Linux x86_64 / librosa 0.11.0",
+    "indexes": [
+      "https://pypi.org/simple"
+    ]
+  },
+  "minimumFreeGiB": 3,
+  "sources": [
+    "https://librosa.org/doc/0.11.0/generated/librosa.beat.beat_track.html",
+    "https://pypi.org/project/librosa/0.11.0/"
+  ],
+  "licensing": "Preserve Librosa and dependency notices; native FFmpeg remains a shared host package. Public-release licensing review remains open."
+}

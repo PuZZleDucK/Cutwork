@@ -26,8 +26,11 @@ const hash = (v: string | Buffer) => createHash('sha256').update(v).digest('hex'
 const quote = (v: string) => `'${v.replaceAll("'", "'\\''")}'`;
 const message = (e: unknown) => (e instanceof Error ? e.message : String(e)).slice(0, 12_000);
 const record = (v: unknown): RecordValue => { assert.ok(v && typeof v === 'object' && !Array.isArray(v), 'Expected an evidence object'); return v as RecordValue; };
+// Legacy attempts may retain a project visual style in history. New music tasks
+// capture only music inputs, without mutating that historical attempt.
 const captured = (a: MusicAttempt): CapturedAttempt => structuredClone({ id: a.id, nativeCallId: a.nativeCallId,
-  projectId: a.projectId, provider: a.provider, model: a.model, input: a.input, seeds: a.seeds });
+  projectId: a.projectId, provider: a.provider, model: a.model,
+  input: { musicPrompt: a.input.musicPrompt, lyrics: a.input.lyrics }, seeds: a.seeds });
 const pendingAnalysis = (): SongAnalysis => ({ state: 'pending', estimatedBpm: null, sampleIndices: [], waveformBucketSamples: 0, peaks: [], error: null, version: null });
 function validateOptions({ runtime, source, origin, attempt }: MusicOptions) {
   assert.ok(isAbsolute(runtime) && isAbsolute(source), 'Absolute runtime and source paths required');
@@ -80,7 +83,7 @@ export async function prepareMusicTask(options: MusicOptions): Promise<{ planPat
   assert.equal(record(providers[attempt.provider]).model, attempt.model);
   const launch: ProviderLaunch = providerLaunch(runtime, { projectId: attempt.projectId, attemptId: attempt.id, songId: attempt.nativeCallId,
     provider: attempt.provider, model: attempt.model, musicPrompt: attempt.input.musicPrompt, lyrics: attempt.input.lyrics,
-    style: attempt.input.style, clipPrompt: '', startFrame: 0, endFrame: 0, seeds: attempt.seeds });
+    style: '', clipPrompt: '', startFrame: 0, endFrame: 0, seeds: attempt.seeds });
   launch.executable = join(runtime, `tools/provider-cli/codex-${codex.version}_claude-${claude.version}/node_modules/.bin`, attempt.provider);
   const paths: MusicPlan['paths'] = { planPath: planPath(options), nativeRequest: join(runtime, 'projects', attempt.projectId, 'inputs/native-calls', attempt.nativeCallId, 'request.json'),
     nativeReceipt: join(runtime, 'projects', attempt.projectId, 'runs', attempt.nativeCallId, 'receipt.json'), agentRequest: join(launch.runDirectory, 'music-request.json'),
@@ -96,7 +99,7 @@ export async function prepareMusicTask(options: MusicOptions): Promise<{ planPat
     'Create one fresh song candidate for this music-only studio task. Perform the tool work, not merely propose a plan. No automatic variations or silent retries are requested.',
     'Use your normal capabilities, tools, research, relevant project context, scripts and score editing. The project workspace organises artifacts; it is not a filesystem sandbox. Reply naturally; no JSON answer schema is required.',
     `Project: ${attempt.projectId}\nParent attempt: ${attempt.id}\nCaptured native YuE2 call ID: ${attempt.nativeCallId}\nProvider/model: ${attempt.provider}/${attempt.model}`,
-    `Music description:\n${attempt.input.musicPrompt}\n\nOptional user lyrics (preserve supplied words):\n${attempt.input.lyrics}\n\nProject style/context:\n${attempt.input.style}`,
+    `Music description:\n${attempt.input.musicPrompt}\n\nOptional user lyrics (preserve supplied words):\n${attempt.input.lyrics}`,
     `Integration source: ${source}\nSTUDIO_DATA_ROOT: ${runtime}\nWorkspace: ${launch.cwd}\nRun directory: ${launch.runDirectory}`,
     `Assigned exact decimal stage seeds: ${JSON.stringify(attempt.seeds)}. With generated planning use abc, semantic and nar; with a supplied score/planning off use semantic and nar. Do not allocate replacements or round seeds.`,
     'Translate the creative brief into the native parameters and choose suitable score, sampling and execution settings. The provided generator guidance describes the native request, not an answer schema for you. Tools are already installed; ordinary generation should not require reinstalling them.',
@@ -206,7 +209,13 @@ export async function runMusicTask(options: RunOptions, dependencies: MusicTaskD
     options.signal?.throwIfAborted();
     validateOptions(options); const raw = await json(planPath(options)); const plan = raw as unknown as MusicPlan;
     activePlan = plan;
-    assert.equal(plan.schemaVersion, 1); assert.equal(plan.runtime, runtime); assert.equal(plan.source, source); assert.equal(plan.origin, origin); assert.deepEqual(plan.attempt, captured(attempt));
+    assert.equal(plan.schemaVersion, 1); assert.equal(plan.runtime, runtime); assert.equal(plan.source, source); assert.equal(plan.origin, origin);
+    const expectedAttempt = captured(attempt);
+    // Already-prepared v1 tasks retain their exact historical inputs and prompt.
+    // Compare the whole old input, including visual style, rather than stripping
+    // it from either side and accidentally accepting changes after capture.
+    if (Object.hasOwn(record(plan.attempt.input), 'style')) expectedAttempt.input = structuredClone(attempt.input);
+    assert.deepEqual(plan.attempt, expectedAttempt);
     assert.equal(plan.paths.planPath, planPath(options)); assert.equal(plan.launch.cwd, join(runtime, 'projects', attempt.projectId, 'workspace'));
     assert.equal(plan.launch.runDirectory, join(plan.launch.cwd, 'runs', attempt.id));
     details = { ...details, guidance: plan.guidance.map(g => ({ name: g.name, sourcePath: g.sourcePath, sha256: g.sha256 })), capturedProvider: attempt.provider, capturedModel: attempt.model, seedEncoding: 'Exact decimal strings; unsafe native JSON integers retained from original lexical text', analysisReceiptPath: plan.paths.analysisReceipt };

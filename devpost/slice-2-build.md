@@ -22,7 +22,8 @@ installations; it must not stop personal Comfy, TTS or other unrelated work.
 - [x] Browser refresh reconnects to the same install/generation; dirty edits survive polling.
 - [x] Actual LAN browser project/setup/music journey and independently decoded result.
 - [x] Industrial UI and responsive desktop/mobile inspection; focus/reduced-motion styles included.
-- [ ] Learner hands-on feedback before adding browser video controls.
+- [x] Learner early UI feedback received: functional, with notice/song-input/style corrections.
+- [ ] Learner retries the corrected controls before adding browser video controls.
 
 Implementation is split into typed store, setup adapter, browser and server/music
 integration work with disjoint file ownership. Exact shared types define the
@@ -37,5 +38,4 @@ and provider switching, original-media audit and idle-server restart persistence
 are recorded in [the live evidence](slice-2-live-evidence.md). Source/receipts and
 private screenshots remain outside Git.
 
-This is a working progress checkpoint, not a claim that the planned early learner
-feedback has happened. Slice 2 stays unchecked until that feedback is resolved.
+Initial UI feedback has now been received and the requested corrections are deployed; see [the feedback record](slice-2-feedback.md). Slice 2 stays unchecked until the learner has retried those affected controls.

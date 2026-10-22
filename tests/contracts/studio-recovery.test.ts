@@ -11,7 +11,7 @@ import { reconcileStudioStartup, validateStudioNativeCall } from '../../apps/ser
 test('startup freezes queued native work before worker starts, preserving unknown held ownership', async () => {
  const root = await mkdtemp(join(tmpdir(), 'studio-recovery-')); const store = openStudioStore(join(root, 's.db')), queue = openGpuQueue(join(root, 'q.db'));
  try {
-  const p = store.createProject('Recovery fixture'), input = { musicPrompt: 'Fixture', lyrics: '', style: '' };
+  const p = store.createProject('Recovery fixture'), input = { musicPrompt: 'Fixture', lyrics: '' };
   const a = store.submitMusic(p.id, randomUUID(), input), b = store.submitMusic(p.id, randomUUID(), input);
   for (const v of [a,b]) { store.patchAttempt(v.id, { state: 'running' }); queue.submit({ id:v.nativeCallId, attemptId:v.id, projectId:p.id, tool:'yue2', request:{} }); }
   const lease = queue.claim('old-server')!; reconcileStudioStartup(store, queue);
@@ -22,7 +22,7 @@ test('startup freezes queued native work before worker starts, preserving unknow
 test('native submissions require the captured active parent and exact assigned seeds', async () => {
  const root = await mkdtemp(join(tmpdir(), 'studio-recovery-')); const store = openStudioStore(join(root, 's.db'));
  try {
-  const p = store.createProject('Validate'), a = store.submitMusic(p.id, randomUUID(), { musicPrompt:'Fixture',lyrics:'',style:'' });
+  const p = store.createProject('Validate'), a = store.submitMusic(p.id, randomUUID(), { musicPrompt:'Fixture',lyrics:'' });
   const call = { id:a.nativeCallId,attemptId:a.id,projectId:p.id,tool:'yue2' as const,request:{schemaVersion:1,attemptId:a.nativeCallId,seeds:a.seeds} };
   expect(() => validateStudioNativeCall(store,call)).toThrow(); store.patchAttempt(a.id,{state:'running'});
   expect(() => validateStudioNativeCall(store,call)).not.toThrow();

@@ -1,6 +1,6 @@
 # Slice 2 — browser integration evidence
 
-Status: **mechanical checkpoint passed, 23 October 2026; early learner UI feedback pending**.
+Status: **mechanical checkpoint passed, 23 October 2026; early learner UI feedback received; requested corrections deployed, retry pending**.
 
 ## What is usable
 
@@ -117,3 +117,11 @@ unchanged. The studio never automatically stops unrelated services. Setup checks
 on this already-prepared host are **not** a clean-host download/install proof;
 newcomer packaging remains a later slice. Fresh full Claude media generation,
 browser video/export and human listening feedback are not claimed here.
+
+## Early feedback corrections
+
+The initial 718-test checkpoint above remains historical. The learner has since
+tried the UI and requested dismissible floating notices, song-input restoration
+and video-only project style. These changes are deployed with **750 tests passing
+on both hosts**, actual two-song browser checks, unchanged media/history and
+responsive overlay measurements. See [the feedback evidence](slice-2-feedback.md).

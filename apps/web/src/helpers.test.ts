@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createRequestId, mergeSavedDraft, waveformEnvelope, formatDuration, attemptIsActive, agentActivity, historySong } from './studio-state.ts';
+import { createRequestId, mergeSavedDraft, waveformEnvelope, formatDuration, attemptIsActive, agentActivity, historySong, musicInputFromDraft, legacyMusicVisualStyle } from './studio-state.ts';
 import { ApiError, request } from './api.ts';
 
 const draft = { musicPrompt: 'A song', lyrics: '', style: '' };
@@ -61,4 +61,25 @@ describe('actual agent activity and generation output links', () => {
     expect(historySong(attempt, [{...song, projectId:'other-project'}])).toBeUndefined();
     expect(historySong(attempt, [{...song, id:'other-song'}])).toBeUndefined();
   });
+});
+
+describe('separate music and visual input', () => {
+  it('copies only music description and optional lyrics, never project visual style', () => {
+    const draft = {musicPrompt:'90s French electronica',lyrics:'Exact words',style:'Monochrome robot closeups'};
+    expect(musicInputFromDraft(draft)).toEqual({musicPrompt:'90s French electronica',lyrics:'Exact words'});
+    expect(draft.style).toBe('Monochrome robot closeups');
+  });
+  it('applies restored song inputs immediately without losing later typing', () => {
+    const original={musicPrompt:'A',lyrics:'A lyrics',style:'Current visual direction'};
+    const restored={...original,musicPrompt:'B',lyrics:''};
+    expect(mergeSavedDraft(original,original,restored)).toEqual({draft:restored,dirty:false});
+    const typed={...original,lyrics:'typed while waiting'};
+    expect(mergeSavedDraft(typed,original,restored)).toEqual({draft:typed,dirty:true});
+  });
+});
+
+it('retains the labelable legacy visual input in history without making it new music input', () => {
+  const legacy={musicPrompt:'Funk',lyrics:'',style:'Blue film grain'};
+  expect(legacyMusicVisualStyle(legacy)).toBe('Blue film grain');
+  expect(legacyMusicVisualStyle(musicInputFromDraft(legacy))).toBeNull();
 });

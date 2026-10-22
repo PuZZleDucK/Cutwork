@@ -3,7 +3,7 @@ import { randomBytes, randomUUID } from 'node:crypto';
 import { isAbsolute, normalize } from 'node:path';
 import { providerModels } from '../providers/launch.ts';
 import type { AttemptPatch, SongInput, StudioStore } from './store-contract.ts';
-import type { MusicAttempt, MusicDraft, Provider, SetupJob, SongAnalysis, StudioProject, StudioSong,
+import type { MusicAttempt, MusicDraft, MusicInput, Provider, SetupJob, SongAnalysis, StudioProject, StudioSong,
   ToolId, ToolStatus } from '../../../../packages/core/src/contracts/studio.ts';
 
 export class StudioStoreError extends Error {
@@ -101,9 +101,13 @@ function details(value: unknown): Record<string, unknown> {
   if (!copy || typeof copy !== 'object' || Array.isArray(copy)) invalid('Details must be a plain object');
   return copy as Record<string, unknown>;
 }
-function musicDraft(value: unknown, submit = false): MusicDraft {
+function musicDraft(value: unknown): MusicDraft {
   const d = object(value, ['musicPrompt', 'lyrics', 'style']);
-  return { musicPrompt: text(d.musicPrompt, 'Music prompt', 16000, submit), lyrics: text(d.lyrics, 'Lyrics', 32000), style: text(d.style, 'Style', 16000) };
+  return { musicPrompt: text(d.musicPrompt, 'Music prompt', 16000), lyrics: text(d.lyrics, 'Lyrics', 32000), style: text(d.style, 'Style', 16000) };
+}
+function musicInput(value: unknown): MusicInput {
+  const input = object(value, ['musicPrompt', 'lyrics']);
+  return { musicPrompt: text(input.musicPrompt, 'Music prompt', 16000, true), lyrics: text(input.lyrics, 'Lyrics', 32000) };
 }
 function analysis(value: unknown, sampleCount: string): SongAnalysis {
   const a = object(value, ['state', 'estimatedBpm', 'sampleIndices', 'waveformBucketSamples', 'peaks', 'error', 'version']);
@@ -250,14 +254,31 @@ export function openStudioStore(path: string): StudioStore {
       return write(() => { const p = project(projectId), s = songById(songId);
         if (s.projectId !== p.id) missing('Song not found in this project');
         if (p.revision !== revision) conflict('Project changed; reload before selecting a song');
-        return saveProject({ ...p, selectedSongId: s.id, revision: p.revision + 1 }); });
+        let draft = p.draft;
+        if (p.selectedSongId !== s.id) {
+          const row = attemptRow(s.attemptId);
+          if (!row) conflict('Song is missing its original generation request');
+          const original = attemptSnapshot(row);
+          if (original.projectId !== p.id || original.songId !== s.id) conflict('Song generation references do not match this project');
+          // Restore the user's immutable request, not translated tool prompts.
+          // Visual style belongs to the current project; reselecting the same
+          // song must not erase edits made since that song was generated.
+          draft = { ...p.draft, musicPrompt: original.input.musicPrompt, lyrics: original.input.lyrics };
+        }
+        return saveProject({ ...p, draft, selectedSongId: s.id, revision: p.revision + 1 }); });
     },
     submitMusic(projectId, idempotencyKey, input) {
-      const key = uuid(idempotencyKey), captured = musicDraft(input, true), inputJson = canonical(captured);
+      const key = uuid(idempotencyKey), captured = musicInput(input), inputJson = canonical(captured);
       return write(() => {
         const p = project(projectId);
         const old = db.prepare('SELECT * FROM studio_attempts WHERE project_id=? AND idempotency_key=?').get(p.id, key) as AttemptRow | undefined;
-        if (old) { if (old.input_json !== inputJson) conflict('Submission key already belongs to different inputs'); return attemptSnapshot(old); }
+        if (old) {
+          // Earlier captures included project visual style. Compare the music
+          // fields only, but return the original record without rewriting history.
+          const previous = object(JSON.parse(old.input_json), ['musicPrompt', 'lyrics'], ['style']);
+          if (canonical({ musicPrompt: previous.musicPrompt, lyrics: previous.lyrics }) !== inputJson) conflict('Submission key already belongs to different inputs');
+          return attemptSnapshot(old);
+        }
         const provider = store.provider(), timestamp = now();
         const a: MusicAttempt = { id: randomUUID(), nativeCallId: randomUUID(), projectId: p.id, sequence: 0,
           createdAt: timestamp, updatedAt: timestamp, state: 'queued', provider, model: providerModels[provider], input: captured,

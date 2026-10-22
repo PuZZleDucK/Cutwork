@@ -5,7 +5,7 @@ import { prepareMusicTask, runMusicTask } from './music.ts';
 import { StudioStoreError } from './store.ts';
 import type { StudioStore } from './store-contract.ts';
 import type { StudioRuntime } from './runtime-contract.ts';
-import type { MusicDraft, Provider, ProviderStatus, SetupJob, ToolId } from '../../../../packages/core/src/contracts/studio.ts';
+import type { MusicInput, Provider, ProviderStatus, SetupJob, ToolId } from '../../../../packages/core/src/contracts/studio.ts';
 
 interface RuntimeOptions {
  store: StudioStore; queue: GpuQueue; runtime: string; source: string; origin: string;
@@ -198,7 +198,7 @@ export function createStudioRuntime(options: RuntimeOptions): StudioRuntime & { 
    // Enqueue synchronously as one group; the timer cannot interleave dependencies.
    return plan.map(id => store.enqueueSetup(id));
   },
-  async submitMusic(projectId: string, idempotencyKey: string, input: MusicDraft) {
+  async submitMusic(projectId: string, idempotencyKey: string, input: MusicInput) {
    assertOpen(); const attempt = store.submitMusic(projectId, idempotencyKey, input);
    if (attempt.state !== 'queued' || attempt.details.planPath) return attempt;
    let capture = captures.get(attempt.id);

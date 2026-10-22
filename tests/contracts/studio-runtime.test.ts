@@ -13,7 +13,7 @@ import { providerModels } from '../../apps/server/src/providers/launch.ts';
 import type { MusicAttempt, Provider, ProviderStatus, ToolId } from '../../packages/core/src/contracts/studio.ts';
 const cleanup: (() => Promise<void>)[] = [];
 afterEach(async () => { for (const fn of cleanup.splice(0).reverse()) await fn(); });
-const draft = { musicPrompt: 'Synthetic scheduler fixture', lyrics: '', style: '' };
+const draft = { musicPrompt: 'Synthetic scheduler fixture', lyrics: '' };
 function deferred() { let resolve!: () => void; const promise = new Promise<void>(r => { resolve = r; }); return { promise, resolve }; }
 async function fixture(nativeRuntimeLimitSeconds = 3600) {
  const root = await mkdtemp(join(tmpdir(), 'studio-runtime-'));

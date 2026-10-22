@@ -6,10 +6,11 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { openStudioStore, StudioStoreError } from '../../apps/server/src/studio/store.ts';
 import type { SongInput, StudioStore } from '../../apps/server/src/studio/store-contract.ts';
-import type { MusicDraft, SongAnalysis } from '../../packages/core/src/contracts/studio.ts';
+import type { MusicDraft, MusicInput, SongAnalysis } from '../../packages/core/src/contracts/studio.ts';
 
 const directories: string[] = [], stores: StudioStore[] = [];
 const draft: MusicDraft = { musicPrompt: 'French electronica about programming', lyrics: '', style: 'Industrial' };
+const musicInput: MusicInput = { musicPrompt: draft.musicPrompt, lyrics: draft.lyrics };
 const pending: SongAnalysis = { state: 'pending', estimatedBpm: null, sampleIndices: [], waveformBucketSamples: 0, peaks: [], error: null, version: null };
 function setup() {
   const dir = mkdtempSync(join(tmpdir(), 'studio-store-')); directories.push(dir);
@@ -68,34 +69,59 @@ describe('Durable project studio store (CPU SQLite; no tool executions)', () => 
       failure(() => s.saveDraft(p.id, 0, input as MusicDraft), 400);
     }
     expect(s.saveDraft(p.id, 0, { musicPrompt: '', lyrics: '', style: '' }).revision).toBe(1);
-    failure(() => s.submitMusic(p.id, randomUUID(), { ...draft, musicPrompt: '   ' }), 400);
-    failure(() => s.submitMusic(p.id, 'not-uuid', draft), 400);
+    failure(() => s.submitMusic(p.id, randomUUID(), { ...musicInput, musicPrompt: '   ' }), 400);
+    failure(() => s.submitMusic(p.id, 'not-uuid', musicInput), 400);
     expect(s.attempts()).toEqual([]);
   });
   test('submission snapshots provider/model and distinct bounded seeds; repeat is idempotent after provider changes', () => {
     const { store: s } = setup(), p = s.createProject('Test'), key = randomUUID();
-    const input = structuredClone(draft), original = s.submitMusic(p.id, key, input);
+    const input = structuredClone(musicInput), original = s.submitMusic(p.id, key, input);
     input.musicPrompt = 'changed';
     expect(original.provider).toBe('codex'); expect(original.model).toBe('gpt-6.1-sol');
-    expect(original.input).toEqual(draft); expect(original.state).toBe('queued');
+    expect(original.input).toEqual(musicInput); expect(original.state).toBe('queued');
     expect(original.nativeCallId).not.toBe(original.id); expect(original.projectId).toBe(p.id);
     expect(Object.keys(original.seeds).sort()).toEqual(['abc', 'nar', 'semantic']);
     expect(new Set(Object.values(original.seeds)).size).toBe(3);
     for (const value of Object.values(original.seeds)) {
       expect(value).toMatch(/^(0|[1-9][0-9]*)$/); expect(BigInt(value)).toBeLessThanOrEqual((1n << 63n) - 1n);
     }
-    s.setProvider('claude'); expect(s.submitMusic(p.id, key, draft)).toEqual(original);
-    const next = s.submitMusic(p.id, randomUUID(), draft);
+    s.setProvider('claude'); expect(s.submitMusic(p.id, key, musicInput)).toEqual(original);
+    const next = s.submitMusic(p.id, randomUUID(), musicInput);
     expect(next.provider).toBe('claude'); expect(next.model).toBe('claude-opus-5-5');
     expect(next.sequence).toBeGreaterThan(original.sequence); expect(next.seeds).not.toEqual(original.seeds);
-    failure(() => s.submitMusic(p.id, key, { ...draft, lyrics: 'changed' }), 409);
+    failure(() => s.submitMusic(p.id, key, { ...musicInput, lyrics: 'changed' }), 409);
     expect(s.attempts()).toHaveLength(2);
+  });
+  test('new music captures exclude visual style and reject extra style rather than silently sending it to an agent', () => {
+    const { store: s } = setup(), p = s.createProject('Separate modalities');
+    s.saveDraft(p.id, p.revision, { ...draft, style: 'VISUAL ONLY: flooded neon city' });
+    const a = s.submitMusic(p.id, randomUUID(), musicInput);
+    expect(Object.keys(a.input).sort()).toEqual(['lyrics', 'musicPrompt']); expect(a.input).toEqual(musicInput);
+    expect(JSON.stringify(a)).not.toContain('VISUAL ONLY');
+    failure(() => s.submitMusic(p.id, randomUUID(), { ...musicInput, style: 'Do not capture this' } as never), 400);
+    expect(s.attempts()).toHaveLength(1); expect(s.project(p.id).project.draft.style).toBe('VISUAL ONLY: flooded neon city');
+  });
+  test('legacy idempotent replay compares only music inputs and returns untouched historical style/provider/seeds', () => {
+    const { store: s, path } = setup(), p = s.createProject('Legacy capture'), key = randomUUID();
+    const a = s.submitMusic(p.id, key, musicInput), legacyInput = { ...musicInput, style: 'Historical captured visual context' };
+    const legacy = { ...a, input: legacyInput };
+    // Bounded fixture representing the prior schema; never edits a live project database.
+    const db = new Database(path);
+    db.prepare('UPDATE studio_attempts SET input_json=?,data=? WHERE id=?').run(JSON.stringify(legacyInput), JSON.stringify(legacy), a.id);
+    const before = db.prepare('SELECT input_json,data FROM studio_attempts WHERE id=?').get(a.id);
+    s.setProvider('claude'); const edited = s.saveDraft(p.id, p.revision, { ...draft, style: 'Current visual context' });
+    expect(s.submitMusic(p.id, key, musicInput)).toEqual(legacy);
+    failure(() => s.submitMusic(p.id, key, { ...musicInput, lyrics: 'changed words' }), 409);
+    expect(db.prepare('SELECT input_json,data FROM studio_attempts WHERE id=?').get(a.id)).toEqual(before); db.close();
+    expect(s.project(p.id).project).toEqual(edited);
+    s.close(); const reopened = openStudioStore(path); stores.push(reopened);
+    expect(reopened.submitMusic(p.id, key, musicInput)).toEqual(legacy);
   });
   test('idempotency is scoped by project and returned snapshots cannot mutate persistence', () => {
     const { store: s } = setup(), a = s.createProject('A'), b = s.createProject('B'), key = randomUUID();
-    const first = s.submitMusic(a.id, key, draft), second = s.submitMusic(b.id, key, draft);
+    const first = s.submitMusic(a.id, key, musicInput), second = s.submitMusic(b.id, key, musicInput);
     first.input.lyrics = 'mutated'; first.seeds.abc = '999';
-    expect(s.attempt(first.id)?.input).toEqual(draft);
+    expect(s.attempt(first.id)?.input).toEqual(musicInput);
     expect(second.id).not.toBe(first.id);
     expect(s.project(a.id).attempts.map(x => x.id)).toEqual([first.id]);
     expect(s.project(b.id).attempts.map(x => x.id)).toEqual([second.id]);
@@ -103,11 +129,11 @@ describe('Durable project studio store (CPU SQLite; no tool executions)', () => 
   });
   test('atomic once-only ingestion inserts asset/song/selects it and duplicate completion never reselects old song', () => {
     const { store: s, path } = setup(), p = s.createProject('Test');
-    const a = s.submitMusic(p.id, randomUUID(), draft), input = song(), completed = s.finishMusic(a.id, input, { source: 'native' });
+    const a = s.submitMusic(p.id, randomUUID(), musicInput), input = song(), completed = s.finishMusic(a.id, input, { source: 'native' });
     expect(s.attempt(a.id)).toMatchObject({ state: 'succeeded', songId: completed.id, details: { source: 'native' } });
     expect(s.asset(input.assetId)).toEqual({ projectId: p.id, path: input.assetPath, sha256: input.sha256 });
     expect(s.project(p.id).project.selectedSongId).toBe(completed.id);
-    const b = s.submitMusic(p.id, randomUUID(), draft), second = s.finishMusic(b.id, song(), {});
+    const b = s.submitMusic(p.id, randomUUID(), musicInput), second = s.finishMusic(b.id, song(), {});
     expect(s.finishMusic(a.id, input, { source: 'later duplicate' })).toEqual(completed);
     expect(s.project(p.id).project.selectedSongId).toBe(second.id);
     expect(s.attempt(a.id)?.details).toEqual({ source: 'native' });
@@ -117,9 +143,9 @@ describe('Durable project studio store (CPU SQLite; no tool executions)', () => 
   });
   test('changed duplicate completion, cross-project asset reuse and invalid path cannot overwrite or partially commit', () => {
     const { store: s } = setup(), a = s.createProject('A'), b = s.createProject('B');
-    const original = s.submitMusic(a.id, randomUUID(), draft), input = song(); s.finishMusic(original.id, input, {});
+    const original = s.submitMusic(a.id, randomUUID(), musicInput), input = song(); s.finishMusic(original.id, input, {});
     failure(() => s.finishMusic(original.id, { ...input, assetPath: '/different.wav' }, {}), 409);
-    const other = s.submitMusic(b.id, randomUUID(), draft);
+    const other = s.submitMusic(b.id, randomUUID(), musicInput);
     failure(() => s.finishMusic(other.id, input, {}), 409);
     failure(() => s.finishMusic(other.id, song({ assetPath: '../bad.wav' }), {}), 400);
     expect(s.project(b.id).songs).toEqual([]); expect(s.attempt(other.id)?.state).toBe('queued');
@@ -127,15 +153,61 @@ describe('Durable project studio store (CPU SQLite; no tool executions)', () => 
   });
   test('song selection is project-specific and revision guarded', () => {
     const { store: s } = setup(), a = s.createProject('A'), b = s.createProject('B');
-    const sa = s.finishMusic(s.submitMusic(a.id, randomUUID(), draft).id, song(), {});
-    const sb = s.finishMusic(s.submitMusic(b.id, randomUUID(), draft).id, song(), {});
+    const sa = s.finishMusic(s.submitMusic(a.id, randomUUID(), musicInput).id, song(), {});
+    const sb = s.finishMusic(s.submitMusic(b.id, randomUUID(), musicInput).id, song(), {});
     const current = s.project(a.id).project;
     failure(() => s.selectSong(a.id, sb.id, current.revision), 404);
     failure(() => s.selectSong(a.id, sa.id, current.revision - 1), 409);
     expect(s.selectSong(a.id, sa.id, current.revision).selectedSongId).toBe(sa.id);
   });
+  test('switching songs restores the original user inputs, not agent-processed prompts, while preserving current visual style and history', () => {
+    const { store: s } = setup(), p = s.createProject('Switch inputs');
+    const originalA = { musicPrompt: '  Warm French electronica\nwith a dubstep pulse  ', lyrics: 'One user line\nSecond user line' };
+    const originalB = { musicPrompt: 'Instrumental chiptune', lyrics: '' };
+    const a = s.submitMusic(p.id, randomUUID(), originalA);
+    const sa = s.finishMusic(a.id, song(), { nativeRequest: { parameters: { style: 'Agent synthesized genre vocabulary', lyrics: '[verse]\nAgent-formatted lyrics' } } });
+    s.setProvider('claude');
+    const b = s.submitMusic(p.id, randomUUID(), originalB), sb = s.finishMusic(b.id, song(), { nativeRequest: { parameters: { style: 'Agent B rewrite', lyrics: '[instrumental]' } } });
+    const before = s.project(p.id), history = structuredClone(before.attempts);
+    const edited = s.saveDraft(p.id, before.project.revision, { musicPrompt: 'Unsubmitted edit', lyrics: 'Unsubmitted lyrics', style: 'Current shared neon style' });
+    const selectedA = s.selectSong(p.id, sa.id, edited.revision);
+    expect(selectedA).toMatchObject({ selectedSongId: sa.id, revision: edited.revision + 1,
+      draft: { musicPrompt: originalA.musicPrompt, lyrics: originalA.lyrics, style: 'Current shared neon style' } });
+    const selectedB = s.selectSong(p.id, sb.id, selectedA.revision);
+    expect(selectedB).toMatchObject({ selectedSongId: sb.id, revision: selectedA.revision + 1,
+      draft: { musicPrompt: originalB.musicPrompt, lyrics: '', style: 'Current shared neon style' } });
+    expect(s.project(p.id).attempts).toEqual(history); expect(s.project(p.id).songs).toEqual(before.songs);
+    expect(s.provider()).toBe('claude');
+  });
+  test('selecting the already-selected song preserves all current edits and still enforces revision guards', () => {
+    const { store: s } = setup(), p = s.createProject('Keep edits');
+    const completed = s.finishMusic(s.submitMusic(p.id, randomUUID(), musicInput).id, song(), {});
+    const current = s.project(p.id).project;
+    const edited = s.saveDraft(p.id, current.revision, { musicPrompt: 'A new direction', lyrics: 'New words', style: 'Changed visuals' });
+    const selected = s.selectSong(p.id, completed.id, edited.revision);
+    expect(selected.draft).toEqual(edited.draft); expect(selected.selectedSongId).toBe(completed.id);
+    failure(() => s.selectSong(p.id, completed.id, edited.revision), 409);
+    expect(s.project(p.id).project).toEqual(selected);
+  });
+  test('restored song inputs and visual style persist across reopen and rejected switches leave them unchanged', () => {
+    const { store: s, path } = setup(), p = s.createProject('Persist switch'), other = s.createProject('Separate project');
+    const original = { musicPrompt: 'Original song concept', lyrics: 'Original words' };
+    const first = s.finishMusic(s.submitMusic(p.id, randomUUID(), original).id, song(), {});
+    const second = s.finishMusic(s.submitMusic(p.id, randomUUID(), musicInput).id, song(), {});
+    const foreign = s.finishMusic(s.submitMusic(other.id, randomUUID(), musicInput).id, song(), {});
+    const current = s.project(p.id).project, edited = s.saveDraft(p.id, current.revision, { ...draft, style: 'Keep current project style' });
+    failure(() => s.selectSong(p.id, first.id, edited.revision - 1), 409);
+    failure(() => s.selectSong(p.id, foreign.id, edited.revision), 404);
+    expect(s.project(p.id).project).toEqual(edited); expect(edited.selectedSongId).toBe(second.id);
+    const selected = s.selectSong(p.id, first.id, edited.revision);
+    expect(selected.draft).toEqual({ ...original, style: 'Keep current project style' });
+    s.close(); const reopened = openStudioStore(path); stores.push(reopened);
+    expect(reopened.project(p.id).project).toEqual(selected);
+    expect(reopened.project(other.id).project.selectedSongId).toBe(foreign.id);
+    expect(reopened.attempt(first.attemptId)?.input).toEqual(original);
+  });
   test('analysis can independently fail or be partial without losing successful song and requires valid numeric data', () => {
-    const { store: s } = setup(), p = s.createProject('Test'), a = s.submitMusic(p.id, randomUUID(), draft);
+    const { store: s } = setup(), p = s.createProject('Test'), a = s.submitMusic(p.id, randomUUID(), musicInput);
     const completed = s.finishMusic(a.id, song(), {});
     const partial: SongAnalysis = { state: 'partial', estimatedBpm: null, sampleIndices: [], waveformBucketSamples: 480,
       peaks: [0, 0.2, 1, 1.25], error: 'No reliable beat grid', version: 'librosa-test' };
@@ -148,7 +220,7 @@ describe('Durable project studio store (CPU SQLite; no tool executions)', () => 
     }
   });
   test('unsafe/lossy JSON and accessors are rejected without executing getters or partially completing', () => {
-    const { store: s } = setup(), p = s.createProject('Test'), a = s.submitMusic(p.id, randomUUID(), draft);
+    const { store: s } = setup(), p = s.createProject('Test'), a = s.submitMusic(p.id, randomUUID(), musicInput);
     let calls = 0; const accessor = Object.defineProperty({}, 'run', { enumerable: true, get() { calls++; return 'oops'; } });
     const cyclic: Record<string, unknown> = {}; cyclic.self = cyclic;
     for (const details of [{ n: Infinity }, { n: 9007199254740992 }, { n: undefined }, { n: 1n }, accessor, cyclic,
@@ -159,7 +231,7 @@ describe('Durable project studio store (CPU SQLite; no tool executions)', () => 
     expect(calls).toBe(0); expect(s.project(p.id).songs).toHaveLength(0);
   });
   test('patch attempts records progress but cannot forge success or alter finalized attempts', () => {
-    const { store: s } = setup(), p = s.createProject('Test'), a = s.submitMusic(p.id, randomUUID(), draft);
+    const { store: s } = setup(), p = s.createProject('Test'), a = s.submitMusic(p.id, randomUUID(), musicInput);
     expect(s.patchAttempt(a.id, { state: 'running', stage: 'Generating', details: { job: 'native-id' } })).toMatchObject({ state: 'running', stage: 'Generating' });
     failure(() => s.patchAttempt(a.id, { state: 'succeeded' }), 409);
     failure(() => s.patchAttempt(a.id, { projectId: randomUUID() } as never), 400);
@@ -169,18 +241,18 @@ describe('Durable project studio store (CPU SQLite; no tool executions)', () => 
   });
   test('accepted requests, immutable completion and analysis survive reopen without changing selection', () => {
     const { store: s, path } = setup(), p = s.createProject('Durable'), key = randomUUID();
-    const a = s.submitMusic(p.id, key, draft), input = song(), completed = s.finishMusic(a.id, input, {});
+    const a = s.submitMusic(p.id, key, musicInput), input = song(), completed = s.finishMusic(a.id, input, {});
     const updatedAnalysis: SongAnalysis = { ...pending, state: 'partial', waveformBucketSamples: 480,
       peaks: [0.1], error: 'Beat grid unavailable' };
     s.setAnalysis(completed.id, updatedAnalysis);
     s.close(); const reopened = openStudioStore(path); stores.push(reopened);
-    expect(reopened.submitMusic(p.id, key, draft)).toMatchObject({ id: a.id, nativeCallId: a.nativeCallId, seeds: a.seeds, state: 'succeeded' });
+    expect(reopened.submitMusic(p.id, key, musicInput)).toMatchObject({ id: a.id, nativeCallId: a.nativeCallId, seeds: a.seeds, state: 'succeeded' });
     expect(reopened.finishMusic(a.id, input, {})).toMatchObject({ id: completed.id, analysis: updatedAnalysis });
     expect(reopened.project(p.id).songs).toHaveLength(1);
     expect(reopened.asset(input.assetId)?.path).toBe(input.assetPath);
   });
   test('a SQLite write failure rolls back asset, song, attempt and selected-song updates together', () => {
-    const { store: s, path } = setup(), p = s.createProject('Atomic'), a = s.submitMusic(p.id, randomUUID(), draft), input = song();
+    const { store: s, path } = setup(), p = s.createProject('Atomic'), a = s.submitMusic(p.id, randomUUID(), musicInput), input = song();
     const external = new Database(path);
     external.exec("CREATE TRIGGER reject_song BEFORE INSERT ON studio_songs BEGIN SELECT RAISE(ABORT, 'fixture storage failure'); END;");
     expect(() => s.finishMusic(a.id, input, {})).toThrow('fixture storage failure');
@@ -198,8 +270,8 @@ describe('Durable project studio store (CPU SQLite; no tool executions)', () => 
   });
   test('independent connections deduplicate accepted submissions and setup jobs through the database', () => {
     const { store: s, path } = setup(), other = openStudioStore(path); stores.push(other);
-    const p = s.createProject('One writer protocol'), key = randomUUID(), accepted = s.submitMusic(p.id, key, draft);
-    expect(other.submitMusic(p.id, key, draft)).toEqual(accepted);
+    const p = s.createProject('One writer protocol'), key = randomUUID(), accepted = s.submitMusic(p.id, key, musicInput);
+    expect(other.submitMusic(p.id, key, musicInput)).toEqual(accepted);
     expect(other.enqueueSetup('h3')).toEqual(s.enqueueSetup('h3'));
     expect(s.attempts()).toHaveLength(1); expect(other.setupJobs()).toHaveLength(1);
   });
@@ -219,11 +291,11 @@ describe('Durable project studio store (CPU SQLite; no tool executions)', () => 
   });
   test('startup interruption marks only started music/setup work reconciling, never restarts or marks queued successful', () => {
     const { store: s } = setup(), p = s.createProject('Test');
-    const queued = s.submitMusic(p.id, randomUUID(), draft);
+    const queued = s.submitMusic(p.id, randomUUID(), musicInput);
     const active = ['preparing', 'waiting_gpu', 'running', 'validating'].map(state => {
-      const attempt = s.submitMusic(p.id, randomUUID(), draft); s.patchAttempt(attempt.id, { state: state as never }); return attempt;
+      const attempt = s.submitMusic(p.id, randomUUID(), musicInput); s.patchAttempt(attempt.id, { state: state as never }); return attempt;
     });
-    const failed = s.submitMusic(p.id, randomUUID(), draft); s.patchAttempt(failed.id, { state: 'failed', error: 'Native failure' });
+    const failed = s.submitMusic(p.id, randomUUID(), musicInput); s.patchAttempt(failed.id, { state: 'failed', error: 'Native failure' });
     const queuedSetup = s.enqueueSetup('yue2'), activeSetup = s.enqueueSetup('h3'); s.patchSetup(activeSetup.id, 'running');
     s.patchTool('h3', { state: 'installing' }); s.markInterrupted(); s.markInterrupted();
     expect(s.attempt(queued.id)?.state).toBe('queued');

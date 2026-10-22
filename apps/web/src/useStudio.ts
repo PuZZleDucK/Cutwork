@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import type { MusicAttempt, MusicDraft, ProjectSnapshot, StudioOverview, StudioProject, ToolId, Provider } from '../../../packages/core/src/contracts/studio.ts';
+import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
+import type { MusicAttempt, MusicDraft, MusicInput, ProjectSnapshot, StudioOverview, StudioProject, ToolId, Provider } from '../../../packages/core/src/contracts/studio.ts';
+import { errorNoticeReducer } from './notifications.ts';
 import { ApiError, request } from './api.ts';
-import { attemptIsActive, createRequestId, draftEqual, emptyDraft, mergeSavedDraft } from './studio-state.ts';
+import { attemptIsActive, createRequestId, emptyDraft, mergeSavedDraft, musicInputFromDraft } from './studio-state.ts';
 
 export function useStudio() {
   const [overview, setOverview] = useState<StudioOverview | null>(null);
@@ -10,15 +11,17 @@ export function useStudio() {
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [errorNotice, dispatchError] = useReducer(errorNoticeReducer, {text:null,occurrence:0});
+  const error = errorNotice.text;
   const [connection, setConnection] = useState<string | null>(null);
   const [conflict, setConflict] = useState(false);
+  const [messageVersion, setMessageVersion] = useState(0);
   const [notice, setNotice] = useState<string | null>(null);
   const current = useRef<{project: StudioProject | null; draft: MusicDraft; dirty: boolean; conflict: boolean}>({ project: null, draft: emptyDraft, dirty: false, conflict: false });
   const saveFlight = useRef<Promise<void> | null>(null);
   const actionFlight = useRef(false);
   const mounted = useRef(true);
-  const submission = useRef<{ projectId: string; input: MusicDraft; key: string } | null>(null);
+  const submission = useRef<{ projectId: string; input: MusicInput; key: string } | null>(null);
 
   const receive = useCallback((next: ProjectSnapshot, reset = false) => {
     const c = current.current;
@@ -74,12 +77,12 @@ export function useStudio() {
           setDraft(merged.draft); setDirty(merged.dirty);
           setSnapshot(old => old?.project.id === saved.id ? { ...old, project: saved } : old);
         }
-        setError(old => old?.startsWith('Draft not saved.') ? null : old);
+        dispatchError({type:'clear-save'});
       } catch (e) {
         if (e instanceof ApiError && e.status === 409) {
           current.current.conflict = true; setConflict(true);
-          setError('This project changed while you were editing. Your inputs have not been overwritten. Choose which draft to keep.');
-        } else setError(`Draft not saved. ${e instanceof Error ? e.message : 'Try again.'}`);
+          dispatchError({type:'raise',text:'This project changed while you were editing. Your inputs have not been overwritten. Choose which draft to keep.'});
+        } else dispatchError({type:'raise',text:`Draft not saved. ${e instanceof Error ? e.message : 'Try again.'}`});
         throw e;
       } finally { setSaving(false); }
     };
@@ -99,9 +102,9 @@ export function useStudio() {
 
   const act = useCallback(async (operation: () => Promise<void>) => {
     if (actionFlight.current) return false;
-    actionFlight.current = true; setBusy(true); setError(null); setNotice(null);
+    actionFlight.current = true; setMessageVersion(version => version + 1); setBusy(true); dispatchError({type:'clear'}); setNotice(null);
     try { await operation(); return true; }
-    catch (e) { setError(e instanceof Error ? e.message : 'The action could not be completed.'); return false; }
+    catch (e) { dispatchError({type:'raise',text:e instanceof Error ? e.message : 'The action could not be completed.'}); return false; }
     finally { actionFlight.current = false; setBusy(false); }
   }, []);
   const selectProject = (id: string) => act(async () => {
@@ -129,14 +132,20 @@ export function useStudio() {
   });
   const selectSong = (songId: string) => act(async () => {
     await save(); const p = current.current.project; if (!p) return;
+    const beforeSelection = { ...current.current.draft };
     const result = await request<StudioProject>(`/api/projects/${encodeURIComponent(p.id)}/songs/${encodeURIComponent(songId)}/select`, { revision: p.revision });
-    current.current.project = result;
-    setSnapshot(old => old ? { ...old, project: result } : old); await refresh();
+    const merged = mergeSavedDraft(current.current.draft, beforeSelection, result.draft);
+    current.current.project = result; current.current.draft = merged.draft; current.current.dirty = merged.dirty;
+    setDraft(merged.draft); setDirty(merged.dirty);
+    setSnapshot(old => old?.project.id === result.id ? { ...old, project: result } : old);
+    setNotice('Song selected. Its original music description and lyrics are restored.');
+    // The mutation already succeeded; a follow-up read failure is a connection issue.
+    await refresh().catch(e => setConnection(e instanceof Error ? e.message : 'Waiting for the next studio update.'));
   });
   const generate = () => act(async () => {
     await save(); const project = current.current.project; if (!project) return;
-    const input = { ...current.current.draft };
-    if (!submission.current || submission.current.projectId !== project.id || !draftEqual(submission.current.input, input)) submission.current = { projectId: project.id, input, key: createRequestId() };
+    const input = musicInputFromDraft(current.current.draft);
+    if (!submission.current || submission.current.projectId !== project.id || (submission.current.input.musicPrompt !== input.musicPrompt || submission.current.input.lyrics !== input.lyrics)) submission.current = { projectId: project.id, input, key: createRequestId() };
     const attempt = await request<MusicAttempt>(`/api/projects/${encodeURIComponent(project.id)}/music`, { idempotencyKey: submission.current.key, input });
     setSnapshot(old => old?.project.id === project.id ? { ...old, attempts: old.attempts.some(a => a.id === attempt.id) ? old.attempts : [...old.attempts, attempt] } : old);
     submission.current = null;
@@ -147,5 +156,5 @@ export function useStudio() {
   const provider = (value: Provider) => act(async () => { await request('/api/provider', { provider: value }); await refresh(); });
   const checkProvider = () => act(async () => { await request('/api/provider/check', {}); await refresh(); });
   const setup = (tool: ToolId | 'all') => act(async () => { await request(`/api/setup/${tool}`, {}); await refresh(); });
-  return { overview, snapshot, draft, dirty, saving, busy, error, connection, conflict, notice, edit, save, selectProject, createProject, resolveConflict, selectSong, generate, provider, checkProvider, setup, refresh, clearError: () => setError(null) };
+  return { overview, snapshot, draft, dirty, saving, busy, error, connection, conflict, notice, messageVersion, errorVersion: errorNotice.occurrence, edit, save, selectProject, createProject, resolveConflict, selectSong, generate, provider, checkProvider, setup, refresh, clearError: () => dispatchError({type:'clear'}) };
 }

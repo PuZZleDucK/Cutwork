@@ -12,7 +12,9 @@ export interface ProviderStatus {
   auth: 'unknown' | 'signed-in' | 'sign-in-required';
   detail: string; signInCommand: string;
 }
-export interface MusicDraft { musicPrompt: string; lyrics: string; style: string }
+export interface MusicInput { musicPrompt: string; lyrics: string }
+/** Style is persistent visual direction for video, never part of new music input. */
+export interface MusicDraft extends MusicInput { style: string }
 export interface StudioProject {
   id: string; name: string; createdAt: string; revision: number;
   draft: MusicDraft; selectedSongId: string | null;
@@ -22,7 +24,7 @@ export type AttemptState = 'queued' | 'preparing' | 'waiting_gpu' | 'running' | 
 export interface MusicAttempt {
   id: string; nativeCallId: string; projectId: string; sequence: number;
   createdAt: string; updatedAt: string; state: AttemptState;
-  provider: Provider; model: string; input: MusicDraft; seeds: Record<string, string>;
+  provider: Provider; model: string; input: MusicInput; seeds: Record<string, string>;
   stage: string; error: string | null; songId: string | null;
   details: Record<string, unknown>;
 }

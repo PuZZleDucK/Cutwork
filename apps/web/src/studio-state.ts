@@ -1,4 +1,4 @@
-import type { AttemptState, MusicDraft, ToolStatus, MusicAttempt, StudioSong } from '../../../packages/core/src/contracts/studio.ts';
+import type { AttemptState, MusicDraft, MusicInput, ToolStatus, MusicAttempt, StudioSong } from '../../../packages/core/src/contracts/studio.ts';
 export const emptyDraft: MusicDraft = { musicPrompt: '', lyrics: '', style: '' };
 export const draftEqual = (a: MusicDraft, b: MusicDraft) => a.musicPrompt === b.musicPrompt && a.lyrics === b.lyrics && a.style === b.style;
 export function mergeSavedDraft(current: MusicDraft, submitted: MusicDraft, saved: MusicDraft): {draft: MusicDraft; dirty: boolean} {
@@ -41,4 +41,12 @@ export function historySong<T extends Pick<StudioSong, 'id' | 'projectId' | 'att
 ): T | undefined {
   if (attempt.state !== 'succeeded' || !attempt.songId) return undefined;
   return songs.find(song => song.id === attempt.songId && song.projectId === attempt.projectId && song.attemptId === attempt.id);
+}
+
+/** A project visual style must never leak into a music-agent task. */
+export const musicInputFromDraft = (draft: MusicDraft): MusicInput => ({ musicPrompt: draft.musicPrompt, lyrics: draft.lyrics });
+
+/** Older records remain truthful; this value is display-only, never reused for music. */
+export function legacyMusicVisualStyle(input: MusicInput): string | null {
+  return 'style' in input && typeof input.style === 'string' && input.style ? input.style : null;
 }

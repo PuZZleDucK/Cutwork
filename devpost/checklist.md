@@ -20,8 +20,10 @@ is complete. The first LAN browser studio (slice 2) is now mechanically verified
 718 default tests on development and Dundee, actual browser-to-Codex-to-YuE2
 generation, independently decoded/hashed output and idle-restart persistence.
 See [slice-2-live-evidence.md](slice-2-live-evidence.md). It is live at
-`http://dundee.local:9122/`; the planned early hands-on feedback is pending before
-browser video controls. This working checkpoint does not tick slice 2 prematurely.
+`http://dundee.local:9122/`; early hands-on feedback has been received and the notice/song-input/style fixes are deployed.
+The current suite is 750 passing tests per host. See [slice-2-feedback.md](slice-2-feedback.md);
+learner retry of the affected controls remains before browser video controls.
+This working checkpoint does not tick slice 2 prematurely.
 TTS is running after restoration; personal Comfy remains unchanged.
 
 ## Working Agreement
@@ -244,7 +246,7 @@ The next work is the prepared real-model lane verification; no slice/G4 gate is 
   Verify (mechanical): Run reviewed API/storage/component tests and actual browser checks. Verify first-use setup ordering, shared prerequisites, individual versus Install all deduplication, missing-sign-in guidance, exact CLI/model selection and isolated Python paths. Refresh during an install and a music request and verify the same operation/result appears once. Generate a real song through the browser; independently decode it, verify stored analysis/version references and the recorded seed, and distinguish analysis failure from song-generation failure. Reopen the project and confirm persistent content/drafts; inspect Host/Origin and asset-ID validation without adding agent restrictions.
   Learner check: Open the reported Dundee studio URL from another LAN device, use setup, create a project, describe a song with optional lyrics, and listen. Refresh while work runs and open its history. Tell me what feels awkward about setup, status, prompts or feedback before we add video controls.
   Commit: `Add browser setup and project music generation`
-  Mechanical checkpoint: 23 October 2026. Projects/setup/music/playback/history are deployed on Dundee; 718 tests per host plus typecheck/build and independently audited real browser generation pass. Drafts, selected song, completed analysis and history survive an actual idle service restart unchanged. Setup verification and generation survive page reload. This was an already-prepared host, not a fresh-download installation demonstration. Early learner feedback remains pending; do not advance slice 3 yet.
+  Mechanical checkpoint: 23 October 2026. Projects/setup/music/playback/history are deployed on Dundee; 718 tests per host plus typecheck/build and independently audited real browser generation pass. Drafts, selected song, completed analysis and history survive an actual idle service restart unchanged. Setup verification and generation survive page reload. This was an already-prepared host, not a fresh-download installation demonstration. Early learner feedback was received; its requested corrections are now deployed and mechanically checked (750 tests per host). Learner retry remains pending; see slice-2-feedback.md.
 
 - [ ] **3. Generate clips and export the first browser-made music video**
   Becomes usable: Describe clips against the selected song, see them placed at their submitted times, preview the assembled result, and download a real music video that plays outside the app.
@@ -318,7 +320,7 @@ The next work is the prepared real-model lane verification; no slice/G4 gate is 
 
 ## Hands-on Checkpoints
 
-- [ ] Early usable behavior explored — slice 2: actual setup and song generation in the LAN UI; feedback is resolved before building the browser video workflow. Slice 1 also has its contract/media learner check, not a substitute for this UI feedback.
+- [ ] Early usable behavior explored — slice 2 (initial feedback received, corrections deployed, retry pending): actual setup and song generation in the LAN UI; feedback is resolved before building the browser video workflow. Slice 1 also has its contract/media learner check, not a substitute for this UI feedback.
 - [ ] Integrated creative loop explored — slice 3: create clips and independently play the export before investing in precision editing. This checks whether the central creative flow works, distinct from setup feedback.
 - [ ] Final kick-the-tires exploration and feedback completed — slice 9 and Final Review; record this session once rather than repeating it. In learn mode every slice also receives its own Learner check.
 
@@ -402,3 +404,5 @@ Activity mode: Proposed focused planning/verification investigation suitable for
   song and 76 independent audit checks are separate from the 718 fixture-based
   default tests. A working checkpoint is saved while early UI feedback remains
   open. No fresh-host installation or complete browser video editor is claimed.
+
+- **23 October 2026 — early UI feedback:** the learner requested floating, dismissible notices, original music/lyrics restoration on song changes, and visual style excluded from music generation. Updated PRD/spec and their HTML companions; implemented and verified the changes without new generation or altering retained media/history. Preserve the card-heavy look comment for polish. Await a retry of affected controls, not another routine implementation approval.

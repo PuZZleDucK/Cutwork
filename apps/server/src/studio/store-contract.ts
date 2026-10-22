@@ -1,4 +1,4 @@
-import type { MusicAttempt, MusicDraft, ProjectSnapshot, ProjectSummary, Provider, SetupJob,
+import type { MusicAttempt, MusicDraft, MusicInput, ProjectSnapshot, ProjectSummary, Provider, SetupJob,
   SongAnalysis, StudioProject, StudioSong, ToolId, ToolStatus } from '../../../../packages/core/src/contracts/studio.ts';
 export type AttemptPatch = Partial<Pick<MusicAttempt, 'state' | 'stage' | 'error' | 'details'>>;
 export type SongInput = Omit<StudioSong, 'id' | 'projectId' | 'attemptId' | 'createdAt'> & { assetPath: string };
@@ -13,7 +13,7 @@ export interface StudioStore {
   project(id: string): ProjectSnapshot;
   saveDraft(id: string, revision: number, draft: MusicDraft): StudioProject;
   selectSong(projectId: string, songId: string, revision: number): StudioProject;
-  submitMusic(projectId: string, idempotencyKey: string, input: MusicDraft): MusicAttempt;
+  submitMusic(projectId: string, idempotencyKey: string, input: MusicInput): MusicAttempt;
   attempts(): MusicAttempt[];
   attempt(id: string): MusicAttempt | null;
   patchAttempt(id: string, patch: AttemptPatch): MusicAttempt;

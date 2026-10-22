@@ -5,7 +5,7 @@ import { StudioStoreError } from './store.ts';
 import { sendStudioAsset } from './assets.ts';
 import type { StudioStore } from './store-contract.ts';
 import type { StudioRuntime } from './runtime-contract.ts';
-import type { MusicDraft, Provider, ToolId } from '../../../../packages/core/src/contracts/studio.ts';
+import type { MusicDraft, MusicInput, Provider, ToolId } from '../../../../packages/core/src/contracts/studio.ts';
 
 interface StudioApiOptions { store: StudioStore; runtime: StudioRuntime; dataRoot: string; webRoot: string | null }
 const uuid = { type: 'string', pattern: '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$' };
@@ -13,6 +13,7 @@ const revision = { type: 'integer', minimum: 0, maximum: Number.MAX_SAFE_INTEGER
 const plain = (properties: Record<string, unknown>) => ({ type: 'object', additionalProperties: false, required: Object.keys(properties), properties });
 const empty = plain({});
 const draft = plain({ musicPrompt: { type: 'string', maxLength: 16000 }, lyrics: { type: 'string', maxLength: 32000 }, style: { type: 'string', maxLength: 16000 } });
+const musicInput = plain({ musicPrompt: draft.properties.musicPrompt, lyrics: draft.properties.lyrics });
 const projectParams = plain({ id: uuid });
 function lossless(value: unknown, depth = 0): void {
   if (depth > 64 || (typeof value === 'number' && (!Number.isFinite(value) || Object.is(value, -0) || (Number.isInteger(value) && !Number.isSafeInteger(value))))) {
@@ -51,8 +52,8 @@ export async function registerStudioApi(app: FastifyInstance, { store, runtime, 
     api.post<{ Params: { tool: ToolId | 'all' } }>('/api/setup/:tool',
       { schema: { params: plain({ tool: { type: 'string', enum: ['all', 'agent', 'yue2', 'comfyui', 'h3', 'analysis'] } }), body: empty, querystring: empty } },
       (request, reply) => reply.code(202).send(runtime.setup(request.params.tool)));
-    api.post<{ Params: { id: string }; Body: { idempotencyKey: string; input: MusicDraft } }>('/api/projects/:id/music',
-      { schema: { params: projectParams, body: plain({ idempotencyKey: uuid, input: draft }), querystring: empty } }, async (request, reply) =>
+    api.post<{ Params: { id: string }; Body: { idempotencyKey: string; input: MusicInput } }>('/api/projects/:id/music',
+      { schema: { params: projectParams, body: plain({ idempotencyKey: uuid, input: musicInput }), querystring: empty } }, async (request, reply) =>
         reply.code(202).send(await runtime.submitMusic(request.params.id, request.body.idempotencyKey, request.body.input)));
     api.route<{ Params: { assetId: string } }>({ method: ['GET', 'HEAD'], url: '/api/assets/:assetId', exposeHeadRoute: false,
       schema: { params: plain({ assetId: uuid }), querystring: empty }, handler: (request, reply) => sendStudioAsset(request, reply, store, root) });

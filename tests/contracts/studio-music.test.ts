@@ -19,7 +19,7 @@ async function fixture(){
  await writeFile(join(source,'integrations/knowledge/README.md'),'Real normal tools and project context.\n');await writeFile(join(source,'integrations/knowledge/music.md'),'Fixture copied guidance, unchanged.\n');
  await save(join(source,'integrations/tool-manifest.json'),{node:{version:'24.22.0'},providers:{codex:{version:'0.163.0',model:'gpt-6.1-sol'},claude:{version:'2.1.306',model:'claude-opus-5-5'}}});
  await mkdir(join(source,'integrations/yue2'),{recursive:true});await writeFile(join(source,'integrations/yue2/generate.py'),'# fixture helper');await save(join(source,'integrations/yue2/models.json'),{fixture:true});
- const store=openStudioStore(join(runtime,'studio.sqlite'));stores.push(store);const project=store.createProject('Test music');const attempt=store.submitMusic(project.id,randomUUID(),{musicPrompt:'Original programming jingle\nKeep this direction',lyrics:'My exact words',style:'Warm workshop'});
+ const store=openStudioStore(join(runtime,'studio.sqlite'));stores.push(store);const project=store.createProject('Test music');const attempt=store.submitMusic(project.id,randomUUID(),{musicPrompt:'Original programming jingle\nKeep this direction',lyrics:'My exact words'});
  const request={schemaVersion:1,attemptId:attempt.nativeCallId,parameters:{style:'Translated sonic direction',lyrics:'My exact words',cot:'full'},seeds:attempt.seeds,sampling:{semantic:{max_tokens:4096}}};
  const input=join(runtime,'projects',project.id,'inputs/native-calls',attempt.nativeCallId,'request.json');const receiptPath=join(runtime,'projects',project.id,'runs',attempt.nativeCallId,'receipt.json'),artifacts=join(receiptPath,'../receipt-artifacts');
  const nativeDirectory=join(runtime,'jobs/native-units',randomUUID()),owner={kind:'systemd-unit',unit:'fixture-owned.service',invocationId:'a'.repeat(32),directory:nativeDirectory,supervisor:{pid:12345}};
@@ -50,6 +50,13 @@ async function fixture(){
  return { ...options,options,dependencies,receipt,receiptPath,input,artifacts,events,get call(){return call;},setCall:(c:GpuCall|null)=>{call=c;},setHeld:(v:boolean)=>{held=v;},get cancelled(){return cancelled;},get providerCount(){return providerCount;},get analysisCalls(){return analysisCalls;}};
 }
 async function prepare(f:Awaited<ReturnType<typeof fixture>>){const p=await prepareMusicTask(f.options);f.store.patchAttempt(f.attempt.id,{details:{planPath:p.planPath}});return p;}
+async function prepareLegacy(f:Awaited<ReturnType<typeof fixture>>){
+ const historicalInput=Object.assign(f.attempt.input,{style:'Previously captured visual direction'}),p=await prepare(f);
+ // Reconstruct the on-disk v1 task shape emitted before visual/music separation.
+ const plan=JSON.parse(await readFile(p.planPath,'utf8'));plan.attempt.input=structuredClone(historicalInput);
+ plan.launch.stdin=plan.launch.stdin.replace(`Optional user lyrics (preserve supplied words):\n${historicalInput.lyrics}`,`Optional user lyrics (preserve supplied words):\n${historicalInput.lyrics}\n\nProject style/context:\n${historicalInput.style}`);
+ await save(p.planPath,plan);return {...p,plan,historicalInput};
+}
 test('planner snapshots normal provider launch, exact input/seeds and unchanged guidance without creating provider run directory',async()=>{
  const f=await fixture(),p=await prepare(f),plan=JSON.parse(await readFile(p.planPath,'utf8'));
  expect(plan.attempt.input).toEqual(f.attempt.input);expect(plan.attempt.seeds).toEqual(f.attempt.seeds);expect(plan.launch.executable).toContain('/tools/provider-cli/codex-0.163.0_claude-2.1.306/node_modules/.bin/codex');
@@ -58,6 +65,40 @@ test('planner snapshots normal provider launch, exact input/seeds and unchanged 
  await expect(prepareMusicTask(f.options)).rejects.toThrow();expect(f.providerCount).toBe(0);
 });
 test('planner rejects non-loopback origin and relative roots without dispatch',async()=>{const f=await fixture();for(const origin of ['http://example.com:9122','http://127.0.0.1:9122/path','https://127.0.0.1:9122'])await expect(prepareMusicTask({...f.options,origin})).rejects.toThrow();await expect(prepareMusicTask({...f.options,runtime:'relative'})).rejects.toThrow();});
+test('new music task excludes legacy project visual style from the saved input and actual agent prompt without rewriting it',async()=>{
+ const f=await fixture(),visualStyle='VISUAL_ONLY_SENTINEL: cyan workshop, oil-painted robot, matching costumes';
+ const musicPrompt='90s French electronica with dubstep beats and lyrics about programming';
+ const legacyInput=Object.assign(f.attempt.input,{musicPrompt,style:visualStyle});
+ const original=structuredClone(legacyInput),p=await prepare(f),raw=await readFile(p.planPath,'utf8'),plan=JSON.parse(raw);
+ expect(plan.attempt.input).toEqual({musicPrompt,lyrics:'My exact words'});expect(raw).not.toContain(visualStyle);
+ expect(plan.launch.stdin).toContain(musicPrompt);expect(plan.launch.stdin).toContain('My exact words');
+ expect(plan.launch.stdin).not.toContain('Project style/context:');expect(plan.launch.stdin).not.toContain('Persistent visual style:');
+ expect(legacyInput).toEqual(original);
+ const provider=f.dependencies.provider!;let dispatchedPrompt:string|null=null;
+ await runMusicTask(f.options,{...f.dependencies,provider:async(launch,options)=>{dispatchedPrompt=launch.stdin;return provider(launch,options);}});
+ expect(dispatchedPrompt).toBe(plan.launch.stdin);expect(dispatchedPrompt).not.toContain(visualStyle);
+ expect(f.store.attempt(f.attempt.id)?.state).toBe('succeeded');expect(legacyInput).toEqual(original);
+ expect(await readFile(p.planPath,'utf8')).toBe(raw);
+});
+test('queued legacy music plan dispatches its exact originally captured prompt without rewriting inputs or file',async()=>{
+ const f=await fixture(),p=await prepareLegacy(f),original=await readFile(p.planPath,'utf8'),input=structuredClone(p.historicalInput);
+ expect(f.store.attempt(f.attempt.id)?.state).toBe('queued');const provider=f.dependencies.provider!;let dispatchedPrompt:string|null=null;
+ await runMusicTask(f.options,{...f.dependencies,provider:async(launch,options)=>{dispatchedPrompt=launch.stdin;return provider(launch,options);}});
+ expect(dispatchedPrompt).toBe(p.plan.launch.stdin);expect(dispatchedPrompt).toContain(`Project style/context:\n${input.style}`);
+ expect(f.store.attempt(f.attempt.id)?.state).toBe('succeeded');expect(f.providerCount).toBe(1);
+ expect(p.historicalInput).toEqual(input);expect(await readFile(p.planPath,'utf8')).toBe(original);
+});
+test.each(['musicPrompt','lyrics','style'] as const)('legacy plan rejects changed historical %s before provider dispatch',async field=>{
+ const f=await fixture(),p=await prepareLegacy(f),original=await readFile(p.planPath,'utf8');p.historicalInput[field]+=' altered after capture';
+ await runMusicTask(f.options,f.dependencies);expect(f.providerCount).toBe(0);expect(f.store.attempt(f.attempt.id)?.state).toBe('failed');
+ expect(f.store.project(f.attempt.projectId).songs).toHaveLength(0);expect(await readFile(p.planPath,'utf8')).toBe(original);
+});
+test.each(['id','nativeCallId','projectId','provider','model','seeds'] as const)('legacy compatibility does not weaken captured %s validation',async field=>{
+ const f=await fixture(),p=await prepareLegacy(f);
+ p.plan.attempt[field]=field==='provider'?'claude':field==='model'?'claude-opus-5-5':field==='seeds'?{...f.attempt.seeds,abc:'1'}:randomUUID();
+ await save(p.planPath,p.plan);await runMusicTask(f.options,f.dependencies);
+ expect(f.providerCount).toBe(0);expect(f.store.attempt(f.attempt.id)?.state).toBe('failed');expect(f.store.project(f.attempt.projectId).songs).toHaveLength(0);
+});
 test('native evidence and media checks precede ingestion; analysis preserves exact positions and peaks above one',async()=>{
  const f=await fixture();await prepare(f);await runMusicTask(f.options,f.dependencies);const state=f.store.project(f.attempt.projectId);expect(state.attempts[0]?.state).toBe('succeeded');expect(state.songs).toHaveLength(1);expect(state.songs[0]?.analysis.peaks[0]).toBe(1.4);expect(state.songs[0]?.analysis.sampleIndices).toEqual(['1024','25024','49024']);expect(f.events).toEqual(['provider','decode','analysis']);expect(f.providerCount).toBe(1);
  expect(state.attempts[0]?.details).toHaveProperty('nativeRequest');expect(JSON.stringify(state.attempts[0]?.details)).toContain(f.attempt.seeds.semantic);

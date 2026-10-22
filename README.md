@@ -44,9 +44,9 @@ anyone who can reach it can run work as the server account. Do not expose it to 
 public Internet. No credentials are entered through a studio web form.
 
 The first slice provides Projects/Config, reversible Codex/Claude selection,
-managed tool setup/verification, saved music/lyrics/style drafts, server-owned
+managed tool setup/verification, saved music/lyrics drafts, server-owned
 generation, original WAV playback, estimated beat/waveform analysis and expandable
-history. Reloading a browser does not stop a setup job or generation. The interface
+history. Selecting another song restores its original description and lyrics; project visual style is reserved for video. Warnings and notifications float over the workspace and can be dismissed or reopened. Reloading a browser does not stop a setup job or generation. The interface
 shows only implemented stages; video editing, export and richer recovery controls
 come next. The Assembly branding is provisional; Kirsty is not bundled yet.
 

@@ -1,0 +1,89 @@
+import { describe, expect, it } from 'vitest';
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+import { NoticeCenter } from './NoticeCenter.tsx';
+import { notificationReducer, readWarningDismissals, writeWarningDismissals, visibleNotices, workspaceNotices, errorNoticeReducer, overviewNotice, type NoticeState } from './notifications.ts';
+
+const warning = { id:'warning:LAN', kind:'warning' as const, text:'Trusted LAN only.' };
+const error = { id:'error:1', kind:'error' as const, text:'Save failed.' };
+const empty: NoticeState = { dismissed: [], reviewing: [] };
+describe('dismissible floating notifications', () => {
+  it('dismisses one notice without hiding others or changing source messages', () => {
+    const original = [warning,error];
+    const state = notificationReducer(empty, {type:'dismiss',ids:[warning.id]});
+    expect(visibleNotices(original,state)).toEqual([error]); expect(original).toEqual([warning,error]);
+  });
+  it('keeps dismissed warnings hidden through polling and supports deliberate reopening', () => {
+    const dismissed = notificationReducer(empty,{type:'dismiss',ids:[warning.id]});
+    expect(visibleNotices([{...warning}],dismissed)).toEqual([]);
+    const reopened = notificationReducer(dismissed,{type:'review',ids:[warning.id]});
+    expect(visibleNotices([warning],reopened)).toEqual([warning]);
+    expect(visibleNotices([warning],notificationReducer(reopened,{type:'dismiss',ids:[warning.id]}))).toEqual([]);
+  });
+  it('does not suppress changed warnings or new occurrences of the same error', () => {
+    const state = notificationReducer(empty,{type:'dismiss',ids:[warning.id,error.id]});
+    const changed = {...warning,id:'warning:new limit',text:'The limit changed.'};
+    const repeated = {...error,id:'error:2'};
+    expect(visibleNotices([warning,changed,repeated],state)).toEqual([changed,repeated]);
+  });
+  it('forgets resolved transient dismissals but keeps session warning preferences', () => {
+    const state = notificationReducer({dismissed:[warning.id,error.id],reviewing:[error.id]}, {type:'reconcile',ids:[]});
+    expect(state).toEqual({dismissed:[warning.id],reviewing:[]});
+    expect(visibleNotices([error],state)).toEqual([error]);
+  });
+  it('persists only static warning dismissal, not private message bodies or transient errors', () => {
+    let stored = ''; const storage = {getItem:()=>stored,setItem:(_key:string,value:string)=>{stored=value;}};
+    writeWarningDismissals(storage,[warning.id,error.id]);
+    expect(JSON.parse(stored)).toEqual([warning.id]); expect(readWarningDismissals(storage)).toEqual([warning.id]);
+  });
+  it('tolerates missing, blocked, malformed or unexpected browser storage', () => {
+    expect(readWarningDismissals(null)).toEqual([]);
+    expect(readWarningDismissals({getItem:()=>'{oops'})).toEqual([]);
+    expect(readWarningDismissals({getItem:()=>JSON.stringify([7,'error:private',warning.id])})).toEqual([warning.id]);
+    expect(readWarningDismissals({getItem:()=>{throw Error('blocked');}})).toEqual([]);
+    expect(()=>writeWarningDismissals({setItem:()=>{throw Error('quota');}},[warning.id])).not.toThrow();
+  });
+  it('renders individually dismissible accessible notices and a persistent review toggle', () => {
+    const markup = renderToStaticMarkup(createElement(NoticeCenter,{notices:[warning,error]}));
+    expect(markup).toContain('aria-label="Notifications"');
+    expect(markup).toContain('class="notification-center"');
+    expect(markup).toContain('aria-label="Dismiss warning: Trusted LAN only."');
+    expect(markup).toContain('aria-label="Dismiss error: Save failed."');
+    expect(markup).toContain('role="alert"'); expect(markup).toContain('aria-expanded="true"');
+  });
+  it('keeps conflict resolution actions within the dismissible notification', () => {
+    const actions=createElement('button',null,'Keep my draft');
+    const markup=renderToStaticMarkup(createElement(NoticeCenter,{notices:[{...error,actions}]}));
+    expect(markup).toContain('Keep my draft'); expect(markup).toContain('Dismiss error: Save failed.');
+  });
+});
+
+describe('notification recovery and repeated occurrences', () => {
+  it('keeps draft-conflict recovery available after an unrelated action cleared the transient error', () => {
+    const notices=workspaceNotices({projectId:'a',conflict:true,error:null,errorVersion:2,notice:null,messageVersion:4,connection:null});
+    expect(notices).toEqual([{id:'conflict:a',kind:'error',text:expect.stringContaining('Choose which draft')}]);
+  });
+  it('gives a repeated direct save failure a new identity even with identical text', () => {
+    const a=errorNoticeReducer({text:null,occurrence:0},{type:'raise',text:'Draft not saved. Offline'});
+    const b=errorNoticeReducer(a,{type:'raise',text:'Draft not saved. Offline'});
+    expect(b).toEqual({text:a.text,occurrence:2});
+    expect(errorNoticeReducer(b,{type:'clear-save'})).toEqual({text:null,occurrence:2});
+    const other={text:'Other action failed',occurrence:3};
+    expect(errorNoticeReducer(other,{type:'clear-save'})).toEqual(other);
+  });
+  it('remembers static advisories but reopens a resolved-then-repeated operational warning', () => {
+    const staticWarning=overviewNotice('Trusted LAN only: service account access.');
+    const dynamic=overviewNotice('A native GPU lease needs reconciliation.');
+    expect(staticWarning.id).toMatch(/^warning:/); expect(dynamic.id).not.toMatch(/^warning:/);
+    let state=notificationReducer(empty,{type:'dismiss',ids:[staticWarning.id,dynamic.id]});
+    state=notificationReducer(state,{type:'reconcile',ids:[staticWarning.id]});
+    expect(visibleNotices([staticWarning,dynamic],state)).toEqual([dynamic]);
+  });
+});
+
+it('reports a new distinct recovery failure even when a draft conflict is still unresolved', () => {
+  const notices=workspaceNotices({projectId:'a',conflict:true,error:'Could not load project',errorVersion:3,notice:null,messageVersion:4,connection:null});
+  expect(notices.map(n=>n.id)).toEqual(['conflict:a','error:3:Could not load project']);
+  const conflictText=notices[0]!.text;
+  expect(workspaceNotices({projectId:'a',conflict:true,error:conflictText,errorVersion:4,notice:null,messageVersion:5,connection:null})).toHaveLength(1);
+});

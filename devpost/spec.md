@@ -88,6 +88,10 @@ Use Kirsty for top-level titles **once the specific asset's web embedding and re
 
 ### C1 — Studio UI and Project Workspace
 
+Render global warnings and transient messages in a fixed, viewport-bounded notification stack outside workspace flow. Individual dismissal and a review toggle remain keyboard accessible; hidden draft-conflict recovery actions can be reopened. Persist only known standing advisory dismissals in sessionStorage, with an in-memory fallback. Reconcile resolved operational messages and assign occurrence IDs to new errors so later identical failures are not suppressed.
+
+Manual song selection is a single revision-checked store transaction: read the selected song’s originating attempt, restore only its original musicPrompt and lyrics, preserve project visual style, and save selection plus draft together. The client immediately adopts the returned draft, without allowing stale polling to overwrite it or later typing. Selecting the same song preserves edits.
+
 Implements `prd.md > Projects and Shared Tools`, `Frontier Agent Setup and Selection`, and `Screens and Layout`.
 
 React renders server-owned snapshots; local component state holds unsent edits, selection focus and disclosure state. Save project style and selected song to the server. Accepted draft-form persistence is per project/song in the server record, debounced with a revision; refreshing restores saved drafts, but a draft is never a submitted request. A visible dirty form is not overwritten by polling.
@@ -107,6 +111,8 @@ All project-owned lookups validate project membership even without accounts, pre
 Results are ingested with unique attempt/artifact and placement-origin constraints. Verify files first, then commit the artifact and placement once. A recorded “publish pending” step bridges filesystem moves and DB commits; reconciliation can finish that step without rerunning the generator. Never treat filesystem and SQLite operations as one magically atomic transaction.
 
 ### C3 — Provider Adapters and Product-Owned Generator Knowledge
+
+Keep MusicInput (musicPrompt, lyrics) separate from the project draft’s persistent visual style. New music API requests and captured agent instructions exclude project visual style. Read legacy records without rewriting their provenance; validate and continue already-captured legacy plans against their exact original inputs.
 
 Implements `prd.md > Frontier Agent Setup and Selection`, `Music and Video Generation`, `Persistent Visual Style`, and `Generation Seeds and Variations`.
 

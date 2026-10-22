@@ -3,7 +3,7 @@
 Start with [the original approved test review](../devpost/slice-1-test-review.md) and [current progress/regression evidence](../devpost/slice-1-progress.md). The developer-facing native proof is complete; the first browser soundtrack studio now has actual LAN evidence.
 
 **Current indices:** [browser integration evidence](../devpost/slice-2-live-evidence.md) and [native assertion/evidence map](../devpost/slice-1-native-evidence.md).
-The default suite passes 718/718 on development and Dundee, plus typecheck; the production browser build passes. The original twelve-case
+The default suite passes 750/750 on development and Dundee, plus typecheck; the production browser build passes. The original twelve-case
 acceptance sketch lives in `reference/` and is not an implemented/passing aggregate
 suite. The checkpoint notes below are historical; use the index for current runs.
 Content auditing has 13 separate synthetic CPU diagnostics and a separately

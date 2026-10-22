@@ -14,6 +14,7 @@ import type { Provider, MusicDraft, ProviderStatus, StudioProject } from '../../
 
 const host = 'studio.local:9122';
 const draft: MusicDraft = { musicPrompt: 'A test idea', lyrics: '', style: 'Minimal' };
+const musicInput = { musicPrompt: draft.musicPrompt, lyrics: draft.lyrics };
 const cleanup: (() => Promise<void>)[] = [];
 afterEach(async () => { for (const operation of cleanup.splice(0).reverse()) await operation(); });
 async function fixture(withWeb = false) {
@@ -36,7 +37,7 @@ async function fixture(withWeb = false) {
   const request = (method: 'GET' | 'HEAD' | 'POST' | 'PUT', url: string, payload?: unknown, headers: Record<string, string> = {}) =>
     app.inject({ method, url, headers: { host, ...headers }, ...(payload === undefined ? {} : { payload: JSON.stringify(payload), headers: { host, 'content-type': 'application/json', ...headers } }) });
   async function asset(path?: string) {
-    const p = store.createProject('Asset fixture'), attempt = store.submitMusic(p.id, randomUUID(), draft);
+    const p = store.createProject('Asset fixture'), attempt = store.submitMusic(p.id, randomUUID(), musicInput);
     const projectPath = join(dataRoot, 'projects', p.id); await mkdir(projectPath, { recursive: true });
     const assetPath = path ?? join(projectPath, 'audio.wav');
     const bytes = Buffer.alloc(60); bytes.write('RIFF'); bytes.writeUInt32LE(52, 4); bytes.write('WAVEfmt ', 8);
@@ -74,13 +75,20 @@ test('provider checks/switches and global setup delegate to runtime, including a
   expect((await request('POST', '/api/setup/yue2', {})).statusCode).toBe(202); expect(runtime.setup).toHaveBeenCalledWith('yue2');
 });
 test('music request is idempotent, project-bound and captures provider in accepted attempt', async () => {
-  const { request, store, runtime } = await fixture(), p = store.createProject('Music'), body = { idempotencyKey: randomUUID(), input: draft };
+  const { request, store, runtime } = await fixture(), p = store.createProject('Music'), body = { idempotencyKey: randomUUID(), input: musicInput };
   const a = await request('POST', `/api/projects/${p.id}/music`, body); expect(a.statusCode).toBe(202);
   await request('POST', '/api/provider', { provider: 'claude' });
   expect((await request('POST', `/api/projects/${p.id}/music`, body)).json()).toEqual(a.json());
-  expect(runtime.submitMusic).toHaveBeenCalledWith(p.id, body.idempotencyKey, draft);
-  expect((await request('POST', `/api/projects/${p.id}/music`, { ...body, input: { ...draft, lyrics: 'different' } })).statusCode).toBe(409);
+  expect(runtime.submitMusic).toHaveBeenCalledWith(p.id, body.idempotencyKey, musicInput);
+  expect((await request('POST', `/api/projects/${p.id}/music`, { ...body, input: { ...musicInput, lyrics: 'different' } })).statusCode).toBe(409);
   expect((await request('POST', `/api/projects/${randomUUID()}/music`, body)).statusCode).toBe(404);
+});
+test('music API excludes project visual style before runtime capture', async () => {
+  const { request, store, runtime } = await fixture(), p = store.createProject('Visual direction is not music');
+  expect((await request('POST', `/api/projects/${p.id}/music`, { idempotencyKey: randomUUID(), input: { ...musicInput, style: 'Only a video style' } })).statusCode).toBe(400);
+  expect(runtime.submitMusic).not.toHaveBeenCalled();
+  const reply = await request('POST', `/api/projects/${p.id}/music`, { idempotencyKey: randomUUID(), input: musicInput });
+  expect(reply.statusCode).toBe(202); expect(reply.json().input).toEqual(musicInput);
 });
 test('song selection enforces project membership and revision', async () => {
   const f = await fixture(), a = await f.asset(), b = f.store.createProject('Other');
@@ -93,8 +101,8 @@ test('exact JSON shapes, UUIDs, enums and numeric types reject before runtime wo
   const { request, store, runtime } = await fixture(), p = store.createProject('Validation');
   for (const [url, body] of [ ['/api/projects', { name: 'Name', command: 'bad' }], ['/api/projects', { name: 2 }],
     ['/api/provider', { provider: 'other' }], ['/api/provider/check', { force: true }], ['/api/setup/all', null], ['/api/setup/unknown', {}],
-    [`/api/projects/${p.id}/music`, { idempotencyKey: randomUUID(), input: { ...draft, unexpected: true } }],
-    [`/api/projects/${p.id}/music`, { idempotencyKey: 'bad', input: draft }], ['/api/projects/not-a-uuid/select', {}],
+    [`/api/projects/${p.id}/music`, { idempotencyKey: randomUUID(), input: { ...musicInput, unexpected: true } }],
+    [`/api/projects/${p.id}/music`, { idempotencyKey: 'bad', input: musicInput }], ['/api/projects/not-a-uuid/select', {}],
     [`/api/projects/${p.id}/songs/${randomUUID()}/select`, { revision: '0' }],
   ] as const) expect((await request('POST', url, body)).statusCode, url).toBe(400);
   expect((await request('PUT', `/api/projects/${p.id}/draft`, { revision: 9007199254740992, draft })).statusCode).toBe(400);

@@ -152,3 +152,26 @@ test('shutdown never cancels a lease subsequently claimed by another coordinator
     await coordinator.close(); expect(other.get('call')?.cancelRequested).toBe(false);
   } finally { other.close(); }
 });
+
+test('application composition registers routes on the same live queue before listen', async () => {
+ const root = await mkdtemp(join(tmpdir(), 'studio-compose-')); cleanups.push(() => rm(root, { recursive: true }));
+ const database = join(root, 'queue.sqlite'); let configured = false;
+ const noLaunch = async (): Promise<never> => { throw new Error('No native launch expected'); };
+ const server = await startNativeCoordinator({ database, adapter: { prepare: noLaunch, launch: noLaunch }, host: '127.0.0.1', port: 0,
+  allowedHosts: ['studio.local:9122'], validateSubmission() {}, hasAttempt: () => false,
+  async configure(app, queue) { configured = true; app.get('/api/composed', () => ({ calls: queue.list().length })); },
+ });
+ cleanups.push(() => server.close()); expect(configured).toBe(true);
+ const response = await server.app.inject({ url: '/api/composed', headers: { host: 'studio.local:9122' } });
+ expect(response.statusCode).toBe(200); expect(response.json()).toEqual({ calls: 0 });
+});
+test('failed application composition closes its queue and never listens', async () => {
+ const root = await mkdtemp(join(tmpdir(), 'studio-compose-failure-')); cleanups.push(() => rm(root, { recursive: true }));
+ const database = join(root, 'queue.sqlite');
+ const noLaunch = async (): Promise<never> => { throw new Error('No native launch expected'); };
+ await expect(startNativeCoordinator({ database, adapter: { prepare: noLaunch, launch: noLaunch }, host: '127.0.0.1', port: 0,
+  allowedHosts: ['studio.local:9122'], validateSubmission() {}, hasAttempt: () => false,
+  configure() { throw new Error('Synthetic composition failure'); },
+ })).rejects.toThrow('Synthetic composition failure');
+ const reopened = openGpuQueue(database); expect(reopened.heldLease()).toBeNull(); reopened.close();
+});

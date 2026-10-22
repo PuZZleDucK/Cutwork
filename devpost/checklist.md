@@ -16,8 +16,13 @@ map is [slice-1-native-evidence.md](slice-1-native-evidence.md). The unbound ori
 twelve-case sketch is now a reference, not a phantom passing suite. Fresh
 Codex/Claude capabilities, actual failed-call replay, measured cancellation and
 native handoff evidence are retained. The new provider media chain and independent content checks passed; slice 1
-is complete. The next step is the first LAN browser studio (slice 2).
-TTS was restored after native generation; personal Comfy was unchanged.
+is complete. The first LAN browser studio (slice 2) is now mechanically verified:
+718 default tests on development and Dundee, actual browser-to-Codex-to-YuE2
+generation, independently decoded/hashed output and idle-restart persistence.
+See [slice-2-live-evidence.md](slice-2-live-evidence.md). It is live at
+`http://dundee.local:9122/`; the planned early hands-on feedback is pending before
+browser video controls. This working checkpoint does not tick slice 2 prematurely.
+TTS is running after restoration; personal Comfy remains unchanged.
 
 ## Working Agreement
 
@@ -239,6 +244,7 @@ The next work is the prepared real-model lane verification; no slice/G4 gate is 
   Verify (mechanical): Run reviewed API/storage/component tests and actual browser checks. Verify first-use setup ordering, shared prerequisites, individual versus Install all deduplication, missing-sign-in guidance, exact CLI/model selection and isolated Python paths. Refresh during an install and a music request and verify the same operation/result appears once. Generate a real song through the browser; independently decode it, verify stored analysis/version references and the recorded seed, and distinguish analysis failure from song-generation failure. Reopen the project and confirm persistent content/drafts; inspect Host/Origin and asset-ID validation without adding agent restrictions.
   Learner check: Open the reported Dundee studio URL from another LAN device, use setup, create a project, describe a song with optional lyrics, and listen. Refresh while work runs and open its history. Tell me what feels awkward about setup, status, prompts or feedback before we add video controls.
   Commit: `Add browser setup and project music generation`
+  Mechanical checkpoint: 23 October 2026. Projects/setup/music/playback/history are deployed on Dundee; 718 tests per host plus typecheck/build and independently audited real browser generation pass. Drafts, selected song, completed analysis and history survive an actual idle service restart unchanged. Setup verification and generation survive page reload. This was an already-prepared host, not a fresh-download installation demonstration. Early learner feedback remains pending; do not advance slice 3 yet.
 
 - [ ] **3. Generate clips and export the first browser-made music video**
   Becomes usable: Describe clips against the selected song, see them placed at their submitted times, preview the assembled result, and download a real music video that plays outside the app.
@@ -388,3 +394,11 @@ Activity mode: Proposed focused planning/verification investigation suitable for
   solely for an aggregate count. Existing failures remain failures; no product
   feature, chosen architecture or mechanical assertion is waived. A focused
   no-dispatch test additionally records actual queued-cancellation timings.
+
+- **23 October 2026 — first LAN browser integration:** real browser work exposed
+  exact Node type-erasure compatibility, provider/setup shutdown races and an
+  analysis status/restart gap. Tests and implementation were repaired without
+  changing scope, stack or normal agent capabilities. The genuine 33.6-second
+  song and 76 independent audit checks are separate from the 718 fixture-based
+  default tests. A working checkpoint is saved while early UI feedback remains
+  open. No fresh-host installation or complete browser video editor is claimed.

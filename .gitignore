@@ -18,3 +18,6 @@ __pycache__/
 # Local runtime/evidence: real media and machine-specific execution logs
 /.runtime/
 /.local-evidence/
+
+# Built browser bundle
+/dist/

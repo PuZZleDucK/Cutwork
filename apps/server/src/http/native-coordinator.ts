@@ -3,6 +3,8 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { openGpuQueue } from '../jobs/gpu-queue.ts';
 import { GpuWorker, type NativeAdapter } from '../jobs/gpu-worker.ts';
 import { createNativeApi, type NativeApiOptions } from './native-api.ts';
+import type { FastifyInstance } from 'fastify';
+import type { GpuQueue } from '../jobs/gpu-queue-contract.ts';
 
 /** Single app process owns HTTP, the durable queue and one native worker.
  * Browser/agent clients can disconnect without cancelling work. A deliberate
@@ -13,6 +15,8 @@ export async function startNativeCoordinator(options: {
   allowedHosts: string[]; pollMs?: number;
   validateSubmission: NativeApiOptions['validateSubmission'];
   hasAttempt: NativeApiOptions['hasAttempt'];
+  /** Trusted application composition, before listening; never a browser hook. */
+  configure?: (app: FastifyInstance, queue: GpuQueue) => Promise<void> | void;
 }) {
   const pollMs = options.pollMs ?? 250;
   if (!Number.isSafeInteger(pollMs) || pollMs < 1 || pollMs > 10000) throw new Error('Invalid worker poll interval');
@@ -74,7 +78,7 @@ export async function startNativeCoordinator(options: {
       if (shutdownError !== undefined) throw shutdownError;
     } finally { queue.close(); }
   });
-  try { await app.listen({ host: options.host, port: options.port }); }
+  try { await options.configure?.(app, queue); await app.listen({ host: options.host, port: options.port }); }
   catch (error) { await app.close(); throw error; }
   loop = pump();
   return { app, close: () => { beginStop(); return closing ??= app.close(); } };

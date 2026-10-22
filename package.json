@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "Slice-1 contract foundation in progress; no runnable studio UI yet.",
+  "description": "Agent-mediated LAN music-video studio; soundtrack browser slice in progress.",
   "engines": {
     "node": ">=24 <25"
   },
@@ -12,16 +12,25 @@
     "test:list": "vitest list --no-staticParse --json=/dev/stdout",
     "test": "vitest run",
     "test:live:list": "vitest list --config vitest.live.config.ts --no-staticParse --json=/dev/stdout",
-    "test:live": "vitest run --config vitest.live.config.ts"
+    "test:live": "vitest run --config vitest.live.config.ts",
+    "build": "vite build",
+    "dev": "vite",
+    "start": "node apps/server/src/main.ts"
   },
   "devDependencies": {
     "@types/better-sqlite3": "9.6.0",
     "@types/node": "24.19.2",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
     "typescript": "7.0.2",
+    "vite": "8.3.5",
     "vitest": "5.0.5"
   },
   "dependencies": {
+    "@fastify/static": "10.1.7",
     "better-sqlite3": "13.0.3",
-    "fastify": "5.12.7"
+    "fastify": "5.12.7",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
   }
 }

@@ -1,9 +1,9 @@
-# Slice 1 tests
+# Verification tests
 
-Start with [the original approved test review](../devpost/slice-1-test-review.md) and [current progress/regression evidence](../devpost/slice-1-progress.md). The developer-facing native proof is complete; the browser studio is next.
+Start with [the original approved test review](../devpost/slice-1-test-review.md) and [current progress/regression evidence](../devpost/slice-1-progress.md). The developer-facing native proof is complete; the first browser soundtrack studio now has actual LAN evidence.
 
-**Current index:** [native assertion/evidence map](../devpost/slice-1-native-evidence.md).
-The default suite passes 579/579 plus typecheck. The original twelve-case
+**Current indices:** [browser integration evidence](../devpost/slice-2-live-evidence.md) and [native assertion/evidence map](../devpost/slice-1-native-evidence.md).
+The default suite passes 718/718 on development and Dundee, plus typecheck; the production browser build passes. The original twelve-case
 acceptance sketch lives in `reference/` and is not an implemented/passing aggregate
 suite. The checkpoint notes below are historical; use the index for current runs.
 Content auditing has 13 separate synthetic CPU diagnostics and a separately
@@ -31,7 +31,7 @@ may be omitted from the listing.
 npm test
 ```
 
-The default suite includes only `contracts/`. Its payloads are synthetic; temporary-file, child-process and loopback HTTP fixtures exercise real local OS behavior. It cannot prove live model access, generation quality, GPU use, raw-frame origin or native stop latency.
+The default suite includes `contracts/` and browser helper tests under `apps/web/src/`. Its payloads are synthetic; temporary-file, child-process and loopback HTTP fixtures exercise real local OS behavior. It cannot prove live model access, generation quality, GPU use, raw-frame origin or native stop latency.
 
 The facade in `support/slice1-contract.ts` is bound directly to application modules through `support/slice1-driver.ts`; there is no separate fake implementation. **The original 78 approved cases pass.** The eight implementation-review cases first reproduced failures, were approved by the learner, and then passed after fixes. No skips or expected-failure annotations hide them. The fixes preserve exact entered-duration intent, snapshot asynchronous metadata at entry, distinguish native queue state from application cancellation state, and match output identity/seeds to the recorded call.
 

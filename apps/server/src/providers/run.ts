@@ -7,9 +7,12 @@ import { setTimeout, clearTimeout } from 'node:timers';
 import type { NativeOwner } from '../../../../packages/core/src/contracts/generation.ts';
 import type { providerLaunch } from './launch.ts';
 
-export type ProviderLaunch = ReturnType<typeof providerLaunch>;
+export type ProviderLaunch = Omit<ReturnType<typeof providerLaunch>, 'executable'> & { executable: string };
 type ProcessOwner = Extract<NativeOwner, { kind: 'process' }>;
 type Exit = { code: number | null; signal: string | null };
+export class ProviderLaunchAbortedError extends Error {
+  constructor() { super('Provider launch cancelled before process creation'); this.name = 'ProviderLaunchAbortedError'; }
+}
 
 /** Linux identity observation, never PID-only ownership. */
 export async function observeProcess(pid: number): Promise<ProcessOwner> {
@@ -38,7 +41,9 @@ const message = (error: unknown) => error instanceof Error ? error.message : Str
  * CLI's exit, NOT termination/resource release of every unregistered native job.
  * Durable scheduling, descendant reconciliation and GPU cancellation are separate.
  */
-export async function runProvider(launchInput: ProviderLaunch) {
+export async function runProvider(launchInput: ProviderLaunch, options: { signal?: AbortSignal } = {}) {
+  const checkBeforeLaunch = () => { if (options.signal?.aborted) throw new ProviderLaunchAbortedError(); };
+  checkBeforeLaunch();
   const launch = structuredClone(launchInput);
   await mkdir(dirname(launch.runDirectory), { recursive: true, mode: 0o700 });
   await mkdir(launch.runDirectory, { mode: 0o700 }); // never overwrite an earlier attempt
@@ -61,7 +66,7 @@ export async function runProvider(launchInput: ProviderLaunch) {
   try {
     const stderr = await open(stderrPath, 'wx', 0o600);
     try {
-      let interrupted: 'SIGINT' | 'SIGTERM' | undefined;
+      let interrupted: 'SIGINT' | 'SIGTERM' | 'abort' | undefined;
       let wakeInterruption!: () => void;
       const interruption = new Promise<'interrupted'>(resolve => { wakeInterruption = () => resolve('interrupted'); });
       const onSignal = (signal: 'SIGINT' | 'SIGTERM') => {
@@ -71,8 +76,13 @@ export async function runProvider(launchInput: ProviderLaunch) {
       };
       const onInt = () => onSignal('SIGINT');
       const onTerm = () => onSignal('SIGTERM');
+      // Runtime-owned cancellation uses the same identity-checked cleanup without
+      // assigning a process-wide signal exit code to an ordinary shutdown call.
+      const onAbort = () => { interrupted ??= 'abort'; wakeInterruption(); };
       process.on('SIGINT', onInt); process.on('SIGTERM', onTerm);
+      options.signal?.addEventListener('abort', onAbort, { once: true });
       try {
+        checkBeforeLaunch();
         const child = spawn(launch.executable, launch.argv, {
           cwd: launch.cwd, shell: false, detached: true,
           stdio: ['pipe', stdout.fd, stderr.fd],
@@ -172,6 +182,7 @@ export async function runProvider(launchInput: ProviderLaunch) {
         }
       } finally {
         process.off('SIGINT', onInt); process.off('SIGTERM', onTerm);
+        options.signal?.removeEventListener('abort', onAbort);
       }
     } finally { await stderr.close(); }
   } finally { await stdout.close(); }

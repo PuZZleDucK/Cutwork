@@ -20,7 +20,7 @@ The scope, PRD and technical specification are approved. The learner approved th
 - Each slice includes test review, implementation, mechanical verification, the appropriate learner check and a commit. In learn mode, wait for hands-on feedback before that commit. Inspect the staged diff and stage only intended project files; keep private context, credentials, runtime state and generated media out of Git. Record completion evidence and the commit when checking a slice off.
 - Missing access or a failing native contract stops the dependent work for diagnosis; do not mark the slice done or build a convincing UI around fake success. Changes to product promises, chosen architecture or the creative kernel require agreement and reconciliation with the planning documents.
 
-## Current Checkpoint — Read-Only GPU Observation Verified
+## Current Checkpoint — Linux Process Census Verified
 
 Read [slice-1-progress.md](slice-1-progress.md). The learner approved the two provider-runner assertions with "yeah, looks good". Both are fixed; **78/78 local tests and typechecking pass**. A source review found no blocker. Real tasks previously verified the requested `gpt-6.1-sol` and `claude-opus-5-5` models and normal tools on Dundee. Those remain capability evidence, not native generation/cancellation proof. The 12 native live cases remain unrun.
 
@@ -99,9 +99,20 @@ The actual adapter ran on Dundee with no test seam: three valid native queries
 in **105.791 ms**, matched independent surrounding observations, and left personal
 Comfy unchanged. Query children exited; the bounded proof service exited 0 and
 was subsequently inactive/not-found. Retained source/evidence passed focused
-review. **The learner accepted this implementation with “good to go”; save it as a partial checkpoint.**
+review. **The learner accepted this implementation with “good to go”; it is committed as `119505c`.**
 This proves compute-process observation, not resource release, GPU cancellation,
 shared leasing or dispatch readiness. No remaining G4 gate is waived.
+
+**Current process census implementation checkpoint:** the learner approved the
+[39-case batch](process-census-test-review.md) with “looks good.” The reader is
+implemented, with two additional passing canonical-input guards: **41 census
+cases, 268/268 default tests locally**, plus typechecking. One actual default-I/O
+Dundee call returned **340 identities in 226.837 ms**, all matched against
+independent before/after observations. Personal Comfy and boot identity were
+unchanged; the bounded proof service exited 0 and was later inactive/not-found.
+Code/receipt review found no remaining blocker. **The learner accepted the implementation with “all good”; save this verified
+checkpoint before the next tests-first batch.** This is visible process evidence, not ownership,
+GPU resource release or dispatch readiness. No remaining G4 gate is waived.
 
 ## Slices
 

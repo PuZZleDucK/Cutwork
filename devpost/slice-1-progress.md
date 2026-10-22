@@ -1,6 +1,36 @@
 # Slice 1 — implementation checkpoint
 
-## Current continuation — read-only GPU observation verified, 22 October 2026
+## Current continuation — Linux process census verified, 22 October 2026
+
+The learner approved the **39-case** [process census batch](process-census-test-review.md)
+with “looks good” before implementation. `apps/server/src/jobs/linux-process-census.ts`
+now reads fixed procfs paths, brackets the scan with the expected boot identity,
+retains exact parent/group/session/start/state records, and bounds the whole
+observation by one deadline. Listed-process disappearance invalidates the scan;
+no partial list, PID-only ownership claim or process signalling is substituted.
+
+All 39 tests passed first implementation. Two additional canonical-input guards
+also passed unchanged: **41 census cases, 268/268 default cases locally** on Node
+24.1.0, plus typechecking. No reproduced/repaired defect is claimed for the added
+guards. Focused code review found no remaining blocker.
+
+The exact adapter ran once on Dundee's pinned Node 24.22.0 without test I/O,
+in a finite transient user service. **340 identities in 226.837 ms** matched
+independent before/after procfs observations, with zero unmatched returned rows.
+The boot ID and personal Comfy identity/listener on 8188 remained unchanged.
+The proof unit exited 0 and was later inactive/not-found. Source hashes,
+receipts, scripts and post-checks are retained under
+`.local-evidence/slice-1/process-census/`; the linked review records exact IDs.
+Independent evidence review agreed with the native count/matches and boundaries.
+
+**The learner accepted this implementation with “all good”; commit this verified
+checkpoint before the next tests-first batch.** This proves one successful
+non-atomic visible-procfs census, not native fault injection, ownership, GPU
+resource release, shared leasing or dispatch readiness. The composed observer
+and actual cancellation/handoff gates remain open; no slice/G4 box is ticked.
+No new browser, generator, provider or NVIDIA work ran in this checkpoint.
+
+## Previous continuation — read-only GPU observation verified, 22 October 2026
 
 The learner approved the **37-case** [GPU observation batch](gpu-observation-test-review.md)
 with “looks good” before implementation. `apps/server/src/jobs/nvidia-query.ts`
@@ -23,7 +53,7 @@ not-found. Source hashes, query inputs/outputs, timing and independent post-chec
 are retained under `.local-evidence/slice-1/gpu-observation/`; the linked review
 records the exact source/unit IDs. Focused review found no remaining blocker.
 
-**The learner accepted this implementation with “good to go”; save it as a partial checkpoint.** This is one successful
+**The learner accepted this implementation with “good to go”; it is committed as `119505c`.** This is one successful
 native compute-context observation, not native failure-recovery, GPU cancellation,
 resource release, shared leasing or dispatch readiness. Slice 1/G4 remain open;
 no browser/slice-2 advancement or model/provider launch occurred in this step.

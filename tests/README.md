@@ -68,8 +68,8 @@ not a substitute for any remaining model/GPU gate.
 
 The [GPU observation implementation review](../devpost/gpu-observation-test-review.md)
 records **38 cases** in `contracts/nvidia-query.test.ts`: 37 approved assertions
-plus a meaningful red/green final-deadline regression. They now run in the default
-suite, **227/227 locally**, with typechecking. The review-only facade/configuration
+plus a meaningful red/green final-deadline regression. At the accepted GPU
+checkpoint, the default suite passed **227/227 locally**, with typechecking. The review-only facade/configuration
 were removed; tests import the actual product module directly.
 
 Most cases supply synthetic output using harmless local Node subprocesses;
@@ -93,6 +93,35 @@ success does not prove native timeout recovery, model cancellation, total GPU
 allocation, resource release or dispatch readiness. The full 227-case suite was
 run locally, not on Dundee in this checkpoint. See the linked review for source
 hashes, retained receipts and exact proof boundaries.
+
+## Read-only Linux process census
+
+The [process-census implementation review](../devpost/process-census-test-review.md)
+records **41 cases** in `contracts/linux-process-census.test.ts`: the approved 39
+plus two canonical-input guards that passed unchanged. They now import the actual
+reader directly and join the default suite: **268/268 locally**, plus typechecking.
+The draft facade and review-only runner configuration have been removed.
+
+The fixtures supply synthetic procfs bytes and controlled promises. They verify
+exact identity fields, leaderless members/zombies, complete-record validation,
+unknown/error handling, original deadline, prompt abort and ignored late results.
+These are not actual kernel race, PID-reuse or native cancellation experiments.
+
+```sh
+npm run typecheck
+npm test -- tests/contracts/linux-process-census.test.ts
+npm test
+```
+
+Separately, the exact adapter ran once under pinned Node 24.22.0 on Dundee, with
+no I/O injection, inside a bounded transient user service. It returned **340
+identities in 226.837 ms**; all matched independent surrounding observations.
+The boot ID and personal Comfy identity/listener remained unchanged; the unit
+exited 0 and was independently inactive/not-found afterward. No GPU operation
+or workload signalling occurred. This is a non-atomic visible-procfs census,
+not host-namespace coverage, ownership, release or dispatch proof. The complete
+268-case suite ran locally, not on Dundee in this checkpoint. See the linked
+review for retained source hashes, receipts and detailed boundaries.
 
 ## Additional H3 diagnostics
 

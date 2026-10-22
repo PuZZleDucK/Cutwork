@@ -8,6 +8,7 @@ status: approved
 22 October 2026. **Learner approved the 37-case batch with “looks good” before implementation.
 The implemented probe now passes 38 cases and one real read-only Dundee check;
 learner accepted the implementation with “good to go”.**
+Accepted checkpoint: **`119505c` — Verify bounded read-only NVIDIA compute observations**.
 The learner accepted the preceding CPU cancellation implementation with “all
 good.” It is committed as **`6e1926e` — Verify owned Comfy CPU cancellation on
 Dundee**. Its default suite was rechecked: **189/189**, plus typechecking.
@@ -230,7 +231,7 @@ not a release decision. No browser UI was added in this step.
 - [x] Learner approves the batch with “looks good.”
 - [x] Implement; reproduce/fix final-deadline regression; promote and pass 227/227.
 - [x] Run the actual read-only adapter on Dundee and independently review evidence.
-- [x] Learner accepts the implementation with “good to go”; commit the verified checkpoint.
+- [x] Learner accepts the implementation with “good to go”; checkpoint committed as `119505c`.
 
 Slice 1/G4 remain unchecked. Shared leasing, stopped-process identity/descendant
 observation, native queues, unsupported-attribution handling, actual GPU model

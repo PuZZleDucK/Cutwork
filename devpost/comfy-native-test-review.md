@@ -184,7 +184,7 @@ generation and is the only subprocess the fixture may stop during cleanup.
 - [x] Address implementation review with meaningful failing/passing regressions.
 - [x] Move approved tests into the normal contract suite; remove unused draft config.
 - [x] Learner accepts the working implementation with “proceed” before its partial checkpoint commit.
-- [ ] Review/run a real owned CPU Comfy proof before claiming native behavior.
+- [x] Review/run a real owned CPU Comfy proof before claiming native behavior; see the separate CPU review for its limited cooperative-workload result.
 - [ ] Continue lease/release/GPU cancellation gates after their concrete bindings.
 
 ## Implementation review and five supplemental cases
@@ -258,3 +258,9 @@ GPU cancellation/handoff claim. It must preserve unrelated queued/running work.
 The learner accepted the implementation checkpoint with “proceed.” This saves the
 verified binding separately from the next owned CPU Comfy proof; it does not
 close slice 1 or any remaining native/GPU gate.
+
+Accepted checkpoint commit: **`620458c`**. The separate
+[owned CPU cancellation checkpoint](comfy-cpu-test-review.md) now records an
+approved, implemented and executed 2/2 CPU proof. That result was observed on
+Dundee, not inferred from this earlier synthetic binding evidence. It does not
+close the GPU/lease/live-suite gates.

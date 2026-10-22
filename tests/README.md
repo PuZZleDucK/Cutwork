@@ -21,11 +21,48 @@ npm run test:live:list
 npm test
 ```
 
-The default suite includes only `contracts/`. Its fixtures are explicitly synthetic, apart from small real temporary-file snapshot checks. It cannot prove live model access, generation quality, GPU use, raw-frame origin or native stop latency.
+The default suite includes only `contracts/`. Its payloads are synthetic; temporary-file, child-process and loopback HTTP fixtures exercise real local OS behavior. It cannot prove live model access, generation quality, GPU use, raw-frame origin or native stop latency.
 
-The facade in `support/slice1-contract.ts` is bound directly to application modules through `support/slice1-driver.ts`; there is no separate fake implementation. **All 78 approved cases pass.** The eight implementation-review cases first reproduced failures, were approved by the learner, and then passed after fixes. No skips or expected-failure annotations hide them. The fixes preserve exact entered-duration intent, snapshot asynchronous metadata at entry, distinguish native queue state from application cancellation state, and match output identity/seeds to the recorded call.
+The facade in `support/slice1-contract.ts` is bound directly to application modules through `support/slice1-driver.ts`; there is no separate fake implementation. **The original 78 approved cases pass.** The eight implementation-review cases first reproduced failures, were approved by the learner, and then passed after fixes. No skips or expected-failure annotations hide them. The fixes preserve exact entered-duration intent, snapshot asynchronous metadata at entry, distinguish native queue state from application cancellation state, and match output identity/seeds to the recorded call.
 
 The two assertions in `contracts/provider-runner-review.test.ts` were approved and now pass after fixes. They launch only harmless local Node fixtures, not Codex/Claude or native generators. A failed prompt delivery now produces an explicit failed application outcome while preserving the actual CLI exit code. SIGINT/SIGTERM handling performs bounded, identity-checked cleanup; unconfirmed termination stays `reconciling`. Fixture teardown uses independent ownership evidence and a self-expiry backstop. These local checks do not measure GPU stopping latency or certify unregistered native descendants.
+
+## Owned Comfy binding and CPU cancellation proof
+
+The default suite passes **189 cases**, including 39 cancellation/handoff
+controller cases, 58 owned HTTP/decoder cases, nine shared-transport cases and
+five CPU-proof safeguard cases. These use synthetic workloads/data, not native
+Comfy or GPU inference. See the [binding review](../devpost/comfy-native-test-review.md)
+and [CPU implementation/evidence review](../devpost/comfy-cpu-test-review.md).
+
+The separate `cpu-native/` suite passed **2/2 on Dundee** with real pinned Comfy
+and a deliberately cooperative gate-controlled CPU node. It proves queued/running
+targeted cancellation while unrelated jobs survive; actual interruption is
+checked separately from natural completion or teardown. It does not establish
+GPU stop latency, GPU resource release or the formal 12-case live suite.
+
+Collection is safe and does not start a service:
+
+```sh
+node node_modules/vitest/vitest.mjs list --config vitest.cpu.config.ts --no-staticParse --json
+```
+
+Native execution is explicit, on Dundee's pinned runtime from an audited source
+snapshot, **inside an isolated transient user service** with a finite outer
+runtime/stop budget and control-group cleanup:
+
+```sh
+STUDIO_CPU_COMFY=1 STUDIO_DATA_ROOT="$HOME/.local/share/music-video-studio" \
+  "$HOME/.local/share/music-video-studio/tools/runtime/node-v24.22.0-linux-x64/bin/node" \
+  node_modules/vitest/vitest.mjs run --config vitest.cpu.config.ts --reporter=verbose
+```
+
+Do not run against personal Comfy or change its configuration. The fixture uses
+a fresh loopback port (never 8188), isolated base/custom-node/user directories,
+verified source/recipe bytes and the existing isolated Python. It refuses an
+inherited `extra_model_paths.yaml`. Native receipts retain inputs, observations,
+node events and separate cleanup evidence. Success of cooperative CPU work is
+not a substitute for any remaining model/GPU gate.
 
 ## Additional H3 diagnostics
 

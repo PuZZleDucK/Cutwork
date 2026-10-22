@@ -1,0 +1,12 @@
+{
+  "revision": "f5c611e3849ff7219dfb7d7b251092ab8a9b51dc",
+  "archiveSha256": "a8b098364547eaba668eff2245eb2e53c03f789b9a04e4bb0339977846afee74",
+  "provenance": "Hashes independently computed from the checksum-verified pinned official archive; not upstream signatures or a full installed-tree audit.",
+  "files": {
+    "server.py": "6e3614c753c95b037e57e25dfc2de979de70136baad2a3abb5d2d32aaf05281e",
+    "execution.py": "bf61eed32e9db0fe87ab8c108ea21adeb948e0596242c9cc55334de4a6e451a1",
+    "main.py": "226a90fdd2cb0942c587e60ae292cddcebd8f6173224e3b91a80ab0efafa93ef",
+    "comfy/model_management.py": "dbe096a72c675bd49b21c084d28c14028bfdcc5bd5c8ee42f7c0b189d4a70747",
+    "comfy_execution/jobs.py": "c4cacb27796ec2ab5704d4b594a4e5351a9747ccd04aa1e102d52d42261834c4"
+  }
+}

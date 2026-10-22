@@ -20,7 +20,7 @@ The scope, PRD and technical specification are approved. The learner approved th
 - Each slice includes test review, implementation, mechanical verification, the appropriate learner check and a commit. In learn mode, wait for hands-on feedback before that commit. Inspect the staged diff and stage only intended project files; keep private context, credentials, runtime state and generated media out of Git. Record completion evidence and the commit when checking a slice off.
 - Missing access or a failing native contract stops the dependent work for diagnosis; do not mark the slice done or build a convincing UI around fake success. Changes to product promises, chosen architecture or the creative kernel require agreement and reconciliation with the planning documents.
 
-## Current Checkpoint — Native Binding Verified Locally
+## Current Checkpoint — Owned CPU Cancellation Verified
 
 Read [slice-1-progress.md](slice-1-progress.md). The learner approved the two provider-runner assertions with "yeah, looks good". Both are fixed; **78/78 local tests and typechecking pass**. A source review found no blocker. Real tasks previously verified the requested `gpt-6.1-sol` and `claude-opus-5-5` models and normal tools on Dundee. Those remain capability evidence, not native generation/cancellation proof. The 12 native live cases remain unrun.
 
@@ -72,10 +72,24 @@ typechecking and a direct Node 24.1.0 synthetic HTTP/controller smoke. An array
 status-coercion defect was reproduced and repaired; a deliberately reconnecting
 copy fails the same-socket assertion. Focused review found no remaining blocker.
 These are local HTTP/process tests with synthetic data, not real Comfy or GPU
-cancellation. No remote service/generator was launched. The learner accepted the implementation with “proceed” before its partial
-checkpoint commit; slice 1 remains unchecked.
-The next native CPU Comfy proof, shared GPU lease and resource-release observer
-remain outstanding.
+cancellation. No remote service/generator was launched. The learner accepted the implementation with “proceed.” The partial checkpoint
+is committed as **`620458c`**; slice 1 remains unchecked. The shared GPU lease
+and resource-release observer remain outstanding.
+
+**Current CPU implementation checkpoint:** the learner approved the
+[seven extraction/two native scenarios](comfy-cpu-test-review.md) with “make it so.”
+The shared transport, cooperative proof node and owned service fixture are
+implemented. The default suite now passes **189/189** on development and Dundee
+Node, with typechecking; the separate real-Comfy CPU suite passed **2/2** on
+Dundee in a transient user service. Queued/running targets stopped through native
+cancellation while unrelated jobs succeeded. Both service identities/listeners
+were independently gone after separate owned teardown; personal Comfy was
+unchanged. Review-driven capture/configuration/signal safeguards were repaired
+before launch. See the progress/review documents for receipts and exact limits.
+The learner accepted this implementation checkpoint with “all good”; save it
+as a partial checkpoint before preparing the next reviewed batch.
+This is not H3/GPU stop latency, resource release, shared leasing or completion
+of G4/the 12 live cases; slice 1 remains unchecked.
 
 ## Slices
 
@@ -194,6 +208,15 @@ Reflection: Not offered yet; any personal response belongs in the ignored learne
 Activity mode: Proposed focused planning/verification investigation suitable for an experienced developer; not yet performed.
 
 ## Revisions
+
+- **22 October 2026 — approved CPU cancellation proof:** extracted the existing
+  owned transport and added isolated cooperative native fixtures, with no product
+  or agent-authority change. Local/Dundee default suites pass 189 cases; the two
+  real Comfy CPU cancellation scenarios pass with unrelated-work preservation,
+  explicit interruption evidence and independently verified cleanup. Review
+  corrected synchronous JSON capture, inherited configuration and parent-signal
+  propagation before launch. GPU/lease/live-suite gates remain open; the learner
+  accepted this partial implementation checkpoint with “all good.”
 
 - **22 October 2026 — analysis checkpoint and native-control implementation:** accepted isolated analysis work committed as `b064372`. Inspecting the selected Comfy pin found its atomic per-job cancellation route; prefer it over composing older queue/interrupt operations, without changing owned-job semantics or scope. The learner approved 26 asynchronous control assertions; their implementation and 13 supplemental regressions now pass. Direct Node loading and forgotten owned-child allocation bugs were reproduced and repaired. Typecheck and all 117 default tests pass. Concrete native bindings/shared lease and live interruption/resource-release proof remain outstanding; no slice completion or new native run is claimed.
 

@@ -1,6 +1,46 @@
 # Slice 1 — implementation checkpoint
 
-## Current continuation — native binding verified locally, 22 October 2026
+## Current continuation — real CPU cancellation verified, 22 October 2026
+
+The learner approved the **7 + 2** [CPU cancellation test batch](comfy-cpu-test-review.md)
+with “make it so” before implementation. Extracted the shared owned HTTP transport
+and implemented a proof-only gate-controlled CPU node plus separate owned Comfy
+service fixtures. Nine extraction cases and five local guard cases now join the
+prior 175: **189/189** tests and typechecking pass on both the development machine
+and Dundee's pinned Node 24.22.0. The existing 58 binding cases are unchanged.
+
+Two real pinned-Comfy CPU scenarios passed on Dundee in transient user unit
+`studio-comfy-cpu-20261022-d559eb25` (exit 0, **37.376 s**, reported **1 G** peak
+memory, **0 B** swap):
+
+- Queued target never started, remained absent after queue drain, and did not
+  disturb the held blocker or survivor; both completed normally.
+- Running target produced native `execution_interrupted` plus cancelled/error/
+  completed=false history and exactly the node's `started → interrupted` events.
+  Its completion gate stayed closed; the unrelated survivor completed normally.
+
+Both final queues were empty, with the same service still healthy **before**
+owned teardown. Each then exited 0 after its own SIGINT; independent checks found
+both captured process identities/groups and listeners gone. Personal Comfy on
+8188 retained the same identity and before/after GPU compute allocation. No
+model/provider work or personal-service change occurred. CPU request-to-observed-
+stop intervals of **287.534 ms** and **363.458 ms** are diagnostics, not a GPU or
+product latency guarantee.
+
+Review repaired JSON-capture cancellation/deadline gaps, inherited custom-node
+configuration and termination-signal propagation before native execution. The
+JSON regressions have retained meaningful red/green results. Parent-termination
+and failed-startup paths were not live fault-injected; successful startup/cleanup
+was observed. Exact runnable source bytes and native evidence are retained under
+`.local-evidence/slice-1/comfy-cpu/`; the linked review gives IDs and commands.
+
+The learner accepted this implementation with “all good.” Save the partial
+checkpoint, then prepare the next tests-first batch. Slice 1/G4 remain unchecked;
+shared GPU lease/resource-release observers, actual model cancellation and
+bidirectional handoff, music replay, clean provider-chain/Claude evidence and the
+formal 12 native cases remain open. Do not advance to the browser/slice 2.
+
+## Previous continuation — native binding verified locally, 22 October 2026
 
 The learner approved the 53-case [native-binding test contract](comfy-native-test-review.md)
 with “looks good.” `apps/server/src/jobs/comfy-native.ts` now connects the accepted
@@ -21,8 +61,8 @@ These checks ran on the development machine, **not Dundee**, using real local
 HTTP/process fixtures with **synthetic Comfy data**. No native Comfy/H3/YuE2 job,
 GPU work, remote service deployment or resource-release/lease implementation
 occurred. The detailed test-review record links the retained ignored evidence
-and runnable commands. The learner accepted this implementation with “proceed” for its partial
-checkpoint commit. Slice 1/G4 and the 12-case live suite remain
+and runnable commands. The learner accepted this implementation with “proceed”; it is committed as
+**`620458c`**. Slice 1/G4 and the 12-case live suite remain
 incomplete; continue with an owned CPU Comfy proof, then the outstanding native
 release/lease/cancellation gates, not slice 2.
 

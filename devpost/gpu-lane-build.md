@@ -120,3 +120,21 @@ query timeout to be observed again, records the gap, and never treats it as an
 empty GPU or as release authority. This repairs premature cleanup assessment;
 it does not repair or disguise an OOM-killed generation. The next native run
 uses a fresh source snapshot and preserves this failure.
+
+## Retry outcome and focused verification
+
+With the approved TTS pause, the exact `d7e2006` snapshot completed real
+YuE2 → H3 → YuE2 generation/release in order. YuE2 cancellation after observed
+unfinished semantic inference and owned CUDA attribution completed in about
+1.693 seconds. H3 cancellation was also requested after unfinished inference;
+its durable call ultimately became cancelled, release evidence passed and no
+lease remained. The test itself failed because it continued progress/socket
+inspection while the deliberately stopped Comfy owner disappeared. That failed
+harness result remains retained, not relabelled as a passing test.
+
+Independent inspection found all 79 remembered model/query PIDs and all five
+owned cgroups gone, no H3 reconciliation marker, and personal Comfy unchanged.
+The harness now stops progress polling after requesting cancellation and awaits
+the independent worker cleanup. A separately named focused H3 cancellation
+scenario can reuse the retained song/request without regenerating the three
+successful media calls. Its result must still be run and recorded.

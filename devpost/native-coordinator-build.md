@@ -85,3 +85,10 @@ then uses this HTTP coordinator to replay identical creative/native inputs under
 a new call identity. It compares actual helper/model/package versions and seeds;
 it does not promise byte-identical output. Typecheck and safe collection pass;
 its native outcome will be recorded only after execution.
+
+`scripts/verify-media-proof.ts` prepares independent post-run assertions against
+native call rows, exclusive request hashes, helper/owned-unit receipts, actual
+FFprobe/FFmpeg decoding, every original PNG/hash, the shared pre-encode graph
+branch and the full-song H.264/AAC export. It does not use an agent's success
+message as media evidence. The updated provider run must supply its first
+real input before this checker can report an end-to-end result.

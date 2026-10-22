@@ -21,7 +21,9 @@ import { createComfyQueueBinding } from '../../apps/server/src/jobs/comfy-queue.
 
 const exec = promisify(execFile);
 const enabled = process.env.STUDIO_MODEL_LANE === '1';
-test.skipIf(!enabled)('Dundee real YuE2 → H3 → YuE2 release/handoff and queued/running cancellation', async () => {
+const h3CancellationInput = process.env.STUDIO_MODEL_H3_CANCEL_INPUT;
+test.skipIf(!enabled)(h3CancellationInput ? 'Dundee real H3 unfinished-inference cancellation' :
+  'Dundee real YuE2 → H3 → YuE2 release/handoff and queued/running cancellation', async () => {
   const runtime = process.env.STUDIO_LIVE_RUNTIME, root = process.env.STUDIO_MODEL_LANE_OUTPUT, uuid = process.env.STUDIO_GPU_UUID;
   if (hostname().split('.')[0] !== 'dundee' || process.env.STUDIO_LIVE !== '1' ||
     !runtime || !isAbsolute(runtime) || !root || !isAbsolute(root) || !uuid) throw new Error('Explicit Dundee model proof configuration required');
@@ -125,6 +127,10 @@ test.skipIf(!enabled)('Dundee real YuE2 → H3 → YuE2 release/handoff and queu
         if (cancelWhileRunning && positiveInference && cancelledAt === null) {
           cancelledAt = performance.now(); q.cancelAttempt(id);
           console.log(`Native lane: cancellation requested after native progress and owned CUDA PID for ${id}`);
+          // The verified owner is now deliberately disappearing. Progress
+          // telemetry must not race that stop; the worker independently awaits
+          // owned-unit and CUDA release below. A missing socket is not release.
+          break;
         }
       }
       if (!done) await delay(500);
@@ -144,6 +150,12 @@ test.skipIf(!enabled)('Dundee real YuE2 → H3 → YuE2 release/handoff and queu
     return JSON.parse(await readFile(recipes.get(id)!.receipt, 'utf8'));
   }
   try {
+    if (h3CancellationInput) {
+      if (!isAbsolute(h3CancellationInput)) throw new Error('Focused H3 proof needs an absolute retained request path');
+      const source = JSON.parse(await readFile(h3CancellationInput, 'utf8'));
+      await perform(await submit('h3', { song: source.song, plan: source.plan, seed: source.seed, prompt: source.prompt }), true);
+      return;
+    }
     // Queued cancellation uses the real durable lane and never launches helpers.
     for (const tool of ['yue2', 'h3'] as const) {
       const id = await submit(tool, { fixtureNeverLaunched: true }); q.cancelAttempt(id);
@@ -170,7 +182,8 @@ test.skipIf(!enabled)('Dundee real YuE2 → H3 → YuE2 release/handoff and queu
     try {
       if (activeAttempt) q.cancelAttempt(activeAttempt);
       if (active) await active;
-      await writeFile(join(root, 'evidence.json'), JSON.stringify({ projectId, scope: 'real native helper lane', baselineOwners,
+      await writeFile(join(root, 'evidence.json'), JSON.stringify({ projectId, scope: 'real native helper lane',
+        scenario: h3CancellationInput ? 'focused-h3-cancellation' : 'full-lane', h3CancellationInput: h3CancellationInput ?? null, baselineOwners,
         transitions, observations, calls: q.list(), recipes: Object.fromEntries(recipes), heldLease: q.heldLease() }, null, 2));
     } finally { process.off('SIGTERM', interrupt); process.off('SIGINT', interrupt); q.close(); }
   }

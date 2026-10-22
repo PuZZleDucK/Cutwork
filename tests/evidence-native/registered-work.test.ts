@@ -1,10 +1,10 @@
-/** Approved opt-in native composition, not model/GPU-release proof.
- * Listing runs no hooks. After approval, use an audited Dundee snapshot and
+/** Draft assessment extension of the accepted native composition; not release proof.
+ * Listing runs no hooks. After separate run approval, use an audited Dundee snapshot and
  * finite outer user service; personal Comfy is never the HTTP/signal target. */
 import { beforeAll, afterEach, expect, test } from 'vitest';
 import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { observeProcess } from '../../apps/server/src/providers/run.ts';
 import { createOwnedComfyTransport } from '../../apps/server/src/jobs/comfy-http.ts';
 import { loadCpuFixture, type CpuFixture, type CpuFixtureModule } from '../support/comfy-cpu-contract.ts';
@@ -12,11 +12,13 @@ import { createCpuRunGuard } from '../support/comfy-cpu-guards.ts';
 import * as module from '../../apps/server/src/jobs/registered-work-evidence.ts';
 import { type EvidenceConfig,
   type Observation, type RegisteredWorkEvidence } from '../../apps/server/src/jobs/registered-work-evidence.ts';
+import { assessRegisteredWork, type AssessmentInput, type NativeExitReceipt } from '../../apps/server/src/jobs/registered-work-assessment.ts';
 
 let factory: CpuFixtureModule, runtime: string, gpuUuids: string[];
 const scenarioGuard = createCpuRunGuard(); // No signal handlers until the test attaches.
 let active: { abort: AbortController; launch: Promise<CpuFixture>; detach: () => void } | undefined;
 beforeAll(async () => {
+  if (process.env.STUDIO_ASSESSMENT_EVIDENCE !== '1') throw new Error('Requires separate approval and STUDIO_ASSESSMENT_EVIDENCE=1');
   if (process.env.STUDIO_COMPOSED_EVIDENCE !== '1') throw new Error('Requires explicit STUDIO_COMPOSED_EVIDENCE=1');
   gpuUuids = (process.env.STUDIO_GPU_UUIDS ?? '').split(',');
   if (!gpuUuids.length || gpuUuids.some(id => !/^GPU-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(id))) {
@@ -55,7 +57,53 @@ function checkGpuRows(result: RegisteredWorkEvidence) {
   expect(result.limitations).toContain('pid-attribution-unverified');
 }
 
-test('an idle live CPU service is not exited; after owned teardown queue failure is not empty-queue evidence', async () => {
+/** The fixture writes actual ChildProcess exitCode/signalCode before close()
+ * resolves. Read that evidence, not only its two cleanup booleans. The timestamp
+ * is when THIS worker observed the completed receipt, not the exact exit time. */
+async function recordedExit(session: CpuFixture, config: EvidenceConfig, signal: AbortSignal): Promise<NativeExitReceipt> {
+  signal.throwIfAborted();
+  const bytes = await readFile(join(session.directory, 'service-receipt.json'), { signal });
+  const raw: { state: unknown; owner: unknown; command: unknown; sourceRevision: unknown;
+    cleanup: { ownedServiceExited: unknown; identityResolved: unknown; exitCode: unknown; signalCode: unknown } } = JSON.parse(bytes.toString());
+  expect(raw.state).toBe('service-exited'); expect(raw.owner).toEqual(session.config.owner);
+  expect(raw.command).toEqual(session.command); expect(raw.sourceRevision).toBe(session.sourceRevision);
+  expect(raw.cleanup).toMatchObject({ ownedServiceExited: true, identityResolved: true });
+  const { exitCode, signalCode } = raw.cleanup;
+  let outcome: Pick<NativeExitReceipt, 'exitCode' | 'signalCode'>;
+  if (typeof exitCode === 'number' && Number.isSafeInteger(exitCode) && exitCode >= 0 && signalCode === null) {
+    outcome = { exitCode, signalCode };
+  } else if (exitCode === null && typeof signalCode === 'string' && /^SIG[A-Z0-9]+$/.test(signalCode)) {
+    outcome = { exitCode, signalCode };
+  } else throw new Error('Owned fixture receipt has no unambiguous actual child exit outcome');
+  signal.throwIfAborted();
+  const receipt: NativeExitReceipt = { receiptId: randomUUID(), attemptId: config.registration.attemptId,
+    registrationId: 'owned-cpu-service', beforeWindowId: config.windowId,
+    owner: { ...session.config.owner }, observedAtMs: performance.now(), ...outcome };
+  await writeFile(join(session.directory, 'assessment-exit-receipt.json'), JSON.stringify({
+    sourceFile: 'service-receipt.json', sourceSha256: createHash('sha256').update(bytes).digest('hex'),
+    source: raw, observation: 'After awaited close and verified file read in this worker monotonic-clock lifetime', receipt,
+  }, null, 2), { flag: 'wx', mode: 0o600 });
+  return receipt;
+}
+
+async function recordAssessment(session: CpuFixture, name: string, input: AssessmentInput) {
+  const original = JSON.stringify(input);
+  const assessment = assessRegisteredWork(input);
+  await writeFile(join(session.directory, name), JSON.stringify({ input, assessment }, null, 2), { flag: 'wx', mode: 0o600 });
+  expect(JSON.stringify(input)).toBe(original);
+  expect(assessment).toMatchObject({ kind: 'registered-work-assessment', scope: 'captured-registration-only',
+    windowId: input.evidence.windowId, attemptId: input.expectedRegistration.attemptId,
+    registrationRevision: input.expectedRegistration.revision,
+    startedAtMs: input.evidence.startedAtMs, finishedAtMs: input.evidence.finishedAtMs });
+  expect(assessment.limitations).toEqual(expect.arrayContaining([...input.evidence.limitations, 'not-dispatch-authorization']));
+  expect(assessment.gpuRows).toEqual(input.evidence.gpuCorrelations); // All native rows, not just matching ones.
+  for (const field of ['ownerKnown', 'nativeQueueEmpty', 'gpuClear', 'resourcesReleased', 'maySubmit', 'dispatchNext']) {
+    expect(assessment).not.toHaveProperty(field);
+  }
+  return assessment;
+}
+
+test('native live-service, confirmed-exit and withheld-receipt assessments preserve evidence without authorizing handoff', async () => {
   const abort = new AbortController();
   // This guard spans BOTH windows; deliberate fixture close aborts session.signal,
   // but parent SIGINT/SIGTERM must also stop the later post-exit census/GPU work.
@@ -96,6 +144,7 @@ test('an idle live CPU service is not exited; after owned teardown queue failure
     return result;
   }
   const rawBefore = await rawEmptyQueue();
+  const liveRegistration = structuredClone(config.registration), livePriorMemory = structuredClone(config.memory);
   // Deliberately no injected reader I/O: exact application-to-native composition.
   const live = await module.collectRegisteredWorkEvidence(config, liveSignal);
   await writeFile(join(session.directory, 'composed-live.json'), JSON.stringify({ config, rawBefore, evidence: live }, null, 2), { flag: 'wx', mode: 0o600 });
@@ -108,11 +157,21 @@ test('an idle live CPU service is not exited; after owned teardown queue failure
     expect(live.identities.find(row => row.identity.pid === owner.pid)?.[phase].state).toBe('present');
   }
   expect(live.queues[0]!.changed).toBe(false); checkGpuRows(live);
+  const liveAssessment = await recordAssessment(session, 'assessment-live.json', {
+    expectedRegistration: liveRegistration, priorMemory: livePriorMemory, evidence: live, exits: [],
+  });
+  expect(liveAssessment.state).toBe('activity-observed'); expect(liveAssessment.retiredServices).toEqual([]);
+  for (const phase of ['before', 'after'] as const) {
+    expect(liveAssessment.findings).toContainEqual({ kind: 'registered-process-observed',
+      identity: id, registrationId: 'owned-cpu-service', phase });
+  }
   liveSignal.throwIfAborted(); expect(await observeProcess(owner.pid)).toEqual(owner); // Empty queue did not mean exit.
 
   const cleanup = await session.close(); // Separate existing identity-checked fixture teardown, NOT collector action.
   expect(cleanup).toMatchObject({ ownedServiceExited: true, identityResolved: true });
   config.windowId = randomUUID(); config.memory = live.memory;
+  const exitReceipt = await recordedExit(session, config, scenarioSignal);
+  const goneRegistration = structuredClone(config.registration), gonePriorMemory = structuredClone(config.memory);
   scenarioSignal.throwIfAborted();
   const gone = await module.collectRegisteredWorkEvidence(config, scenarioSignal);
   await writeFile(join(session.directory, 'composed-after-exit.json'), JSON.stringify({ config, cleanup, evidence: gone }, null, 2), { flag: 'wx', mode: 0o600 });
@@ -125,4 +184,18 @@ test('an idle live CPU service is not exited; after owned teardown queue failure
   }
   expect(gone.queues[0]!.changed).toBeNull(); checkGpuRows(gone);
   expect(Object.hasOwn(gone, 'resourcesReleased')).toBe(false);
+  expect(exitReceipt.observedAtMs).toBeLessThanOrEqual(gone.startedAtMs);
+  const goneInput: AssessmentInput = { expectedRegistration: goneRegistration, priorMemory: gonePriorMemory,
+    evidence: gone, exits: [exitReceipt] };
+  // Persist all three assessment reports before checking the nominal post-exit
+  // outcome, so an inconclusive run keeps its negative-control evidence too.
+  const goneAssessment = await recordAssessment(session, 'assessment-after-exit.json', goneInput);
+  const withoutReceipt = await recordAssessment(session, 'assessment-after-exit-no-receipt.json', { ...goneInput, exits: [] });
+  expect(goneAssessment.state).toBe('no-matching-activity-observed');
+  expect(goneAssessment.findings).toEqual([]); expect(goneAssessment.unresolved).toEqual([]);
+  expect(goneAssessment.retiredServices).toEqual([{ registrationId: 'owned-cpu-service', identity: id,
+    receiptId: exitReceipt.receiptId, queue: 'unavailable-after-confirmed-exit' }]);
+  expect(withoutReceipt.state).toBe('indeterminate'); expect(withoutReceipt.retiredServices).toEqual([]);
+  expect(withoutReceipt.unresolved).toContainEqual({ code: 'service-exit-unverified', registrationId: 'owned-cpu-service' });
+  for (const phase of ['before', 'after'] as const) expect(gone.queues[0]![phase].state).toBe('failed');
 });

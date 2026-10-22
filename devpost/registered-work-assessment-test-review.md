@@ -9,6 +9,14 @@ The learner approved this contract and its 45 cases with “looks good” on
 23 October 2026. Implementation and synthetic verification are now authorised;
 native execution remains a separate approval boundary.
 
+The learner subsequently accepted the implementation with “great, proceed”.
+Committed as **`0356682` — Assess registered-work evidence without authorizing
+dispatch**, after fresh typechecking and **446/446** default tests. The
+[native extension](registered-work-assessment-native-review.md) subsequently
+received explicit one-run approval and passed **1/1** on Dundee, with independent
+raw-evidence/cleanup audit and reviewer corroboration. Learner acceptance of that
+native checkpoint is pending; no GPU release/handoff claim is added.
+
 23 October 2026. The learner accepted the composed collector checkpoint with
 “looks good, go for it”. It is committed as **`3298874` — Collect registered-work
 evidence with native diagnostics** after rechecking typechecking and **397/397**
@@ -206,7 +214,7 @@ approval remain required. No model inference or GPU stop-latency claim is added.
 - [x] Learner approves the contract and tests before implementation.
 - [x] Implement, run synthetic integration checks and review.
 - [x] Learner checks the implementation checkpoint before commit.
-- [ ] Separately approve and execute the native assessment extension.
+- [x] Separately approve and execute the native assessment extension.
 
 The accepted product/spec boundary is unchanged: this **descriptive, window-bound
 reconciliation result** is a bridge before real shared-lease integration, not

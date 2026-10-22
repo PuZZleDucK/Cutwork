@@ -1,6 +1,77 @@
 # Slice 1 — implementation checkpoint
 
-## Current continuation — assessment accepted; native preparation next, 23 October 2026
+## Current continuation — native assessment accepted; fast mode, 23 October 2026
+
+The learner explicitly approved one bounded native attempt. It passed **1/1**,
+exit **0**, with no retry. Full [outcome and provenance](registered-work-assessment-native-review.md)
+are retained; source remains based on **0356682** plus the approved native-test
+extension. No product/fixture implementation changed.
+
+- Fresh Dundee preflight: Ubuntu 26.04.1, RTX 4060 Ti / 16380 MiB, pinned Node 24.22.0,
+  isolated Python/Comfy source checks, about 193 GiB free, no conflicting studio run.
+  The short hostname failed resolution; documented `dundee.local` resolved and
+  was verified before any remote execution. No native retry was involved.
+- **108** source/config/test files reverified; local and exact-snapshot Dundee
+  typechecking and **446/446** defaults passed before native launch.
+- Proof: `registered-work-assessment.f46e77e6-0c9f-492b-a8e5-c84c01c65744`.
+  Native unit: **19.201 s**, **692.1 M** peak, **0 swap**; journal corroborates exit 0.
+- Live assessment: `activity-observed`; post-exit: `no-matching-activity-observed`
+  with one confirmed retired service; same capture without the exit receipt:
+  `indeterminate` with `service-exit-unverified` and no retirement.
+- The post-exit collector report stayed `incomplete`: both queue reads remained
+  settled `COMFY_IDENTITY`/native ENOENT failures. No invented empty queue.
+- Actual child exit 0, observed receipt at 18249.405422 ms before window 18250.312766 ms.
+  Source receipt hash/identity/command and same-input negative control verified.
+- Initial audit review found a derived-summary dependency. Before launch, added
+  a separately hashed supplemental audit deriving nominal conditions directly
+  from raw census rows/NVIDIA stdout; original snapshot/audit remained preserved.
+- Owned PID/group 2402977, start 88840108, port 35285: SIGINT-only exit 0. Independent
+  checks found its process/group/listener and all six query PIDs gone. Personal
+  PID 1216557/start 41044381, port 8188 and 234 MiB compute listing were unchanged.
+- Independent reviewer corroborated the 108 source hashes, 12 native evidence files,
+  raw conditions, receipt/control, cleanup and outcome without discrepancies.
+
+Ignored evidence: `.local-evidence/slice-1/registered-work-assessment/attempt-1/`.
+Earlier collector attempts remain untouched. This is CPU observation/assessment
+composition proof, not GPU release, model cancellation, lease or dispatch proof.
+
+**Accepted:** the learner said “great, looks good” and requested fast mode with
+standing approval for routine in-scope work. Commit this verified checkpoint and
+continue directly through shared GPU lease/handoff tests and implementation.
+Pause only for genuine issues or material product feedback; retain verification
+and evidence limits. Slice 1/G4 remain unchecked. No more generic observer layers.
+
+## Previous continuation — assessment committed; native plan ready for review, 23 October 2026
+
+Committed the learner-accepted implementation as **`0356682` — Assess
+registered-work evidence without authorizing dispatch**. Fresh typechecking and
+**446/446** default tests passed before commit. Accepted source/test hashes
+matched the reviewed implementation. Only the nine intended files were staged;
+private context/evidence and unrelated files stayed out of Git. Slice 1/G4 remain
+unchecked; this result is not a GPU release or dispatch permit.
+
+Prepared the [one-run native assessment review](registered-work-assessment-native-review.md)
+and extended the existing single native scenario. It now checks live idle,
+confirmed-exit and withheld-receipt assessments. The negative control uses the
+same captured post-exit report, not another query. Exit evidence comes from the
+actual fixture child outcome after awaited close, with source hash and a new
+same-worker monotonic observation time preceding the post-exit window.
+
+- Typechecking and **one-scenario collection** pass; no native hooks/body ran.
+- Independent static review found no blocker in provenance, ordering, retained
+  assertions/cleanup or the one-run execution boundary.
+- Production, native readers, fixture and Vitest execution limits are unchanged.
+- New explicit gate: `STUDIO_ASSESSMENT_EVIDENCE=1`, in addition to existing gates.
+- No SSH, service launch/control, NVIDIA query or model generation this turn.
+- Local draft evidence: `.local-evidence/slice-1/registered-work-assessment-native-review/`.
+
+**Next:** learner approval of one bounded native attempt, including fresh Dundee
+preflight, exact-source snapshot/default checks and independent outcome/cleanup
+audit. No automatic retry; preserve failures. The native draft remains uncommitted
+and unexecuted. After this checkpoint, move toward the actual shared GPU lease/
+handoff path; the descriptive assessment does not waive it.
+
+## Previous continuation — assessment accepted; native preparation next, 23 October 2026
 
 The learner approved the [assessment contract and 45 cases](registered-work-assessment-test-review.md)
 with “looks good”. Implemented the pure `assessRegisteredWork()` reconciliation

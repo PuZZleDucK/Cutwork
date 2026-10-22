@@ -324,3 +324,34 @@ contains no behaviour. The temporary collect-only review configuration was
 removed when the assertions moved into `tests/contracts/` unchanged. All **446**
 default cases pass, including the existing 397. These are synthetic checks, not a
 new native run or proof of actual GPU release. No further native run is authorised.
+
+### Native assessment extension — one approved run passed
+
+The implementation is committed as `0356682`. The
+[one-run review](../devpost/registered-work-assessment-native-review.md) extends the
+existing `tests/evidence-native/registered-work.test.ts` scenario with the live
+assessment, actual fixture exit receipt and post-exit assessment, plus a negative
+control withholding that receipt without another native read. The original
+native checks and cleanup are retained. No production or fixture code changed.
+
+Safe preparation only:
+
+```sh
+npm run typecheck
+node node_modules/vitest/vitest.mjs list --config vitest.evidence-native.config.ts --no-staticParse --json
+```
+
+Both safe commands pass; one native definition is collected without running
+hooks or bodies. Execution additionally requires `STUDIO_ASSESSMENT_EVIDENCE=1`;
+old collector launch flags alone are insufficient. Separate learner run approval
+and the documented fresh-source/host/cleanup audit remain required.
+
+The learner explicitly approved one attempt. It passed **1/1**, exit 0, on Dundee
+after fresh typechecking and **446/446** default cases locally and on the exact
+snapshot. Live, confirmed-exit and withheld-receipt assessments matched the plan;
+the latter two used the identical native report. Independent checks corroborated
+receipt provenance/order, raw conditions, retained failed queues/GPU rows and
+owned cleanup while personal Comfy was unchanged. The reviewer found no evidence
+discrepancies. See the linked review for hashes, logs and limits. This is not
+GPU release/handoff proof. No second native run is authorised; learner acceptance
+of this native checkpoint is pending.

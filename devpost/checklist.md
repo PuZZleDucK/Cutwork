@@ -5,13 +5,13 @@ status: approved
 
 # Build Checklist
 
-Build mode: learn — explicitly selected by the learner on 21 October 2026. Review tests before feature implementation; after mechanical verification, explain the change, complete the learner check, and commit before proceeding. Carry this mode forward without asking again.
+Build mode: **fast** — explicitly selected by the learner on 23 October 2026 because submission is due this weekend. Standing approval applies to routine in-scope tests, implementation, bounded verification and commits. Do not pause for per-batch approval; stop for genuine blockers, consequential scope/architecture changes or feedback that materially affects the product. Retain tests-first development, mechanical verification, independent focused review where useful, privacy safeguards and honest live-evidence boundaries. Prior learn-mode approval gates are historical, not current blockers. No blanket permission to kill unrelated work or conceal failed results.
 
 The scope, PRD and technical specification are approved. The learner approved this build order on 21 October 2026 ("looks great"). It sequences the approved product, without adding new behaviour; no further build-order sign-off is required. Git was initialised with the learner's agreement. On 21 October the learner explicitly requested a partial progress checkpoint commit; this saves the work without completing slice 1. Slice 1 has initial application modules, Dundee runtime/CLI preparation and successful real provider capability probes; a direct short YuE2 generation has now passed, and a first short song-conditioned H3 clip has passed; a first agent-driven attempt recovered real media after an H3 observation failure, but a clean chain pass remains outstanding. All 78 approved local tests pass, including the eight implementation-review regressions and both provider-runner failure paths.
 
 ## Working Agreement
 
-- The build order is approved. Write each slice's tests and present their assertions, fixtures and live-test boundaries for learner review **before implementing the feature**. Minimal test-runner scaffolding may accompany the tests; it is not permission to implement the behaviour under review. A missing import or unavailable GPU is not a meaningful behavioural test result.
+- The build order is approved. Write tests and record their assertions, fixtures and live-test boundaries before implementation; the learner's fast-mode standing approval removes routine waiting for sign-off. A missing import or unavailable GPU is not meaningful behavioural test evidence.
 - Keep development tests separate from live evidence. Synthetic media, fake provider responses and simulated failures must be labelled; they do not prove generation, authentication, audio quality, memory feasibility or stopping latency. A skipped live check is not a pass.
 - Dundee is the deployment/test target; Artigas is reference evidence only. Confirm access, the actual OS/GPU, available space and the service-account environment when slice 1 starts. Do not infer fresh-host support from existing installations, or silently substitute a larger GPU, different provider/model or remote generator.
 - Preserve normal creative-agent capabilities, project-specific working directories and the approved Python-isolation requirement. Helper receipts and media validation establish observable facts without forcing agent JSON replies or restricting tools. Unknown unregistered work is a visible tracking limitation, not proof of cancellation.
@@ -20,7 +20,7 @@ The scope, PRD and technical specification are approved. The learner approved th
 - Each slice includes test review, implementation, mechanical verification, the appropriate learner check and a commit. In learn mode, wait for hands-on feedback before that commit. Inspect the staged diff and stage only intended project files; keep private context, credentials, runtime state and generated media out of Git. Record completion evidence and the commit when checking a slice off.
 - Missing access or a failing native contract stops the dependent work for diagnosis; do not mark the slice done or build a convincing UI around fake success. Changes to product promises, chosen architecture or the creative kernel require agreement and reconciliation with the planning documents.
 
-## Current Checkpoint — Reconciliation Accepted; Native Preparation Next
+## Current Checkpoint — Native Assessment Accepted; Fast-Mode Build Continuing
 
 Read [slice-1-progress.md](slice-1-progress.md). The learner approved the two provider-runner assertions with "yeah, looks good". Both are fixed; **78/78 local tests and typechecking pass**. A source review found no blocker. Real tasks previously verified the requested `gpt-6.1-sol` and `claude-opus-5-5` models and normal tools on Dundee. Those remain capability evidence, not native generation/cancellation proof. The 12 native live cases remain unrun.
 
@@ -165,6 +165,27 @@ complete. The learner accepted the implementation with “great, proceed”, app
 its commit and native test preparation. No native extension has run or been
 authorised; this result remains incompatible with
 release/dispatch authorization. Real shared lease/handoff work is still required.
+The accepted assessment is saved as **`0356682`** after fresh typechecking and
+446/446 tests. Its [native verification plan](registered-work-assessment-native-review.md)
+extends the existing single CPU-service scenario with live, confirmed-exit and
+same-capture withheld-receipt assessments. Typechecking and one-scenario
+collection pass; independent static review found no blocker. A new explicit
+`STUDIO_ASSESSMENT_EVIDENCE=1` gate prevents accidental reuse of the old launch
+command. No native execution is authorised until the learner approves the plan.
+
+**Latest native outcome:** the learner replied “approved”; the single authorised
+attempt passed **1/1**, exit 0, on Dundee. Fresh local and exact-source Dundee
+checks passed typechecking and **446/446**. The live service was observed active;
+the post-exit report retained failed queues while the actual child exit receipt
+allowed a retired-service explanation; removing that receipt from the same input
+yielded indeterminate. Independent raw census/GPU and receipt checks, cleanup,
+source hashes and reviewer corroboration passed. The owned fixture exited via
+SIGINT only; personal Comfy identity/listener and its 234 MiB listing were unchanged.
+See [the retained outcome](registered-work-assessment-native-review.md).
+The learner accepted the native result and switched to fast mode with standing
+approval. Commit this checkpoint and implement the shared GPU lease/handoff
+path; do not rerun a completed proof without a concrete verification purpose. G4 and
+real model cancellation/release/handoff remain open.
 
 ## Slices
 

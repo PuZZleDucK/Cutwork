@@ -1,6 +1,19 @@
 # Slice 1 — implementation checkpoint
 
-## Current continuation — isolated analysis verified, 22 October 2026
+## Current continuation — native-control functions verified locally, 22 October 2026
+
+After accepting analysis checkpoint `b064372`, the learner approved the next
+26 cancellation/handoff assertions with “looks good, go for it.” The TypeScript
+functions now pass those plus 13 implementation regressions: **39/39** controller
+cases, **117/117** default tests, and typechecking. Direct Node loading and
+owned-child retention bugs were reproduced and fixed. This is control-flow
+evidence with injected I/O, **not** live native cancellation or GPU handoff.
+The detailed continuation below and [test-review record](native-control-test-review.md)
+give the proof boundary. The learner accepted this working step with “looks good,
+continue.” Save the partial checkpoint before native bindings; slice 1 remains
+unchecked.
+
+## Previous continuation — isolated analysis verified, 22 October 2026
 
 The provider-media/polling checkpoint below is committed as `91a8db9`. Following
 the learner's request to continue and approval of the [analysis tests](analysis-test-review.md),
@@ -10,8 +23,8 @@ passed in transient user services with unchanged host-Python observations.
 Independent decoding of the retained song matches all 3,079 waveform peaks and
 its original 1,576,256 samples/channel. Its 65 detected anchors and approximately
 119.68 BPM are estimates, not a musical-accuracy guarantee. Detailed evidence is
-at the end. The learner accepted this result with “looks good, move forward.” It is being
-saved as a partial checkpoint; no slice completion, browser integration or formal
+at the end. The learner accepted this result with “looks good, move forward.” It is
+committed as partial checkpoint **`b064372`**; no slice completion, browser integration or formal
 12-case native-suite pass is claimed.
 
 21 October 2026 historical baseline. **Incomplete; learner-requested partial checkpoint, not slice completion. Do not advance to slice 2.**
@@ -739,9 +752,50 @@ at **330 MiB / 0%**, with the same personal Comfy PID **1216557** at 234 MiB on
 not start/stop GPU services or run providers.
 
 **Boundary and next step:** the isolated analysis gate is mechanically verified;
-the learner accepted this working step with “looks good, move forward.” Save the
-partial checkpoint before starting cancellation/handoff work. No browser
+the learner accepted this working step with “looks good, move forward.” The
+partial checkpoint is now committed as **`b064372`**. No browser
 setup/analysis UI, exact editor beat-map arithmetic, persistence/reanalysis
 selection or formal native-generation-suite completion is claimed. Slice 1
 remains unchecked; next are its remaining music replay/cancellation, bidirectional
 GPU handoff and clean provider-chain/Claude media/live-suite gates.
+
+## 22 October continuation — approved native-control implementation
+
+The learner approved the 26 proposed asynchronous assertions with “looks good,
+go for it.” Implemented `apps/server/src/jobs/native-control.ts` and promoted
+its assertions to `tests/contracts/native-control.test.ts` in the normal suite.
+`cancelComfyJob` uses captured identity, one targeted request and independently
+supplied stop observations. `handoffGpu` waits for owned processes, descendants,
+queue and allocations, then invokes dispatch once under its caller-held-lease
+precondition. Both bound observations/polling by one original monotonic deadline;
+no HTTP acknowledgement is promoted into native stop or resource-release proof.
+
+Thirteen supplemental implementation regressions cover evidence ambiguity,
+mutable inputs, retained child ownership, timeouts, timer cleanup and direct Node
+loading. Two concrete defects were found before this checkpoint:
+
+- Vitest accepted a constructor parameter property that Node 24.1.0's direct
+  TypeScript loader rejected. A child-process import test reproduced the failure;
+  explicit field assignment repaired it without a new loader or stack change.
+- Independent review found an observed owned child could be forgotten after its
+  process disappeared while its GPU allocation lingered. Active/unresolved-owned
+  fixtures both failed with premature `dispatched`. Remembering all observed
+  owned PIDs repaired both; the focused reviewer confirmed the repair.
+
+Verification: **39/39 native-control cases**, **117/117 default cases**, TypeScript
+checking and `git diff --check` pass. A separate real-clock Node diagnostic held
+three synthetic never-settling callbacks to a 100 ms budget (observed
+**100.43–100.85 ms**), aborted their signals and made no duplicate POST/dispatch.
+It made no network request and is not a native stopping-latency measurement.
+Local ignored evidence: `.local-evidence/slice-1/native-control/` contains the
+owned-child failing/passing logs and real-clock diagnostic output. See the test
+review for runnable commands and the exact remaining gates.
+
+No generator, provider, remote service or process termination was invoked in
+this step. No browser/API integration, durable lease, native observer/transport
+or formal 12-case live-suite pass is claimed. The new functions deliberately
+accept validated native observations; they do not derive them from agent text.
+If dispatch acknowledgement times out, the launched work may still exist: retain
+ownership and reconcile rather than automatically retry. Concrete native
+bindings/shared-lease testing and the planned owned-service/GPU proof sequence
+remain next. Slice 1 and G4 remain incomplete.

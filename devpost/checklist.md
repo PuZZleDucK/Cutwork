@@ -20,7 +20,7 @@ The scope, PRD and technical specification are approved. The learner approved th
 - Each slice includes test review, implementation, mechanical verification, the appropriate learner check and a commit. In learn mode, wait for hands-on feedback before that commit. Inspect the staged diff and stage only intended project files; keep private context, credentials, runtime state and generated media out of Git. Record completion evidence and the commit when checking a slice off.
 - Missing access or a failing native contract stops the dependent work for diagnosis; do not mark the slice done or build a convincing UI around fake success. Changes to product promises, chosen architecture or the creative kernel require agreement and reconciliation with the planning documents.
 
-## Current Checkpoint — Polling Replay and Isolated Analysis Verified
+## Current Checkpoint — Native Control Verified Locally
 
 Read [slice-1-progress.md](slice-1-progress.md). The learner approved the two provider-runner assertions with "yeah, looks good". Both are fixed; **78/78 local tests and typechecking pass**. A source review found no blocker. Real tasks previously verified the requested `gpt-6.1-sol` and `claude-opus-5-5` models and normal tools on Dundee. Those remain capability evidence, not native generation/cancellation proof. The 12 native live cases remain unrun.
 
@@ -49,8 +49,18 @@ generation or alteration; independent decoding reproduced all 3,079 waveform
 peaks, original duration/sample count, and receipt identity. Estimated beats are
 not musical ground truth. See the progress record for evidence and limitations.
 The learner accepted this working analysis step with “looks good, move forward.”
-It is being saved as a partial checkpoint before cancellation/handoff work; it
+It is committed as **`b064372`** before cancellation/handoff work; it
 does not complete slice 1 or implement the browser setup panel.
+
+**Current implementation checkpoint:** the learner approved the
+[native-control test batch](native-control-test-review.md). Its 26 original cases
+and 13 supplemental regressions now pass against the TypeScript functions;
+typecheck and all 117 default tests pass. Node direct-loading and owned-child
+retention failures were reproduced and repaired. These are injected-I/O control
+checks, not native endpoint, shared-lease or GPU-cancellation proof. No native
+cancellation or GPU run occurred. The learner accepted this working step with
+“looks good, continue.” Save the partial checkpoint before native bindings;
+slice 1 remains incomplete.
 
 ## Slices
 
@@ -169,6 +179,8 @@ Reflection: Not offered yet; any personal response belongs in the ignored learne
 Activity mode: Proposed focused planning/verification investigation suitable for an experienced developer; not yet performed.
 
 ## Revisions
+
+- **22 October 2026 — analysis checkpoint and native-control implementation:** accepted isolated analysis work committed as `b064372`. Inspecting the selected Comfy pin found its atomic per-job cancellation route; prefer it over composing older queue/interrupt operations, without changing owned-job semantics or scope. The learner approved 26 asynchronous control assertions; their implementation and 13 supplemental regressions now pass. Direct Node loading and forgotten owned-child allocation bugs were reproduced and repaired. Typecheck and all 117 default tests pass. Concrete native bindings/shared lease and live interruption/resource-release proof remain outstanding; no slice completion or new native run is claimed.
 
 - **21 October 2026 — implementation refinements, no scope change:** following learner approval, fixed the eight reproduced regressions without weakening their expectations. Real provider capability tasks now pass on Dundee. A subsequent code review identified two launcher failure paths, reproduced with local Node fixtures and presented for test review at that checkpoint (subsequently approved and fixed below). Evidence and remaining G1–G4 boundaries are recorded in `slice-1-progress.md`. Native installation/generation and the slice's hands-on check remain outstanding.
 

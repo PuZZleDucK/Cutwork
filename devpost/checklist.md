@@ -20,7 +20,7 @@ The scope, PRD and technical specification are approved. The learner approved th
 - Each slice includes test review, implementation, mechanical verification, the appropriate learner check and a commit. In learn mode, wait for hands-on feedback before that commit. Inspect the staged diff and stage only intended project files; keep private context, credentials, runtime state and generated media out of Git. Record completion evidence and the commit when checking a slice off.
 - Missing access or a failing native contract stops the dependent work for diagnosis; do not mark the slice done or build a convincing UI around fake success. Changes to product promises, chosen architecture or the creative kernel require agreement and reconciliation with the planning documents.
 
-## Current Checkpoint — Native Control Verified Locally
+## Current Checkpoint — Native Binding Verified Locally
 
 Read [slice-1-progress.md](slice-1-progress.md). The learner approved the two provider-runner assertions with "yeah, looks good". Both are fixed; **78/78 local tests and typechecking pass**. A source review found no blocker. Real tasks previously verified the requested `gpt-6.1-sol` and `claude-opus-5-5` models and normal tools on Dundee. Those remain capability evidence, not native generation/cancellation proof. The 12 native live cases remain unrun.
 
@@ -59,8 +59,23 @@ typecheck and all 117 default tests pass. Node direct-loading and owned-child
 retention failures were reproduced and repaired. These are injected-I/O control
 checks, not native endpoint, shared-lease or GPU-cancellation proof. No native
 cancellation or GPU run occurred. The learner accepted this working step with
-“looks good, continue.” Save the partial checkpoint before native bindings;
+“looks good, continue.” The partial checkpoint is committed as **`70a40af`**;
 slice 1 remains incomplete.
+
+**Current native-binding checkpoint:** the learner approved the 53 assertions in
+[comfy-native-test-review.md](comfy-native-test-review.md) with “looks good.” The
+real Linux/IPv4 binding now verifies the captured process and accepted server-side
+socket before sending HTTP, validates complete native responses, and bounds the
+whole request by one deadline. The original 53 plus five supplemental regressions
+pass: **58 binding cases, 175/175 default tests on three consecutive runs**, plus
+typechecking and a direct Node 24.1.0 synthetic HTTP/controller smoke. An array
+status-coercion defect was reproduced and repaired; a deliberately reconnecting
+copy fails the same-socket assertion. Focused review found no remaining blocker.
+These are local HTTP/process tests with synthetic data, not real Comfy or GPU
+cancellation. No remote service/generator was launched. The learner accepted the implementation with “proceed” before its partial
+checkpoint commit; slice 1 remains unchecked.
+The next native CPU Comfy proof, shared GPU lease and resource-release observer
+remain outstanding.
 
 ## Slices
 
@@ -199,3 +214,12 @@ Activity mode: Proposed focused planning/verification investigation suitable for
 - **22 October 2026 — first native H3 feasibility proof:** six model files verified and repeat-checked; short audio-conditioned generation passed, including original PNGs, exact seed/native counts and observed normal resource release. Dynamic VRAM/CPU offloading and process swap were required in the observed run; no new minimum host requirement inferred. Product guidance prepared, not yet provider-exercised. No scope/build-order change or slice completion.
 
 - **22 October 2026 — provider media and polling repair checkpoint:** learner approved the recovered video and polling assertions. Codex used the product guidance for real music/H3/export work; a failed completion observation was preserved. The reviewed bounded-GET repair passes nine regression methods and a direct same-input native replay with final history, identical media and clean release. No natural read failure occurred in that replay; diagnostic fault injection remains separate. Slice 1 is still open.
+
+- 22 October 2026 native-binding implementation: the learner approved 53 transport/
+  decoder assertions before code. Implemented them plus five supplemental
+  counterexamples, repaired the reproduced non-string status coercion bug, and
+  promoted 58 cases into the default suite (175 total). Three full runs and a
+  direct Node synthetic wire smoke pass. An isolated mutant proves the socket-
+  reuse test detects reconnecting. No product/stack/agent-authority change;
+  native CPU/GPU proof remains separate. Corrected the HTML companion's stale
+  Markdown fingerprint metadata only; canonical spec content is unchanged.

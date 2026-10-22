@@ -1,6 +1,32 @@
 # Slice 1 — implementation checkpoint
 
-## Current continuation — native-control functions verified locally, 22 October 2026
+## Current continuation — native binding verified locally, 22 October 2026
+
+The learner approved the 53-case [native-binding test contract](comfy-native-test-review.md)
+with “looks good.” `apps/server/src/jobs/comfy-native.ts` now connects the accepted
+controller to a captured local service/job: exact process/socket identity before
+HTTP bytes, complete typed native response validation, targeted cancellation,
+one whole-request deadline, and client-only cleanup without retries or redirects.
+No global interrupt, process termination or agent restriction was introduced.
+
+All original assertions pass. Focused review found a status-coercion defect;
+meaningful red tests preceded its repair. Five supplemental cases cover that
+counterexample, same-socket reuse across listener replacement and late identity
+resolution after timeout. A deliberately reconnecting copy fails the socket test.
+The final **58 binding tests** are in the normal suite: **175/175 passed on three
+consecutive runs**, with typechecking and a direct Node **24.1.0** synthetic
+GET/POST/GET controller smoke. The focused reviewer found no remaining blocker.
+
+These checks ran on the development machine, **not Dundee**, using real local
+HTTP/process fixtures with **synthetic Comfy data**. No native Comfy/H3/YuE2 job,
+GPU work, remote service deployment or resource-release/lease implementation
+occurred. The detailed test-review record links the retained ignored evidence
+and runnable commands. The learner accepted this implementation with “proceed” for its partial
+checkpoint commit. Slice 1/G4 and the 12-case live suite remain
+incomplete; continue with an owned CPU Comfy proof, then the outstanding native
+release/lease/cancellation gates, not slice 2.
+
+## Previous continuation — native-control functions verified locally, 22 October 2026
 
 After accepting analysis checkpoint `b064372`, the learner approved the next
 26 cancellation/handoff assertions with “looks good, go for it.” The TypeScript
@@ -10,8 +36,11 @@ owned-child retention bugs were reproduced and fixed. This is control-flow
 evidence with injected I/O, **not** live native cancellation or GPU handoff.
 The detailed continuation below and [test-review record](native-control-test-review.md)
 give the proof boundary. The learner accepted this working step with “looks good,
-continue.” Save the partial checkpoint before native bindings; slice 1 remains
-unchecked.
+continue.” The partial checkpoint is committed as **`70a40af`**; slice 1 remains
+unchecked. The subsequent [native-binding test review](comfy-native-test-review.md)
+contained 53 assertions (17 decoder, five socket-matching and 31 local HTTP/process
+cases). It was collected/reviewed without implementation or fixture execution;
+the learner then approved it before the implementation recorded above.
 
 ## Previous continuation — isolated analysis verified, 22 October 2026
 

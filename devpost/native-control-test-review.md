@@ -268,5 +268,6 @@ The concrete transports/observers/shared lease, live native proof and measured
 generator stop latency remain unverified. Slice 1 and G4 remain incomplete.
 
 The learner accepted the working implementation checkpoint with “looks good,
-continue.” Save this verified partial step before the next native-binding tests;
-this acceptance does not close the outstanding native gates.
+continue.” This verified partial step is committed as **`70a40af`** before the
+next [native-binding tests](comfy-native-test-review.md); this acceptance does
+not close the outstanding native gates.

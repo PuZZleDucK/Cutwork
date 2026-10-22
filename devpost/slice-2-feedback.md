@@ -21,7 +21,7 @@ A manual change to another song atomically restores original user music descript
 - [x] Browser: warning dismissal causes no workspace movement; survives reload; hidden messages reopen.
 - [x] Browser: change between real retained songs, compare description/lyrics with immutable original inputs; no generation required.
 - [x] Typecheck/default tests/build, deploy idle studio only, check personal services unchanged.
-- [ ] Learner retries the affected controls; feedback checkpoint completion remains pending that report.
+- [x] Learner accepted the affected controls with “great, perfect”; early UI feedback checkpoint complete (23 October 2026).
 
 ## Verified outcome
 

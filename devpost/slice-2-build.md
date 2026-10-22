@@ -38,4 +38,4 @@ and provider switching, original-media audit and idle-server restart persistence
 are recorded in [the live evidence](slice-2-live-evidence.md). Source/receipts and
 private screenshots remain outside Git.
 
-Initial UI feedback has now been received and the requested corrections are deployed; see [the feedback record](slice-2-feedback.md). Slice 2 stays unchecked until the learner has retried those affected controls.
+Initial UI feedback has now been received and the requested corrections are deployed; see [the feedback record](slice-2-feedback.md). The learner accepted the corrected controls with “great, perfect”; slice 2 and the early UI checkpoint are complete.

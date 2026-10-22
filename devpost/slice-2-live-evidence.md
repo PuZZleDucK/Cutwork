@@ -1,6 +1,6 @@
 # Slice 2 — browser integration evidence
 
-Status: **mechanical checkpoint passed, 23 October 2026; early learner UI feedback received; requested corrections deployed, retry pending**.
+Status: **mechanical checkpoint passed, 23 October 2026; early learner UI feedback received; requested corrections deployed and accepted with “great, perfect”**.
 
 ## What is usable
 

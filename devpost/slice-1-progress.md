@@ -1,6 +1,180 @@
 # Slice 1 — implementation checkpoint
 
-## Current continuation — whole Comfy queue verified, 22 October 2026
+## Current continuation — composed native checkpoint accepted, 23 October 2026
+
+The learner said “yes” to one fresh native attempt after the diagnostic repair,
+with unchanged strict checks and no automatic retry. Attempt 3 is
+`registered-work.6004ece3-71c5-4ca9-ba89-0cfdccbbe626`, separately recorded under
+`.local-evidence/slice-1/registered-work/attempt-3/`. Its 104-file source snapshot
+differs from attempt 2 only in the approved collector repair and added diagnostic
+test file. Fresh Dundee preflight and isolated preparation passed: typechecking
+and **397/397** default cases, also freshly passed locally.
+
+The single native scenario **passed 1/1, exit 0**, including both windows:
+
+- Live service: **343/343** processes in successful census brackets, valid empty
+  owned queues matching independent raw observations, and all GPU rows retained.
+- After separate owned shutdown: **342/342** processes, old service identity
+  absent in both scans, queue reads explicitly failed rather than became empty,
+  and all GPU rows retained. The report intentionally says `incomplete` because
+  the dead service cannot supply queue data; that is the expected passing result.
+- The post-exit queue errors retained real native `ENOENT`, errno **-2**, `open`
+  and `/proc/2366077/stat` under `cause`. This demonstrates native diagnostic
+  propagation through the owned transport, **not** a census-error reproduction.
+  All four census scans succeeded; the prior mid-scan causes remain unknown.
+
+Native unit: **18.580 s**, **689.2 M** peak memory, no swap. Owned CPU service
+**2366077**, port **32863**, exited 0 after SIGINT only. Independent audit found
+its PID/group/listener and all query PIDs absent. Personal Comfy **1216557/8188**,
+exact identity and **234 MiB** compute listing were unchanged. Both proof units
+are inactive/not-found and no studio unit was running. All 104 source hashes
+were rechecked locally and remotely; the unchanged success audit passed.
+Focused independent review corroborated the retained evidence and found no
+discrepancy; this collector checkpoint is ready for learner acceptance.
+
+The first two failures remain intact, with no retrospective errno assignment.
+No retries, unreadable-PID skipping or strict-assertion changes were made. An
+exclusive launch marker prevents accidental reuse of this attempt's command.
+
+The learner accepted the [third-attempt evidence](registered-work-test-review.md)
+with “looks good, go for it”, approving the collector checkpoint commit and
+preparation of the next integration tests before implementation. This does not prove H3/GPU
+cancellation, resource-release authorization, shared leasing or the remaining
+slice 1/G4/formal live cases. No fourth attempt or UI advancement is authorised.
+
+## Previous continuation — diagnostic repair verified locally, 23 October 2026
+
+The learner approved the [27 diagnostic cases](census-error-diagnostics-test-review.md)
+with “looks good”. Freshly reproduced **21 red / 6 green** before the repair.
+The collector now copies an optional immediate native cause using the approved
+field allowlist; the original census reader already retained it in memory.
+Outer error/abort/deadline precedence, query-cleanup metadata, strict failed-scan
+behaviour and all control flow remain unchanged. No new retry or release verdict.
+
+All **27/27** diagnostic cases passed first implementation. Promoted their
+unchanged assertion bodies into `tests/contracts/census-error-diagnostics.test.ts`
+and removed the temporary review config. Final local verification on Node 24.1.0:
+**397/397 default tests**, **27/27 focused cases** and typechecking pass. Focused
+independent review found no issue. Only the collector differs among the 103
+previous native-snapshot files; the new test body matches its approved copy.
+
+Red/green logs, source copies, exact diff and hashes are retained under
+`.local-evidence/slice-1/census-error-diagnostics/`. Prior native evidence remains
+untouched. The diagnostic repair makes future errors inspectable; it neither
+recovers the missing historical errno nor fixes an established native root cause.
+
+**Next learner check:** inspect the small copier and focused tests in the linked
+review. No Dundee/native run or third attempt occurred, and none is authorised by
+this approval. A fresh native attempt needs its own approval and source/evidence
+ID. The composed checkpoint remains uncommitted pending native verification and
+learner feedback. Slice 1/G4 remains open; no UI advancement.
+
+## Previous continuation — diagnostic tests drafted, awaiting review, 23 October 2026
+
+The learner said “do it” to preparing the diagnostic batch, not implementing the
+repair or running another native scenario. The [27-case diagnostic review](census-error-diagnostics-test-review.md)
+proposes preserving immediate native error details through the existing census
+wrapper, collector and JSON report, without changing failure/release semantics.
+
+Source inspection located the loss: `ProcessCensusError.cause` already contains
+the original error; the collector's plain-data `fault()` omits it. The draft
+tests import those actual functions and inject synthetic filesystem bytes/errors.
+No replacement serializer or production change was added.
+
+Typechecking and collection pass. Executing the isolated draft suite gives
+**21 diagnostic assertions failing on missing cause fields, 6 controls passing**;
+these are meaningful behaviour failures, not import errors. The existing default
+suite still passes **370/370**. All **103** source files from native attempt 2
+remain hash-identical. Logs and hashes are retained under
+`.local-evidence/slice-1/census-error-diagnostics-review/`.
+
+Focused review identified finite-integer/zero errno and partial/empty-object
+coverage gaps. Seven added cases cover them; the original 20-case red run is also
+retained. No implementation was added to make the draft green.
+
+**Next:** learner review of the proposed error shape and assertions before the
+small implementation. No native call, third attempt, PID skipping, retry, agent
+restriction or commit. Both prior failures remain intact; slice 1/G4 remains open.
+
+## Previous continuation — second native failure retained; diagnose before another run, 23 October 2026
+
+The learner said “proceed” to one fresh, separately recorded attempt with the
+unchanged strict collector/tests. Attempt 2 is
+`registered-work.a043956c-f25d-4dfc-b18f-9667e5de0367`; its 103 source hashes and
+archive match attempt 1 exactly. Preflight and fresh isolated preparation passed:
+typechecking and **370/370 default cases** on Dundee, also freshly passed locally.
+No implementation or assertion changed between attempts.
+
+The single native execution **failed, exit 1**, but got further: its live-service
+window passed completely, with **344/344** process records, valid empty queue
+brackets and all three native NVIDIA query results. After separate owned-service
+teardown, the second window's opening census failed with `PROC_CENSUS_IO`,
+`Could not read /proc/2348632/stat`. Its closing census retained **343** processes.
+Both dead-service queue reads correctly remained failures rather than empty
+queues; those expected queue failures were not the failing assertion. Personal
+GPU correlation was same-identity in the live window, one-sided after exit.
+
+The bounded native unit ran **18.389 s**, with **688.8 M** peak memory and no swap.
+Owned CPU service **2348409**, port **37619**, exited 0 after SIGINT only.
+Independent checks found its PID/group/listener and query PIDs absent. Personal
+Comfy **1216557/8188**, its exact identity and **234 MiB** compute observation were
+unchanged. Neither proof unit remains active; no studio unit was running.
+Focused independent review corroborated the source hashes, both retained windows,
+failed overall result and cleanup.
+
+Evidence is retained separately under
+`.local-evidence/slice-1/registered-work/attempt-2/`, including both reports,
+source snapshot, logs, audit and unit journal. The failed-read PID was absent at
+later audit, but the original nested errno is missing: process churn is plausible,
+not established, and the failed PID's ownership is unknown. Do not infer either
+from nearby PID numbers or the later absence.
+
+**Next proposed learner decision:** prepare tests for retaining the underlying
+filesystem error details before another native run. No third attempt, skipped
+PID, relaxed assertion, diagnostic implementation or commit was made. Preserve
+the strict incomplete result while investigating. Slice 1/G4 and the complete
+post-exit scenario remain open; no UI advancement.
+
+## Previous continuation — composed evidence implemented; native proof incomplete, 22 October 2026
+
+The learner accepted the whole-queue implementation with “looks great, go for
+it”. Rechecked typechecking and **316/316** existing default cases, reviewed the
+intended staged diff, and committed **`b45c6d2` — Verify complete owned Comfy queue
+observations**. Private/unrelated files remain excluded.
+
+The learner approved the [registered-work evidence batch](registered-work-test-review.md)
+with “yep”. Implemented `apps/server/src/jobs/registered-work-evidence.ts` and
+promoted the 53 approved assertions into the default contract suite, with direct
+imports. All 53 passed first implementation. Review reproduced a later final-
+classification deadline defect; its new regression failed before the repair,
+then all **54 collector cases** and typechecking passed. The final classification
+now precedes the last deadline-validating timestamp. Focused re-review confirmed
+the repair. No release verdict, dispatch or agent restriction was added.
+
+Local and exact-source Dundee checks pass **370/370 default cases**, plus
+typechecking. The native scenario **failed, exit 1**, in the first live-service
+window: opening census `PROC_CENSUS_IO`, `Could not read /proc/2163576/stat`.
+The collector faithfully returned incomplete while retaining both valid empty
+queue snapshots, three native NVIDIA queries and the successful 345-process
+closing census. GPU correlation remained one-sided. The post-exit window was
+not executed. The PID was absent at later audit, consistent with churn, but the
+original nested errno is unavailable; no definite ENOENT claim is made.
+
+Exact snapshot: `registered-work.c7f47a21-2dae-49fe-852b-00b9856a11c8`, 103 files.
+Native unit: **18.717 s**, **697.3 M** peak, zero swap. Owned CPU service
+2163378/port45921 exited 0 after SIGINT only; independent audit found its
+PID/group/listener gone. Personal Comfy 1216557/8188 identity and 234 MiB listing
+were unchanged. No studio unit remains active. Focused review corroborated the
+retained failure, cleanup, source hashes and unexecuted second window.
+
+All evidence is retained under `.local-evidence/slice-1/registered-work/`; see the
+linked review for exact paths, hashes and verification boundaries. No automatic
+retry, skipped PID, weakened assertion or native-pass claim. **Next:** learner
+review of this failed observation, then one explicitly approved fresh native
+attempt with strict semantics and separate evidence IDs. No commit yet; no UI
+advancement. Slice 1/G4 and the formal live suite remain open.
+
+## Previous continuation — whole Comfy queue verified, 22 October 2026
 
 The learner approved the [48-case whole-queue batch](comfy-queue-test-review.md)
 and both extended native CPU scenarios with “looks good” before implementation.
@@ -30,8 +204,8 @@ source snapshot and all six queue comparisons were independently rechecked.
 Evidence, commands, hashes, unit results and two native directories are retained
 under `.local-evidence/slice-1/comfy-queue/`; the linked review names exact IDs.
 
-**The learner accepted this implementation with “looks great, go for it”; commit
-this verified checkpoint before the next tests-first batch.** This is native queue and
+**The learner accepted this implementation with “looks great, go for it”; committed
+as `b45c6d2`.** This is native queue and
 cooperative CPU evidence, not GPU release/stopping latency or a shared lease.
 No model/provider work or personal-service change occurred. Composition of
 identities/remembered descendants, queues/service exit, attribution/visibility and

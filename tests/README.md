@@ -237,3 +237,66 @@ The live tests independently decode/probe generated media and read/hash every pr
 5. `live/dundee-native.test.ts`: where fixtures stop and real evidence begins.
 
 Keep generated media and machine-specific logs out of Git (`/.runtime/` and `/.local-evidence/` are ignored). Commit only selected redacted evidence summaries after review; never credentials, provider stores or private learner context.
+
+## Registered-work evidence composition — native scenario verified, G4 still open
+
+The [implementation/evidence review](../devpost/registered-work-test-review.md)
+records **54 cases** in `contracts/registered-work-evidence.test.ts`: 53 approved
+assertions plus one reproduced/repaired final-classification deadline regression.
+Tests import the production collector directly; the draft facade and review-only
+runner were removed. The original **370/370** default cases passed; with the
+27 diagnostic cases below, **397/397 and typechecking pass** locally and on the
+exact-source Dundee snapshot. These collector cases inject all readers
+and use a fake clock; they are not native release proof.
+
+```sh
+npm run typecheck
+npm test
+node node_modules/vitest/vitest.mjs list --config vitest.evidence-native.config.ts --no-staticParse --json
+```
+
+The separate native scenario has two failed, retained, separately authorised attempts on
+Dundee with real owned CPU-only Comfy fixtures and actual read-only GPU queries.
+**Both failed.** Attempt 1 stopped at an incomplete live-service census; its
+post-exit window did not execute. Attempt 2 used identical source and passed the
+live window, then failed its opening post-exit census on `/proc/2348632/stat`.
+Later observations were retained; dead-service queue failures were never relabelled
+as empty queues. Owned-service cleanup was independently verified for both runs;
+personal Comfy was unchanged. Missing original errno prevents a firm cause claim.
+After the approved diagnostic repair, the learner separately authorised attempt 3.
+It **passed 1/1**: all four censuses succeeded, the live queue brackets were empty,
+and the post-exit queue failures correctly remained failures. Those expected
+`COMFY_IDENTITY` errors preserved native ENOENT/-2/open/path details. This proves
+native cause propagation through the owned transport, not reproduction or
+explanation of the earlier mid-census failures. Cleanup and unchanged personal
+Comfy were independently verified, and focused review corroborated the evidence.
+
+No automatic retry or relaxed assertion was used; no fourth run is authorised.
+See the review before any new native execution: it requires a separately identified
+audited snapshot, bounded user service and explicit opt-in. Local green tests do
+not waive remaining G4 gates. Neither evidence collection nor a quiet result
+authorizes handoff.
+
+## Census-error diagnostics — approved repair
+
+The [27-case diagnostic review](../devpost/census-error-diagnostics-test-review.md)
+records learner approval, reproduced failure and repair. Tests now live in
+`contracts/census-error-diagnostics.test.ts` and run in the default suite; the
+temporary review config is removed. They use the actual census reader and
+collector with synthetic filesystem/queue/GPU I/O. No native work is required
+or authorised.
+
+```sh
+npm run typecheck
+node node_modules/vitest/vitest.mjs run tests/contracts/census-error-diagnostics.test.ts --reporter=verbose
+npm test
+```
+
+Before the repair, **21 failed on missing native cause fields; 6 controls passed**.
+After the repair, **27/27** pass, and **397/397 default cases plus typechecking**
+pass locally. Assertion bodies were not weakened during promotion. The collector
+now keeps an optional shallow `Fault.cause`, without changing outer error priority,
+cleanup metadata, deadlines or strict failure behaviour. This is diagnostic
+propagation proof. The subsequent separately approved native pass is described
+above; its post-exit transport errors exercised cause preservation, but no census
+error occurred. No fourth native attempt is authorised.

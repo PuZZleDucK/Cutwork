@@ -20,7 +20,7 @@ The scope, PRD and technical specification are approved. The learner approved th
 - Each slice includes test review, implementation, mechanical verification, the appropriate learner check and a commit. In learn mode, wait for hands-on feedback before that commit. Inspect the staged diff and stage only intended project files; keep private context, credentials, runtime state and generated media out of Git. Record completion evidence and the commit when checking a slice off.
 - Missing access or a failing native contract stops the dependent work for diagnosis; do not mark the slice done or build a convincing UI around fake success. Changes to product promises, chosen architecture or the creative kernel require agreement and reconciliation with the planning documents.
 
-## Current Checkpoint — Whole Comfy Queue Verified
+## Current Checkpoint — Composed Evidence Accepted; Next Integration Tests
 
 Read [slice-1-progress.md](slice-1-progress.md). The learner approved the two provider-runner assertions with "yeah, looks good". Both are fixed; **78/78 local tests and typechecking pass**. A source review found no blocker. Real tasks previously verified the requested `gpt-6.1-sol` and `claude-opus-5-5` models and normal tools on Dundee. Those remain capability evidence, not native generation/cancellation proof. The 12 native live cases remain unrun.
 
@@ -121,9 +121,38 @@ The **2/2** extended native CPU scenarios passed, with all **six** actual queue
 observations matching raw before/after responses and intended job IDs. Both
 owned services exited cleanly; independent checks found their PIDs/groups/ports
 gone, with personal Comfy unchanged. Exact-source/receipt review found no blocker.
-**The learner accepted the implementation with “looks great, go for it”; save
-this verified checkpoint before the next tests-first batch.** Queue input is not
-GPU release, a shared lease or model cancellation/handoff; no G4 gate is waived.
+**The learner accepted the implementation with “looks great, go for it”; committed
+as `b45c6d2` after rechecking typechecking and 316/316 default cases.** Queue input
+is not GPU release, a shared lease or model cancellation/handoff; no G4 gate is waived.
+
+**Current composed-evidence checkpoint:** the learner approved the
+[53-case/native batch](registered-work-test-review.md) with “yep”. The collector
+is implemented, with a reproduced/repaired final-classification deadline defect:
+**54 collector cases, 370/370 default cases and typechecking pass** locally and
+on Dundee's exact source snapshot. The first native attempt failed in its opening
+live-service census; the post-exit window was not executed. On 23 October the
+learner approved one fresh attempt with identical source and strict checks.
+That second attempt passed the live window, then failed its opening post-exit
+census (`PROC_CENSUS_IO` on `/proc/2348632/stat`). Later observations were retained,
+not promoted to clear/released. Both attempts' owned-service cleanup and unchanged
+personal Comfy were independently verified. The original nested errno is missing,
+so process churn and the failed PID's ownership remain unconfirmed. The learner then approved the
+[27 diagnostic tests](census-error-diagnostics-test-review.md) with “looks good”.
+The missing-cause defect was reproduced (**21 red / 6 green**) and repaired:
+**27/27 diagnostic cases, 397/397 default cases and typechecking pass locally**.
+The tests are promoted into the default suite; focused review found no issue.
+No retry/release semantics changed and historical errno was not reconstructed.
+The learner accepted the diagnostic repair and authorised one fresh native
+attempt with “yes”. **Attempt 3 passed 1/1**, including all four census scans,
+live empty-queue brackets, explicit post-exit queue failures and retained GPU rows.
+Those expected queue failures preserved native ENOENT details; the earlier
+census errors were not reproduced. Fresh exact-source Dundee and local checks
+pass **397/397** plus typechecking. Owned-service cleanup and unchanged personal
+Comfy were independently verified. The learner accepted this checkpoint with
+“looks good, go for it”, approving its commit and preparation of the next
+integration tests before implementation. Slice 1/G4, actual GPU cancellation/handoff
+and shared leasing remain open. No fourth run authorised; normal agent
+capabilities remain unchanged.
 
 ## Slices
 
@@ -242,6 +271,13 @@ Reflection: Not offered yet; any personal response belongs in the ignored learne
 Activity mode: Proposed focused planning/verification investigation suitable for an experienced developer; not yet performed.
 
 ## Revisions
+
+- **23 October 2026 — diagnostic fidelity after two native census failures:**
+  the learner approved 27 tests for preserving immediate native error fields in
+  the composed report. Implemented the shallow data copier and promoted the
+  assertions; local tests pass without changing strict census/release rules.
+  Historical failures remain unmodified and native proof remains open. No scope,
+  stack or agent-authority change; no further native run authorised.
 
 - **22 October 2026 — approved CPU cancellation proof:** extracted the existing
   owned transport and added isolated cooperative native fixtures, with no product

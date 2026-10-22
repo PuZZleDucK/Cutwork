@@ -8,7 +8,8 @@ status: approved
 22 October 2026. **Learner approved the 48-case batch and two extended native CPU
 scenarios with “looks good” before implementation. All 48 cases and both native
 scenarios now pass; the learner accepted the implementation with “looks great,
-go for it”.**
+go for it”. Committed as `b45c6d2`; acceptance rechecks passed typechecking and
+316/316 default tests.**
 The learner accepted the Linux process census with “all good”; it is committed
 as **`cc699e4` — Verify bounded read-only Linux process census**. The accepted
 suite was rechecked: **268/268 locally**, plus typechecking. Slice 1/G4 remain open.

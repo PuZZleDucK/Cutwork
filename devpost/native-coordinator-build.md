@@ -77,3 +77,11 @@ startup and captured in each launch plan; it is not a clip-duration cap.
 Listening on LAN additionally requires an explicit host/port allowlist. The
 default internal proof binds loopback only. Stop it with SIGINT/SIGTERM; shutdown
 waits for the adapter's bounded cleanup rather than deleting job records.
+
+A separate explicit live check, `tests/live/gpu-failed-replay.test.ts`, is now
+prepared to retry the genuinely OOM-killed YuE2 call. It verifies the retained
+failed unit result, original request hash and actual stage seeds before launch,
+then uses this HTTP coordinator to replay identical creative/native inputs under
+a new call identity. It compares actual helper/model/package versions and seeds;
+it does not promise byte-identical output. Typecheck and safe collection pass;
+its native outcome will be recorded only after execution.

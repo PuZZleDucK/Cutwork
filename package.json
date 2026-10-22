@@ -4,7 +4,9 @@
   "private": true,
   "type": "module",
   "description": "Slice-1 contract foundation in progress; no runnable studio UI yet.",
-  "engines": { "node": ">=24 <25" },
+  "engines": {
+    "node": ">=24 <25"
+  },
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test:list": "vitest list --no-staticParse --json",
@@ -13,8 +15,12 @@
     "test:live": "vitest run --config vitest.live.config.ts"
   },
   "devDependencies": {
+    "@types/better-sqlite3": "9.6.0",
     "@types/node": "24.19.2",
     "typescript": "7.0.2",
     "vitest": "5.0.5"
+  },
+  "dependencies": {
+    "better-sqlite3": "13.0.3"
   }
 }

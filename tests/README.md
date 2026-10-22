@@ -353,5 +353,26 @@ the latter two used the identical native report. Independent checks corroborated
 receipt provenance/order, raw conditions, retained failed queues/GPU rows and
 owned cleanup while personal Comfy was unchanged. The reviewer found no evidence
 discrepancies. See the linked review for hashes, logs and limits. This is not
-GPU release/handoff proof. No second native run is authorised; learner acceptance
-of this native checkpoint is pending.
+GPU release/handoff proof. The learner subsequently accepted this checkpoint and
+selected fast mode with standing approval for necessary in-scope verification;
+there is no reason to repeat this completed scenario without a new test purpose.
+
+## Shared GPU lane checkpoint
+
+`gpu-queue*.test.ts`, `gpu-worker*.test.ts` and `systemd-gpu.test.ts` add persisted
+SQLite/worker contracts; separate real Node processes contend for the same lease.
+Injected cleanup receipts are explicitly fixtures, never native release proof.
+
+The opt-in `tests/evidence-native/gpu-lane.test.ts` launches bounded **CPU** payloads
+inside actual owned systemd user units and reads actual NVIDIA compute listings.
+It requires `STUDIO_GPU_LANE=1`, `STUDIO_GPU_UUID`, and an exclusive absolute
+`STUDIO_GPU_LANE_OUTPUT` directory. It never invokes either model. Evidence and
+exact Dundee invocation boundaries are in [the build record](../devpost/gpu-lane-build.md).
+
+`tests/live/gpu-model-lane.test.ts` is the separate, prepared real-model lane
+scenario. It requires explicit `STUDIO_LIVE=1`, `STUDIO_MODEL_LANE=1`,
+`STUDIO_LIVE_RUNTIME`, `STUDIO_GPU_UUID` and a new `STUDIO_MODEL_LANE_OUTPUT`.
+It is not the original 12-case integration suite. Two default proof-parser
+regressions reject stale/completed sampler progress as running-cancellation
+evidence; these bring the local suite to **486/486**. No real-model result is
+claimed until the opt-in run and independent evidence review finish.

@@ -221,5 +221,15 @@
     "exportSha256": "ccd4078b3cbe2e3920ce2bfba8ec8f941d596ce505f6b0c24522fbaff2bb0433",
     "ownedProcessesReleased": true,
     "scope": "Real normal-provider creative task with versioned guidance, new song, same-song H3 outputs and independently checked recovered sparse export. Original native failure remains; no generation retry. Not a clean pipeline pass, native history proof, listening approval, cancellation/replay, full bidirectional handoff or formal live-suite pass."
+  },
+  "applicationPersistence": {
+    "package": "better-sqlite3",
+    "version": "13.0.3",
+    "embeddedSqlite": "3.53.4",
+    "journalMode": "wal",
+    "synchronous": "FULL",
+    "verifiedHost": "dundee",
+    "verifiedDate": "2026-10-23",
+    "scope": "Actual persisted queue and CPU helper lifecycle; real-model release/handoff remain separate gates"
   }
 }

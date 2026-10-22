@@ -189,6 +189,14 @@ real model cancellation/release/handoff remain open.
 
 ## Slices
 
+**Fast-mode progress, 23 October:** the actual durable SQLite FIFO/lease and native
+worker now exist, with launch-before-ack gating, frozen cancelled attempts,
+maintenance exclusion and retained reconciliation. Typecheck and **484/484** tests
+pass on Dundee; an independently audited real systemd/SQLite CPU lifecycle proof
+also passes. These are no longer only pure decision helpers, but CPU payloads do
+not prove model cancellation/CUDA release. See [GPU lane build](gpu-lane-build.md).
+The next work is the prepared real-model lane verification; no slice/G4 gate is waived.
+
 - [ ] **1. Prove a real brief-to-media path on Dundee**
   Becomes usable: A repeatable contract-check command takes a small creative brief through a real provider agent, generates a song and a short song-conditioned H3 clip, retains the original frames and receipts, and produces a playable validation video. It is a developer-facing integration proof, not yet the finished browser product.
   Why now: Native versions, model access, 16 GB operation, frame output and actual cancellation can invalidate the rest of the design. Find those problems before investing in an editor. Include project bootstrapping here rather than making it an otherwise unusable first step.

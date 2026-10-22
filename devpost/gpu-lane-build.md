@@ -138,3 +138,27 @@ The harness now stops progress polling after requesting cancellation and awaits
 the independent worker cleanup. A separately named focused H3 cancellation
 scenario can reuse the retained song/request without regenerating the three
 successful media calls. Its result must still be run and recorded.
+
+## Focused native checkpoints passed
+
+Exact source `93dbb42`, snapshot `native-final.7fa28f31-6fd5-49a5-ae43-95a7cacecffe`:
+
+- Focused real H3 cancellation **1/1 passed**, after observing unfinished native
+  inference, its running prompt and owned CUDA PID. Request-to-confirmed-release
+  measurement was **3.425 seconds**; no hard immediate-stop latency promise is
+  inferred. The earlier full-scenario failure remains retained.
+- Actual OOM-failed YuE2 call replay **1/1 passed** through the real HTTP client,
+  queue and native worker. Original creative inputs, sampling, execution settings,
+  actual stage seeds and helper/model/package identities matched. New call ID
+  `7055217e-2c09-4cc0-b1e1-2a9b0c90f932`; original failure remains unchanged.
+  This sample is still token-truncated; it is not a completed composition claim.
+- Outer service exited 0 in 6m52.722s. Native receipts, logs and queue databases
+  are retained under `.local-evidence/slice-1/gpu-lane/final-native/`.
+- The replay harness completed normally. SIGINT/SIGTERM injection was not tested;
+  a subsequent review added its missing cancellation latch and bounded status
+  fetch for future runs. Its owned unit already had a 1,200-second watchdog.
+
+The combined native evidence now covers actual ordered music/video/music release
+and queued/running cancellation, rather than just CPU fixtures. Provider-driven
+clean media/export verification is still separate and pending; the original
+12-case aggregate driver and slice-1 completion are not claimed here.

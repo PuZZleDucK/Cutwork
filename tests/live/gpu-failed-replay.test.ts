@@ -55,9 +55,13 @@ test.skipIf(!enabled)('replays the actual OOM-failed YuE2 call with identical ca
   });
   const record: Record<string, unknown> = { originalEvidence, originalId, retryId: id, projectId,
     originalInputs: unchanged(oldRequest), retryInputs: unchanged(request), state: 'running' };
+  const interruption = new AbortController();
+  const onInt = () => { record.interruptedBy = 'SIGINT'; interruption.abort(); };
+  const onTerm = () => { record.interruptedBy = 'SIGTERM'; interruption.abort(); };
+  process.on('SIGINT', onInt); process.on('SIGTERM', onTerm);
   try {
     const result = await submitAndWait(`http://127.0.0.1:${port}`, { id, attemptId: id, projectId, tool: 'yue2', request },
-      { timeoutMs: 1_300_000, onState: state => console.log(`Replay ${id}: ${state}`) });
+      { timeoutMs: 1_300_000, signal: interruption.signal, onState: state => console.log(`Replay ${id}: ${state}`) });
     record.call = result; expect(result.state).toBe('succeeded');
     const receiptPath = join(runtime, 'projects', projectId, 'runs', id, 'receipt.json');
     const receipt = JSON.parse(await readFile(receiptPath, 'utf8')); record.receiptPath = receiptPath;
@@ -67,11 +71,14 @@ test.skipIf(!enabled)('replays the actual OOM-failed YuE2 call with identical ca
     expect(receipt.versions).toEqual(oldReceipt.versions);
     expect(receipt.calls.filter((c: { stage: string }) => ['abc', 'semantic', 'nar'].includes(c.stage)).map((c: { suppliedSeed: string }) => c.suppliedSeed))
       .toEqual(oldReceipt.calls.filter((c: { stage: string }) => ['abc', 'semantic', 'nar'].includes(c.stage)).map((c: { suppliedSeed: string }) => c.suppliedSeed));
-    expect((await fetch(`http://127.0.0.1:${port}/api/internal/coordinator`).then(r => r.json())).heldCallId).toBeNull();
+    expect((await fetch(`http://127.0.0.1:${port}/api/internal/coordinator`, { signal: AbortSignal.timeout(5000) }).then(r => r.json())).heldCallId).toBeNull();
     record.state = 'succeeded'; record.truncated = receipt.truncated;
   } catch (error) { record.state = 'failed'; record.error = String(error); throw error; }
   finally {
     try { await coordinator.close(); }
-    finally { await writeFile(join(root, 'evidence.json'), JSON.stringify(record, null, 2), { flag: 'wx', mode: 0o600 }); }
+    finally {
+      process.off('SIGINT', onInt); process.off('SIGTERM', onTerm);
+      await writeFile(join(root, 'evidence.json'), JSON.stringify(record, null, 2), { flag: 'wx', mode: 0o600 });
+    }
   }
 });

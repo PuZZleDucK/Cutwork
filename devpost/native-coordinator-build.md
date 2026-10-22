@@ -92,3 +92,15 @@ FFprobe/FFmpeg decoding, every original PNG/hash, the shared pre-encode graph
 branch and the full-song H.264/AAC export. It does not use an agent's success
 message as media evidence. The updated provider run must supply its first
 real input before this checker can report an end-to-end result.
+
+The genuine failed-call replay has now passed on Dundee through an actual HTTP
+listener/client/native worker, not a fixture. See the native checkpoint above.
+Both provider capability checks were also freshly rerun and independently
+verified against their native sessions (`gpt-6.1-sol`, `claude-opus-5-5`), with
+real research/tool use and executed score/timing artifacts. These small tasks
+are not a provider-generated media-chain proof. Source `93dbb42` and local
+private provider-capability evidence retain the exact runs.
+
+Review added a termination latch to the replay scenario and fixed an explicit
+192-kbit/s AAC setting in the next validation-export brief, enabling an
+independent reference encode comparison rather than guessing encoder settings.

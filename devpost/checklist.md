@@ -20,7 +20,7 @@ The scope, PRD and technical specification are approved. The learner approved th
 - Each slice includes test review, implementation, mechanical verification, the appropriate learner check and a commit. In learn mode, wait for hands-on feedback before that commit. Inspect the staged diff and stage only intended project files; keep private context, credentials, runtime state and generated media out of Git. Record completion evidence and the commit when checking a slice off.
 - Missing access or a failing native contract stops the dependent work for diagnosis; do not mark the slice done or build a convincing UI around fake success. Changes to product promises, chosen architecture or the creative kernel require agreement and reconciliation with the planning documents.
 
-## Current Checkpoint — Linux Process Census Verified
+## Current Checkpoint — Whole Comfy Queue Verified
 
 Read [slice-1-progress.md](slice-1-progress.md). The learner approved the two provider-runner assertions with "yeah, looks good". Both are fixed; **78/78 local tests and typechecking pass**. A source review found no blocker. Real tasks previously verified the requested `gpt-6.1-sol` and `claude-opus-5-5` models and normal tools on Dundee. Those remain capability evidence, not native generation/cancellation proof. The 12 native live cases remain unrun.
 
@@ -110,9 +110,20 @@ cases, 268/268 default tests locally**, plus typechecking. One actual default-I/
 Dundee call returned **340 identities in 226.837 ms**, all matched against
 independent before/after observations. Personal Comfy and boot identity were
 unchanged; the bounded proof service exited 0 and was later inactive/not-found.
-Code/receipt review found no remaining blocker. **The learner accepted the implementation with “all good”; save this verified
-checkpoint before the next tests-first batch.** This is visible process evidence, not ownership,
+Code/receipt review found no remaining blocker. **The learner accepted the implementation with “all good”; committed as `cc699e4`.** This is visible process evidence, not ownership,
 GPU resource release or dispatch readiness. No remaining G4 gate is waived.
+
+**Current whole-queue implementation checkpoint:** the learner approved the
+[48-case batch and native extensions](comfy-queue-test-review.md) with “looks good.”
+The read-only binding and decoder are implemented: **48/48** new cases,
+**316/316** default tests and typechecking pass on development and Dundee Node.
+The **2/2** extended native CPU scenarios passed, with all **six** actual queue
+observations matching raw before/after responses and intended job IDs. Both
+owned services exited cleanly; independent checks found their PIDs/groups/ports
+gone, with personal Comfy unchanged. Exact-source/receipt review found no blocker.
+**The learner accepted the implementation with “looks great, go for it”; save
+this verified checkpoint before the next tests-first batch.** Queue input is not
+GPU release, a shared lease or model cancellation/handoff; no G4 gate is waived.
 
 ## Slices
 

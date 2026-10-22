@@ -8,6 +8,7 @@ status: approved
 22 October 2026. **Learner approved the 39-case batch with “looks good” before
 implementation. The reader now passes 41 cases and one native Dundee check;
 the learner accepted the implementation with “all good”.**
+Accepted checkpoint: **`cc699e4` — Verify bounded read-only Linux process census**.
 The learner accepted the NVIDIA probe with “good to go”; it is committed as
 **`119505c` — Verify bounded read-only NVIDIA compute observations**. Its accepted
 suite was rechecked: **227/227**, plus typechecking. Slice 1/G4 remain open.
@@ -238,7 +239,7 @@ establishes ownership or permits dispatch. There is no browser change yet.
 - [x] Learner approves the 39-case batch with “looks good” before implementation.
 - [x] Implement and pass 41 cases; promote and pass 268/268 plus typechecking.
 - [x] Execute the actual read-only adapter on Dundee; independently review evidence.
-- [x] Learner accepts the implementation with “all good”; commit this verified checkpoint.
+- [x] Learner accepts the implementation with “all good”; committed as `cc699e4`.
 
 Slice 1/G4 remain unchecked. Composed ownership/queue/GPU release observations,
 shared leasing, real GPU cancellation/handoff and the formal 12-case live suite

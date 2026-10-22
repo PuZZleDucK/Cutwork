@@ -1,4 +1,5 @@
-/** Proposed native CPU proof: real pinned Comfy queue/HTTP/executor, synthetic
+/** Approved native CPU proof with whole-queue comparisons.
+ * Real pinned Comfy queue/HTTP/executor, synthetic
  * cooperative node. No H3/YuE2 inference, GPU-release or product latency claim. */
 import { beforeAll, beforeEach, afterEach, expect, test } from 'vitest';
 import { mkdir, readFile, writeFile, access, lstat, readdir } from 'node:fs/promises';
@@ -8,6 +9,7 @@ import { setTimeout as wait } from 'node:timers/promises';
 import { observeProcess } from '../../apps/server/src/providers/run.ts';
 import { cancelComfyJob } from '../../apps/server/src/jobs/native-control.ts';
 import { createComfyNativeBinding } from '../../apps/server/src/jobs/comfy-native.ts';
+import * as queueModule from '../../apps/server/src/jobs/comfy-queue.ts';
 import { loadCpuFixture, loadTransport, type CpuFixture, type CpuFixtureModule,
   type OwnedTransport, type TransportModule } from '../support/comfy-cpu-contract.ts';
 
@@ -67,6 +69,7 @@ function current() {
 }
 function scenario(session: CpuFixture, http: OwnedTransport, abort: AbortSignal) {
   let sequence = 0;
+  const queue = queueModule.createComfyQueueBinding(session.config);
   const check = () => abort.throwIfAborted();
   const signal = () => { check(); return abort; };
   const owned = () => { check(); return session; };
@@ -206,12 +209,31 @@ function scenario(session: CpuFixture, http: OwnedTransport, abort: AbortSignal)
       execution_status: { status_str: 'success', completed: true } });
   }
   async function queueIds() {
-    const response = await request('GET', '/queue');
-    expect(response.status).toBe(200);
-    const queue = response.body as Queue;
-    expect(Array.isArray(queue.queue_running)).toBe(true);
-    expect(Array.isArray(queue.queue_pending)).toBe(true);
-    return { running: queue.queue_running.map(row => row[1]), pending: queue.queue_pending.map(row => row[1]) };
+    // The existing scenarios hold gates and do not submit/release/cancel inside
+    // this bracket. Raw requests are an independent wire projection, NOT the
+    // production decoder; scenario assertions also name the intended jobs.
+    async function rawIds() {
+      const response = await request('GET', '/queue');
+      expect(response.status).toBe(200);
+      const value = response.body as Queue;
+      const ids = (rows: unknown[][]) => {
+        expect(Array.isArray(rows)).toBe(true);
+        return rows.map(row => {
+          expect(Array.isArray(row)).toBe(true); expect(row).toHaveLength(5);
+          expect(typeof row[1]).toBe('string'); return row[1] as string;
+        });
+      };
+      return { running: ids(value.queue_running), queued: ids(value.queue_pending) };
+    }
+    const before = await rawIds();
+    const observed = await queue.observe(signal());
+    check();
+    await writeFile(join(owned().directory, 'observations', `${String(++sequence).padStart(4, '0')}.queue-reader.json`),
+      JSON.stringify(observed, null, 2) + '\n', { flag: 'wx', mode: 0o600 });
+    const after = await rawIds();
+    expect(before).toEqual(after); // Reject drift rather than explain away a mismatch.
+    expect(observed).toEqual({ kind: 'comfy-whole-queue', service: owned().config.owner, ...before });
+    return { running: observed.running, pending: observed.queued };
   }
   async function cancel(job: Job) {
     const config = { ...owned().config, promptId: job.promptId };

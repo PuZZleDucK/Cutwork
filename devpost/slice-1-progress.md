@@ -1,6 +1,44 @@
 # Slice 1 — implementation checkpoint
 
-## Current continuation — Linux process census verified, 22 October 2026
+## Current continuation — whole Comfy queue verified, 22 October 2026
+
+The learner approved the [48-case whole-queue batch](comfy-queue-test-review.md)
+and both extended native CPU scenarios with “looks good” before implementation.
+`apps/server/src/jobs/comfy-queue.ts` now validates complete queue data and exposes
+only a fixed GET `/queue` through the existing owned transport. It returns every
+observed job ID plus captured service identity, not a release verdict. Failed,
+malformed or ambiguous observations stay errors; no filter/cache/retry creates
+an apparently empty queue.
+
+All **48/48** passed first implementation. After direct-import promotion, the
+full suite passes **316/316**, plus typechecking, on local Node **24.1.0** and
+Dundee's pinned **24.22.0**. A direct Node decoder smoke also passed. No
+reproduced/repaired defect or meaningful red result is claimed in this checkpoint.
+Focused code review found no blocker.
+
+Both real pinned-Comfy CPU scenarios passed **2/2**, with **six** new binding
+observations matching raw responses before/after and the intended job IDs.
+Unrelated jobs survived targeted cancellation. Final queues were empty while
+the same captured services were still healthy, before separate teardown. Both
+owned services then exited 0 after SIGINT; independent checks found their
+PIDs/groups/listeners gone. Personal Comfy's identity/listener and before/after
+234 MiB compute listing were unchanged.
+
+The bounded native unit exited 0 in **38.314 s**, reported **683.3 M** peak memory
+and **0 B** swap, and was subsequently inactive/not-found. The exact **99-file**
+source snapshot and all six queue comparisons were independently rechecked.
+Evidence, commands, hashes, unit results and two native directories are retained
+under `.local-evidence/slice-1/comfy-queue/`; the linked review names exact IDs.
+
+**The learner accepted this implementation with “looks great, go for it”; commit
+this verified checkpoint before the next tests-first batch.** This is native queue and
+cooperative CPU evidence, not GPU release/stopping latency or a shared lease.
+No model/provider work or personal-service change occurred. Composition of
+identities/remembered descendants, queues/service exit, attribution/visibility and
+GPU evidence still precedes actual handoff. Slice 1/G4 and the formal 12-case
+live suite remain open; no browser or slice-2 advancement.
+
+## Previous continuation — Linux process census verified, 22 October 2026
 
 The learner approved the **39-case** [process census batch](process-census-test-review.md)
 with “looks good” before implementation. `apps/server/src/jobs/linux-process-census.ts`
@@ -23,8 +61,7 @@ receipts, scripts and post-checks are retained under
 `.local-evidence/slice-1/process-census/`; the linked review records exact IDs.
 Independent evidence review agreed with the native count/matches and boundaries.
 
-**The learner accepted this implementation with “all good”; commit this verified
-checkpoint before the next tests-first batch.** This proves one successful
+**The learner accepted this implementation with “all good”; committed as `cc699e4`.** This proves one successful
 non-atomic visible-procfs census, not native fault injection, ownership, GPU
 resource release, shared leasing or dispatch readiness. The composed observer
 and actual cancellation/handoff gates remain open; no slice/G4 box is ticked.

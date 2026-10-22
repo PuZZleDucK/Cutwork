@@ -123,6 +123,40 @@ not host-namespace coverage, ownership, release or dispatch proof. The complete
 268-case suite ran locally, not on Dundee in this checkpoint. See the linked
 review for retained source hashes, receipts and detailed boundaries.
 
+## Whole Comfy queue reader
+
+The [implemented queue review](../devpost/comfy-queue-test-review.md) records the
+approved **48 cases** now in `contracts/comfy-queue.test.ts`. They passed first
+implementation and import the real module directly; the draft loader/config
+were removed. The default suite now passes **316/316** with typechecking on both
+development Node **24.1.0** and Dundee's pinned **24.22.0**. No meaningful red or
+reproduced defect is claimed for this checkpoint.
+
+```sh
+npm run typecheck
+npm test -- tests/contracts/comfy-queue.test.ts
+npm test
+```
+
+The focused tests use synthetic queue data and real local loopback/procfs
+fixtures, not models or native Comfy. The reader always performs a fresh owned
+GET `/queue`, retains every ID, rejects malformed/ambiguous responses and returns
+no release/dispatch verdict. Empty queue is not a stopped or unloaded service.
+
+Separately, the two existing real-Comfy CPU scenarios were extended and rerun
+from a new audited **99-file** snapshot on Dundee: **2/2 passed**, with **six**
+actual reader results matching raw observations before/after and intended IDs.
+Unrelated jobs completed normally. Final empty queues and service health were
+asserted before separate SIGINT-only exit-0 cleanup; independent checks found
+both owned PIDs/groups/listeners gone. Personal Comfy on 8188 and its before/after
+compute observation remained unchanged. The bounded unit exited 0 and was then
+inactive/not-found. See the linked review for exact source/hashes/commands.
+
+No GPU/model/provider work ran in this proof. Native queue/CPU success does not
+close resource-release, lease, actual generator cancellation/handoff or any
+remaining G4 gate. The older CPU checkpoint above remains historical evidence
+for its original source; this is a fresh run of the extended scenarios.
+
 ## Additional H3 diagnostics
 
 Additional development diagnostics (not part of the 78 approved contract cases):

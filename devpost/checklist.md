@@ -187,6 +187,18 @@ approval. Commit this checkpoint and implement the shared GPU lease/handoff
 path; do not rerun a completed proof without a concrete verification purpose. G4 and
 real model cancellation/release/handoff remain open.
 
+### Fast-mode HTTP integration checkpoint
+
+The native queue now has a real Fastify listener, cooperative tool client and
+project-scoped native-command resolver. Actual loopback HTTP/SQLite tests use
+explicitly synthetic native adapters; they do not count as model proof. A
+focused review reproduced and fixed shutdown/cancellation races. See
+[native-coordinator-build.md](native-coordinator-build.md). The provider proof
+now uses this shared queue; its new live execution remains to be verified.
+The first model lane run failed on host RAM pressure; failure and bounded
+release-settling repair are retained in [gpu-lane-build.md](gpu-lane-build.md).
+No slice or live gate has been silently waived.
+
 ## Slices
 
 **Fast-mode progress, 23 October:** the actual durable SQLite FIFO/lease and native

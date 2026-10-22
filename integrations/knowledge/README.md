@@ -1,4 +1,4 @@
-# Generator knowledge for creative agents — revision 1
+# Generator knowledge for creative agents — revision 2
 
 These are product-owned task references for the normal Codex/Claude CLI agents,
 not a sandbox, replacement system prompt, tool allowlist or response schema.
@@ -46,13 +46,23 @@ validation export after the H3 helper's completion-observation timeout. That
 attempt remains failed; recovered files do not turn it into a clean pipeline
 pass. A later direct same-input replay using the repaired helper completed
 with full history and identical media; it did not rerun the provider task.
-The durable shared GPU scheduler, arbitrary-descendant tracking and native
-cancellation API are not implemented/proved. The temporary H3 lock only
-serializes H3 proof helpers; it is not a cross-tool lease.
+A durable native-call GPU queue, owned systemd helper lifecycle, internal HTTP
+transport and cooperating CLI client now exist. Real CPU lifecycle tests pass;
+model cancellation/handoff verification is recorded separately in the build
+notes. This does not track arbitrary work deliberately moved outside an owned
+unit. The temporary H3 lock alone is not a cross-tool lease.
 
-For the supervised sequential integration proof, await each generator's real
-process exit and independently verify release before starting another GPU
-generator. Do not mistake a receipt written before exit for resource release.
+When the task supplies a coordinator origin, use `scripts/native-call.ts`
+with the captured project, parent attempt, tool and native request file. The
+server snapshots inputs, runs the isolated helper and waits for verified native
+release. Both tools write `projects/<id>/runs/<native-call-id>/receipt.json` in
+that mode. Keep exact request IDs/seeds and inspect both coordinator status and
+native receipts. Client output is tool data, not a required agent reply format.
+Alternative scripts can call the same internal endpoint; normal tools remain
+available. A transport timeout does not mean the job stopped: inspect its ID,
+never blindly create another expensive call. For historical direct-helper
+experiments, await process exit and independently verify release before the
+next GPU generator. Do not mistake a receipt written before exit for resource release.
 If identity/outcome is uncertain, report it and leave the next heavy stage
 undispatched; never stop unrelated processes or the user's personal Comfy.
 This is the task's resource-sharing protocol, not a restriction on agent tools.
@@ -81,7 +91,8 @@ export STUDIO_DATA_ROOT="$HOME/.local/share/music-video-studio"
 NODE_BIN="$STUDIO_DATA_ROOT/tools/runtime/node-v24.22.0-linux-x64/bin"
 CLI_BIN="$STUDIO_DATA_ROOT/tools/provider-cli/codex-0.163.0_claude-2.1.306/node_modules/.bin"
 PATH="$NODE_BIN:$CLI_BIN:$PATH" "$NODE_BIN/node" scripts/provider-media-proof.ts codex
-# Only when deliberately authorising the real task:
+# Only when deliberately authorising the real task; use the actual GPU UUID:
+export STUDIO_GPU_UUID="GPU-your-verified-device-uuid"
 PATH="$NODE_BIN:$CLI_BIN:$PATH" STUDIO_LIVE=1 "$NODE_BIN/node" scripts/provider-media-proof.ts codex --run
 ```
 
@@ -92,10 +103,12 @@ the resulting root must be absolute. There is no installation/sign-in side
 effect or automatic generation retry. Each execution is a new candidate, not
 faithful replay of a failed one.
 
-The live experiment was hosted in an explicitly started transient user service
-so an SSH disconnect would not end it; that is not the future durable scheduler
-or a browser job API. The foreground command above does not provide restart
-reconciliation. A successful provider exit means only
+The original experiment was hosted in a transient user service to survive SSH
+disconnection. The current command starts the shared native coordinator on
+loopback port 9122, with a 3,600-second limit per native helper. Do not start it
+alongside another studio server or an independent proof GPU worker. Its queue
+persists calls; it does not automatically reconcile an interrupted server's
+retained lease. It is still an internal proof, not the finished browser API. A successful provider exit means only
 `provider-exited-awaiting-independent-validation`. Independently verify session
 identity, tool calls, inputs/seeds, artifacts and owned-resource release before
 claiming a media-chain pass. Natural-language failure/recovery reports may be

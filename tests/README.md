@@ -376,3 +376,13 @@ It is not the original 12-case integration suite. Two default proof-parser
 regressions reject stale/completed sampler progress as running-cancellation
 evidence; these bring the local suite to **486/486**. No real-model result is
 claimed until the opt-in run and independent evidence review finish.
+
+## Internal native coordinator
+
+The Fastify/SQLite/client integration tests bind real loopback sockets but use
+explicitly synthetic native adapters. They verify immutable inputs, no duplicate
+submission, retained leases, disconnect-independent execution and bounded client
+tracking. Independent shutdown/cancellation review regressions are included.
+See [the implementation boundary](../devpost/native-coordinator-build.md). The
+provider media proof now invokes this queue; only a new native run can establish
+that updated agent-driven path.

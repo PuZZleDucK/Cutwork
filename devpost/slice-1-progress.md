@@ -1,6 +1,34 @@
 # Slice 1 — implementation checkpoint
 
-## Current continuation — real CPU cancellation verified, 22 October 2026
+## Current continuation — read-only GPU observation verified, 22 October 2026
+
+The learner approved the **37-case** [GPU observation batch](gpu-observation-test-review.md)
+with “looks good” before implementation. `apps/server/src/jobs/nvidia-query.ts`
+now captures immutable input, performs inventory → compute-process → inventory
+queries, validates complete bounded output, and applies one observation deadline
+with separate query-child cleanup. It returns evidence, not a release verdict.
+
+All 37 cases passed; implementation review then reproduced a final-deadline
+false-success. A new regression failed before the fix and passed afterward.
+Final timestamps now come from the same check that enforces the deadline.
+The cases have joined the default suite: **227/227** locally on Node 24.1.0,
+with typechecking. No GPU work is performed by these local fixture tests.
+
+The exact adapter ran read-only on Dundee's pinned Node 24.22.0 without a test
+I/O seam, in a finite transient user service. Three real NVIDIA queries completed
+in **105.791 ms**, all exit 0/blank stderr, and matched independent before/after
+CLI observations. Personal Comfy remained on 8188 with the same process identity;
+only the query children exited. The proof unit exited 0 and was later inactive/
+not-found. Source hashes, query inputs/outputs, timing and independent post-checks
+are retained under `.local-evidence/slice-1/gpu-observation/`; the linked review
+records the exact source/unit IDs. Focused review found no remaining blocker.
+
+**The learner accepted this implementation with “good to go”; save it as a partial checkpoint.** This is one successful
+native compute-context observation, not native failure-recovery, GPU cancellation,
+resource release, shared leasing or dispatch readiness. Slice 1/G4 remain open;
+no browser/slice-2 advancement or model/provider launch occurred in this step.
+
+## Previous continuation — real CPU cancellation verified, 22 October 2026
 
 The learner approved the **7 + 2** [CPU cancellation test batch](comfy-cpu-test-review.md)
 with “make it so” before implementation. Extracted the shared owned HTTP transport
@@ -34,8 +62,8 @@ and failed-startup paths were not live fault-injected; successful startup/cleanu
 was observed. Exact runnable source bytes and native evidence are retained under
 `.local-evidence/slice-1/comfy-cpu/`; the linked review gives IDs and commands.
 
-The learner accepted this implementation with “all good.” Save the partial
-checkpoint, then prepare the next tests-first batch. Slice 1/G4 remain unchecked;
+The learner accepted this implementation with “all good”; it is committed as
+**`6e1926e`**. Slice 1/G4 remain unchecked;
 shared GPU lease/resource-release observers, actual model cancellation and
 bidirectional handoff, music replay, clean provider-chain/Claude evidence and the
 formal 12 native cases remain open. Do not advance to the browser/slice 2.

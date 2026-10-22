@@ -29,7 +29,7 @@ The two assertions in `contracts/provider-runner-review.test.ts` were approved a
 
 ## Owned Comfy binding and CPU cancellation proof
 
-The default suite passes **189 cases**, including 39 cancellation/handoff
+The accepted CPU checkpoint passed **189 default cases**, including 39 cancellation/handoff
 controller cases, 58 owned HTTP/decoder cases, nine shared-transport cases and
 five CPU-proof safeguard cases. These use synthetic workloads/data, not native
 Comfy or GPU inference. See the [binding review](../devpost/comfy-native-test-review.md)
@@ -63,6 +63,36 @@ verified source/recipe bytes and the existing isolated Python. It refuses an
 inherited `extra_model_paths.yaml`. Native receipts retain inputs, observations,
 node events and separate cleanup evidence. Success of cooperative CPU work is
 not a substitute for any remaining model/GPU gate.
+
+## Read-only NVIDIA compute observations
+
+The [GPU observation implementation review](../devpost/gpu-observation-test-review.md)
+records **38 cases** in `contracts/nvidia-query.test.ts`: 37 approved assertions
+plus a meaningful red/green final-deadline regression. They now run in the default
+suite, **227/227 locally**, with typechecking. The review-only facade/configuration
+were removed; tests import the actual product module directly.
+
+Most cases supply synthetic output using harmless local Node subprocesses;
+three use explicitly scripted child/stream events. They cover complete-output
+validation, unknown/failure handling, original deadline, caller abort and bounded
+query-child-only cleanup. None is a real GPU query or resource-release proof.
+
+```sh
+npm run typecheck
+node --check tests/fixtures/nvidia-query-child.mjs
+npm test -- tests/contracts/nvidia-query.test.ts
+npm test
+```
+
+Separately, the actual production adapter ran directly on Dundee's pinned Node
+24.22.0 in a bounded transient user service, without test I/O injection. Three
+real NVIDIA queries succeeded in **105.791 ms**, agreeing with independent
+before/after CLI output. Personal Comfy's identity/listener remained unchanged;
+all query children exited and the proof unit finished successfully. This native
+success does not prove native timeout recovery, model cancellation, total GPU
+allocation, resource release or dispatch readiness. The full 227-case suite was
+run locally, not on Dundee in this checkpoint. See the linked review for source
+hashes, retained receipts and exact proof boundaries.
 
 ## Additional H3 diagnostics
 

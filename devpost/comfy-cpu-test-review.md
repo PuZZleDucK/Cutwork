@@ -7,6 +7,7 @@ status: approved
 
 22 October 2026. **Tests approved with “make it so”; implementation and native
 CPU verification passed; learner accepted the implementation with “all good.”**
+Accepted implementation checkpoint: **`6e1926e`**.
 The preceding HTTP binding is committed as **`620458c`**. The default suite now
 passes **189 cases**; the separate real-Comfy CPU suite passes **2/2** on Dundee.
 Slice 1, native GPU cancellation and the complete live suite remain open.
@@ -297,3 +298,7 @@ The original draft collected **7 + 2** before implementation. Focused implementa
 review found the JSON-capture abort gap, inherited-config path and termination
 signal gap; all were repaired before the first native launch. These historical
 review checks do not replace the executed results above.
+
+Follow-on: [read-only GPU observation implementation](gpu-observation-test-review.md).
+Its native read-only check is verified; the learner accepted it with “good to go”.
+It does not implement or prove resource release.

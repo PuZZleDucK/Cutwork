@@ -20,7 +20,7 @@ The scope, PRD and technical specification are approved. The learner approved th
 - Each slice includes test review, implementation, mechanical verification, the appropriate learner check and a commit. In learn mode, wait for hands-on feedback before that commit. Inspect the staged diff and stage only intended project files; keep private context, credentials, runtime state and generated media out of Git. Record completion evidence and the commit when checking a slice off.
 - Missing access or a failing native contract stops the dependent work for diagnosis; do not mark the slice done or build a convincing UI around fake success. Changes to product promises, chosen architecture or the creative kernel require agreement and reconciliation with the planning documents.
 
-## Current Checkpoint — Owned CPU Cancellation Verified
+## Current Checkpoint — Read-Only GPU Observation Verified
 
 Read [slice-1-progress.md](slice-1-progress.md). The learner approved the two provider-runner assertions with "yeah, looks good". Both are fixed; **78/78 local tests and typechecking pass**. A source review found no blocker. Real tasks previously verified the requested `gpt-6.1-sol` and `claude-opus-5-5` models and normal tools on Dundee. Those remain capability evidence, not native generation/cancellation proof. The 12 native live cases remain unrun.
 
@@ -86,10 +86,22 @@ cancellation while unrelated jobs succeeded. Both service identities/listeners
 were independently gone after separate owned teardown; personal Comfy was
 unchanged. Review-driven capture/configuration/signal safeguards were repaired
 before launch. See the progress/review documents for receipts and exact limits.
-The learner accepted this implementation checkpoint with “all good”; save it
-as a partial checkpoint before preparing the next reviewed batch.
+The learner accepted this implementation checkpoint with “all good”; it is
+committed as **`6e1926e`**.
 This is not H3/GPU stop latency, resource release, shared leasing or completion
 of G4/the 12 live cases; slice 1 remains unchecked.
+
+**Current GPU observation implementation checkpoint:** the learner approved the
+[37-case batch](gpu-observation-test-review.md) with “looks good.” The read-only
+NVIDIA probe is implemented, with one meaningful red/green final-deadline
+regression: **38 probe cases, 227/227 default tests locally**, plus typechecking.
+The actual adapter ran on Dundee with no test seam: three valid native queries
+in **105.791 ms**, matched independent surrounding observations, and left personal
+Comfy unchanged. Query children exited; the bounded proof service exited 0 and
+was subsequently inactive/not-found. Retained source/evidence passed focused
+review. **The learner accepted this implementation with “good to go”; save it as a partial checkpoint.**
+This proves compute-process observation, not resource release, GPU cancellation,
+shared leasing or dispatch readiness. No remaining G4 gate is waived.
 
 ## Slices
 

@@ -1,3 +1,7 @@
+/** Historical acceptance sketch, not an executable live suite. Its driver was
+ * never implemented. Concrete focused suites and independent media checks now
+ * cover these assertions: see devpost/slice-1-native-evidence.md. No 12/12 result
+ * is claimed by moving this reference out of the live-test glob. */
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';

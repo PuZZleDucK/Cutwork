@@ -9,6 +9,16 @@ Build mode: **fast** — explicitly selected by the learner on 23 October 2026 b
 
 The scope, PRD and technical specification are approved. The learner approved this build order on 21 October 2026 ("looks great"). It sequences the approved product, without adding new behaviour; no further build-order sign-off is required. Git was initialised with the learner's agreement. On 21 October the learner explicitly requested a partial progress checkpoint commit; this saves the work without completing slice 1. Slice 1 has initial application modules, Dundee runtime/CLI preparation and successful real provider capability probes; a direct short YuE2 generation has now passed, and a first short song-conditioned H3 clip has passed; a first agent-driven attempt recovered real media after an H3 observation failure, but a clean chain pass remains outstanding. All 78 approved local tests pass, including the eight implementation-review regressions and both provider-runner failure paths.
 
+## Latest fast-mode verification index
+
+The old chronological notes below remain as history. The current assertion-to-run
+map is [slice-1-native-evidence.md](slice-1-native-evidence.md). The unbound original
+twelve-case sketch is now a reference, not a phantom passing suite. Fresh
+Codex/Claude capabilities, actual failed-call replay, measured cancellation and
+native handoff evidence are retained. The new provider media chain and independent content checks passed; slice 1
+is complete. The next step is the first LAN browser studio (slice 2).
+TTS was restored after native generation; personal Comfy was unchanged.
+
 ## Working Agreement
 
 - The build order is approved. Write tests and record their assertions, fixtures and live-test boundaries before implementation; the learner's fast-mode standing approval removes routine waiting for sign-off. A missing import or unavailable GPU is not meaningful behavioural test evidence.
@@ -209,7 +219,7 @@ also passes. These are no longer only pure decision helpers, but CPU payloads do
 not prove model cancellation/CUDA release. See [GPU lane build](gpu-lane-build.md).
 The next work is the prepared real-model lane verification; no slice/G4 gate is waived.
 
-- [ ] **1. Prove a real brief-to-media path on Dundee**
+- [x] **1. Prove a real brief-to-media path on Dundee**
   Becomes usable: A repeatable contract-check command takes a small creative brief through a real provider agent, generates a song and a short song-conditioned H3 clip, retains the original frames and receipts, and produces a playable validation video. It is a developer-facing integration proof, not yet the finished browser product.
   Why now: Native versions, model access, 16 GB operation, frame output and actual cancellation can invalidate the rest of the design. Find those problems before investing in an editor. Include project bootstrapping here rather than making it an otherwise unusable first step.
   PRD ref: `prd.md > The Core Journey` (steps 2, 4, 6, 9); `prd.md > Frontier Agent Setup and Selection`; `prd.md > Music and Video Generation`; `prd.md > Raw Frame Preservation`; `prd.md > Generation Seeds and Variations`.
@@ -218,6 +228,7 @@ The next work is the prepared real-model lane verification; no slice/G4 gate is 
   Verify (mechanical): Run type checking and the reviewed contract tests. On Dundee, execute both provider smoke tasks, verify actual model identity/cwd/normal tools, and generate the fresh native media chain. Independently probe duration, codecs, exact 24/1 rate, dimensions and ordered PNG count/hashes; compare retained frame and receipt identities. Measure peak VRAM, RAM, disk and stage timings. Exercise a short request, native frame overshoot handling, music→video→music unloading, and queued/running cancellation for both native generators; record measured stop latency and verify no owned job continues after a stopped claim. Check same-seed failed-call replay and both service-account and isolated-interpreter readiness. A live contract failure is not waived by passing fixtures.
   Learner check: Run the documented contract command on Dundee, listen to its generated song, play its validation video in VLC, and inspect one native call/seed receipt and its preserved frames. Review the evidence and any limitations before an editor is built on them.
   Commit: `Prove native music and video generation on Dundee`
+  Completed: 23 October 2026, fast mode. See the native evidence map for actual provider, media, replay, cancellation, resource and release results; 579 default tests/typecheck and 13 separate content diagnostics pass. Prior video feedback was positive; the next hands-on checkpoint remains slice 2. No browser UI is claimed by this completion.
 
 - [ ] **2. Set up the tools and generate a song from the LAN browser**
   Becomes usable: From a LAN browser, create/select a project, choose the agent, prepare the tools with the setup panels or Install all, enter a music description and optional lyrics, and listen to the resulting song with an expandable generation record.
@@ -369,3 +380,11 @@ Activity mode: Proposed focused planning/verification investigation suitable for
   reuse test detects reconnecting. No product/stack/agent-authority change;
   native CPU/GPU proof remains separate. Corrected the HTML companion's stale
   Markdown fingerprint metadata only; canonical spec content is unchanged.
+
+- **23 October 2026 — focused native verification replaces the unbound aggregate sketch:**
+  retain the original twelve acceptance assertions under `tests/reference/` and
+  map each to the actual focused suite/run/artifact in `slice-1-native-evidence.md`.
+  Do not claim "12/12", fabricate driver responses or repeat costly generations
+  solely for an aggregate count. Existing failures remain failures; no product
+  feature, chosen architecture or mechanical assertion is waived. A focused
+  no-dispatch test additionally records actual queued-cancellation timings.

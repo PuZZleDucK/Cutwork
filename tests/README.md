@@ -1,6 +1,13 @@
 # Slice 1 tests
 
-Start with [the original approved test review](../devpost/slice-1-test-review.md) and [current progress/regression evidence](../devpost/slice-1-progress.md). The first application modules exist; the slice is not complete.
+Start with [the original approved test review](../devpost/slice-1-test-review.md) and [current progress/regression evidence](../devpost/slice-1-progress.md). The developer-facing native proof is complete; the browser studio is next.
+
+**Current index:** [native assertion/evidence map](../devpost/slice-1-native-evidence.md).
+The default suite passes 579/579 plus typecheck. The original twelve-case
+acceptance sketch lives in `reference/` and is not an implemented/passing aggregate
+suite. The checkpoint notes below are historical; use the index for current runs.
+Content auditing has 13 separate synthetic CPU diagnostics and a separately
+recorded pass against actual generated media.
 
 ## Safe review commands
 
@@ -13,7 +20,10 @@ npm run test:list
 npm run test:live:list
 ```
 
-`npm ci` installs local development dependencies from the lockfile. The other commands typecheck or collect test definitions; they do not run tests, setup hooks, agents or generators. Listing explicitly disables static parsing so parameterised cases expand. Keep test modules free of top-level native side effects.
+`npm ci` installs local development dependencies from the lockfile. The other commands typecheck or collect test definitions; they do not run tests, setup hooks, agents or generators. Listing explicitly disables static parsing so parameterised cases expand. Keep test modules free of top-level native side effects. The npm listing scripts
+explicitly write JSON to `/dev/stdout`, so an appended test filter cannot be
+misread as an output filename and overwrite a test. Skipped opt-in definitions
+may be omitted from the listing.
 
 ## Local contract execution
 

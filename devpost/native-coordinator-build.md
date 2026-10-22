@@ -98,9 +98,19 @@ listener/client/native worker, not a fixture. See the native checkpoint above.
 Both provider capability checks were also freshly rerun and independently
 verified against their native sessions (`gpt-6.1-sol`, `claude-opus-5-5`), with
 real research/tool use and executed score/timing artifacts. These small tasks
-are not a provider-generated media-chain proof. Source `93dbb42` and local
-private provider-capability evidence retain the exact runs.
+are not a provider-generated media-chain proof. The replay used source
+`93dbb42`; the fresh provider capability tasks used `d7e2006`. The local private
+evidence bundles retain their exact runs.
 
 Review added a termination latch to the replay scenario and fixed an explicit
 192-kbit/s AAC setting in the next validation-export brief, enabling an
 independent reference encode comparison rather than guessing encoder settings.
+
+## Clean real-provider result
+
+The new real Codex task now passed through this HTTP coordinator and shared
+SQLite lane, generating a fresh non-truncated song, conditioned H3 clip and
+independently verified export. Both native calls retained successful owned-unit
+release evidence. See the [final native evidence map](slice-1-native-evidence.md).
+This closes the developer-facing integration proof, not the future browser/API
+project lifecycle or server-restart reconciliation features.

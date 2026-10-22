@@ -9,9 +9,9 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test:list": "vitest list --no-staticParse --json",
+    "test:list": "vitest list --no-staticParse --json=/dev/stdout",
     "test": "vitest run",
-    "test:live:list": "vitest list --config vitest.live.config.ts --no-staticParse --json",
+    "test:live:list": "vitest list --config vitest.live.config.ts --no-staticParse --json=/dev/stdout",
     "test:live": "vitest run --config vitest.live.config.ts"
   },
   "devDependencies": {

@@ -25,7 +25,7 @@ calls participate; no claim is made about policing arbitrary agent scripts.
 - [x] Maintenance excludes active work on that tool; FIFO does not bypass it.
 - [x] Worker hands off only after adapter cleanup evidence, including failures.
 - [x] Real SQLite/process integration on Kunlun and Dundee, CPU fixtures only.
-- [ ] Dundee real-model cancellation, CUDA release and handoff proof.
+- [x] Dundee real-model cancellation, CUDA release and handoff proof (focused runs and retained per-operation evidence; see the final native evidence map).
 
 ## Scope of evidence
 
@@ -162,3 +162,12 @@ The combined native evidence now covers actual ordered music/video/music release
 and queued/running cancellation, rather than just CPU fixtures. Provider-driven
 clean media/export verification is still separate and pending; the original
 12-case aggregate driver and slice-1 completion are not claimed here.
+
+## Consolidated outcome
+
+The initial native risk proof is complete; see
+[slice-1-native-evidence.md](slice-1-native-evidence.md) for the assertion-to-run
+map, fresh clean provider chain, failed-call replay, measured queued/running
+cancellation, handoff and independent content checks. The old failed aggregate
+runs remain failed. TTS was restored and its model/readiness checked afterward.
+Later restart-reconciliation/browser/editing gates remain distinct.

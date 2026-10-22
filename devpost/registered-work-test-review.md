@@ -14,6 +14,11 @@ was accepted by the learner with “looks good, go for it”; this is not a clai
 slice 1/G4 is complete. No automatic
 retry was made, and no fourth run is authorised.**
 
+Accepted checkpoint committed as **`3298874` — Collect registered-work evidence
+with native diagnostics** after a fresh 397/397 default run and typecheck. The
+next [reconciliation assessment batch](registered-work-assessment-test-review.md)
+is tests-first and does not authorize handoff.
+
 The learner accepted the whole-queue implementation with “looks great, go for
 it”. It is committed as **`b45c6d2` — Verify complete owned Comfy queue
 observations**. Before committing, typechecking and **316/316 existing default

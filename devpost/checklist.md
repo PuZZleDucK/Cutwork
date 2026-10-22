@@ -20,7 +20,7 @@ The scope, PRD and technical specification are approved. The learner approved th
 - Each slice includes test review, implementation, mechanical verification, the appropriate learner check and a commit. In learn mode, wait for hands-on feedback before that commit. Inspect the staged diff and stage only intended project files; keep private context, credentials, runtime state and generated media out of Git. Record completion evidence and the commit when checking a slice off.
 - Missing access or a failing native contract stops the dependent work for diagnosis; do not mark the slice done or build a convincing UI around fake success. Changes to product promises, chosen architecture or the creative kernel require agreement and reconciliation with the planning documents.
 
-## Current Checkpoint — Composed Evidence Accepted; Next Integration Tests
+## Current Checkpoint — Reconciliation Accepted; Native Preparation Next
 
 Read [slice-1-progress.md](slice-1-progress.md). The learner approved the two provider-runner assertions with "yeah, looks good". Both are fixed; **78/78 local tests and typechecking pass**. A source review found no blocker. Real tasks previously verified the requested `gpt-6.1-sol` and `claude-opus-5-5` models and normal tools on Dundee. Those remain capability evidence, not native generation/cancellation proof. The 12 native live cases remain unrun.
 
@@ -152,7 +152,19 @@ Comfy were independently verified. The learner accepted this checkpoint with
 “looks good, go for it”, approving its commit and preparation of the next
 integration tests before implementation. Slice 1/G4, actual GPU cancellation/handoff
 and shared leasing remain open. No fourth run authorised; normal agent
-capabilities remain unchanged.
+capabilities remain unchanged. The accepted collector checkpoint is committed as
+**`3298874`**, with fresh typechecking and 397/397 default tests before commit.
+
+**Latest:** the learner approved the [registered-work assessment contract](registered-work-assessment-test-review.md)
+with “looks good”. Its pure descriptive implementation consumes actual collector
+reports and independently observed exit receipts. Failed queues never become
+empty; mere procfs absence cannot certify exit. All 45 approved assertions remain
+unchanged, with four review regressions added: **49/49 assessment tests**, fresh
+typechecking and **446/446 default tests** pass. Independent focused review is
+complete. The learner accepted the implementation with “great, proceed”, approving
+its commit and native test preparation. No native extension has run or been
+authorised; this result remains incompatible with
+release/dispatch authorization. Real shared lease/handoff work is still required.
 
 ## Slices
 

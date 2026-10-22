@@ -300,3 +300,27 @@ cleanup metadata, deadlines or strict failure behaviour. This is diagnostic
 propagation proof. The subsequent separately approved native pass is described
 above; its post-exit transport errors exercised cause preservation, but no census
 error occurred. No fourth native attempt is authorised.
+
+## Registered-work reconciliation assessment
+
+The accepted collector checkpoint is `3298874`. The approved
+[test review](../devpost/registered-work-assessment-test-review.md) defines **45**
+cases consuming actual collector output with synthetic readers/exit receipts;
+implementation review adds **4** regressions, for **49** default-suite cases.
+It is a descriptive reconciliation summary, not `ReleaseObservation`, a lease,
+ownership certification or authorization to dispatch. A failed queue is never
+relabeled empty; a service-retired summary additionally requires its independently
+observed exact-identity exit receipt.
+
+```sh
+npm run typecheck
+npm test -- tests/contracts/registered-work-assessment.test.ts
+npm test
+```
+
+The suite now runs the production assessor. Its test-only facade retains the
+independently approved type contract and compiler-checks the implementation; it
+contains no behaviour. The temporary collect-only review configuration was
+removed when the assertions moved into `tests/contracts/` unchanged. All **446**
+default cases pass, including the existing 397. These are synthetic checks, not a
+new native run or proof of actual GPU release. No further native run is authorised.

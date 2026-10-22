@@ -199,7 +199,7 @@ owned transport, not the earlier mid-census failure path. The historical census
 errors' missing causes remain unknown; those records are untouched.
 
 No fourth run is authorised. The learner subsequently accepted the composed
-collector checkpoint with “looks good, go for it”; slice 1/G4 and actual model cancellation/handoff remain
+collector checkpoint with “looks good, go for it”; saved in **`3298874`**. Slice 1/G4 and actual model cancellation/handoff remain
 open. See the linked review for separate source hashes, audit and limitations.
 
 ## Checklist

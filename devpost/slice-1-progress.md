@@ -1,6 +1,76 @@
 # Slice 1 — implementation checkpoint
 
-## Current continuation — composed native checkpoint accepted, 23 October 2026
+## Current continuation — assessment accepted; native preparation next, 23 October 2026
+
+The learner approved the [assessment contract and 45 cases](registered-work-assessment-test-review.md)
+with “looks good”. Implemented the pure `assessRegisteredWork()` reconciliation
+function in `apps/server/src/jobs/registered-work-assessment.ts`. It preserves
+captured-window limitations, historical identity/GPU PID associations and raw
+input evidence; there is no I/O, native control, ownership promotion or dispatch.
+Service retirement requires independently observed matching exit evidence before
+the window plus successful absence brackets and settled unavailable queue reads.
+
+The initial 45 cases passed unchanged. Self-review and independent review found
+missing empty-queue/absent-service handling and order-dependent retirement.
+Failing regression cases were recorded, then repaired. A further review caught
+an overly strict per-phase check: a service can answer the queue then exit before
+the closing census. That transition now has a regression too. Final focused
+review found no remaining blocker. This is not an exhaustive correctness claim.
+
+- Typechecking passes; targeted assessment **49/49** and full default **446/446**.
+- The original 45 fixture/assertion bodies match the approved snapshot verbatim;
+  four implementation-review cases were appended. Tests now live in the default
+  `tests/contracts/` suite; the temporary review config was removed.
+- The independent test contract statically typechecks the production function.
+- Local red/green transcripts and source hashes:
+  `.local-evidence/slice-1/registered-work-assessment-implementation/` (ignored).
+- No native run, model generation, shared-lease handoff or agent restriction.
+  The accepted collector/native reader sources remain unchanged.
+
+**Learner check completed:** “great, proceed” accepts this implementation
+checkpoint and authorises its commit and preparation of the native verification
+step. No separate learner command execution is claimed.
+
+**Next:** commit the accepted checkpoint and prepare the native assessment
+extension for separate approval. No new native execution
+is authorised. Slice 1/G4, actual GPU cancellation/release and the shared lease
+remain open; synthetic success does not waive them.
+
+## Previous continuation — collector committed; reconciliation tests drafted, 23 October 2026
+
+Committed the learner-accepted collector and native diagnostics as **`3298874` —
+Collect registered-work evidence with native diagnostics**, after rechecking
+typechecking and **397/397** default cases. Intended staged source/tests matched
+the passing native snapshot. Private context, local evidence and unrelated files
+were excluded. Slice 1 remains unchecked.
+
+The [next test review](registered-work-assessment-test-review.md) proposes a thin
+reconciliation assessment of actual collector reports, expected registration,
+prior identity memory and independently observed owned-child exit receipts.
+It explains observed activity and unresolved evidence; it does **not** produce
+release authorization or connect the old boolean handoff interface.
+
+Key boundary: two procfs absences plus failed queue reads do not prove service
+exit. A retired-service summary additionally requires exact-identity preceding
+exit evidence, while retaining the failed queue observations. Surviving children,
+historical GPU PID matches, ambiguous associations and coverage limits remain
+visible. No global-quiescence, ownership or lease claim.
+
+The **45** draft cases typecheck and collect without execution. They feed reports
+from the actual collector using synthetic readers into a deferred assessor
+contract; the implementation is deliberately absent. No behavioural red/green
+result is claimed. No new native work, model call or production change.
+
+Focused static review is complete: added explicit nonzero-window exit ordering
+and foreign busy-report precedence cases, with no remaining blocker in recheck.
+The unchanged default suite also passed **397/397** this turn.
+
+**Next:** learner approval of this tests-first batch. After the
+small assessment, proceed toward the real shared lease/handoff integration rather
+than another observation framework. Slice 1/G4 and native model cancellation,
+GPU release/handoff and the formal live cases remain open.
+
+## Previous continuation — composed native checkpoint accepted, 23 October 2026
 
 The learner said “yes” to one fresh native attempt after the diagnostic repair,
 with unchanged strict checks and no automatic retry. Attempt 3 is

@@ -12,7 +12,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { openGpuQueue } from '../../apps/server/src/jobs/gpu-queue.ts';
 import { GpuWorker } from '../../apps/server/src/jobs/gpu-worker.ts';
 import { createSystemdGpuAdapter } from '../../apps/server/src/jobs/systemd-gpu.ts';
-import { readNvidiaComputeSnapshot } from '../../apps/server/src/jobs/nvidia-query.ts';
+import { readNvidiaComputeSnapshot, NvidiaQueryError } from '../../apps/server/src/jobs/nvidia-query.ts';
 import { seeds } from '../../apps/server/src/generation/seeds.ts';
 import type { GpuCall, Json } from '../../apps/server/src/jobs/gpu-queue-contract.ts';
 import { planVideo } from '../../packages/core/src/time/video-plan.ts';
@@ -30,7 +30,7 @@ test.skipIf(!enabled)('Dundee real YuE2 → H3 → YuE2 release/handoff and queu
   const projectId = `gpu-lane-${randomUUID()}`, workspace = join(runtime, 'projects', projectId, 'workspace');
   await mkdir(workspace, { recursive: true, mode: 0o700 });
   const q = openGpuQueue(join(root, 'queue.sqlite'));
-  const gpuConfig = { executable: '/usr/bin/nvidia-smi', expectedGpuUuids: [uuid], timeoutMs: 5000, cleanupTimeoutMs: 2000, maxOutputBytes: 1024 * 1024 };
+  const gpuConfig = { executable: '/usr/bin/nvidia-smi', expectedGpuUuids: [uuid], timeoutMs: 15000, cleanupTimeoutMs: 2000, maxOutputBytes: 1024 * 1024 };
   const recipes = new Map<string, { path: string; receipt: string; port: number }>();
   const observations: Array<Record<string, unknown>> = [], transitions: Array<Record<string, unknown>> = [];
   const baseline = await readNvidiaComputeSnapshot(gpuConfig, new AbortController().signal);
@@ -87,7 +87,17 @@ test.skipIf(!enabled)('Dundee real YuE2 → H3 → YuE2 release/handoff and queu
         let pids: number[] = [];
         try { pids = (await readFile(join('/sys/fs/cgroup', owner.controlGroup, 'cgroup.procs'), 'utf8')).trim().split('\n').filter(Boolean).map(Number); }
         catch (e) { if ((e as NodeJS.ErrnoException).code !== 'ENOENT') throw e; }
-        const gpu = await readNvidiaComputeSnapshot(gpuConfig, new AbortController().signal);
+        let gpu;
+        try { gpu = await readNvidiaComputeSnapshot(gpuConfig, new AbortController().signal); }
+        catch (error) {
+          // This is progress telemetry, not release authority. A bounded query
+          // timeout with confirmed query-child cleanup may be observed again;
+          // retain the missing observation, never reinterpret it as an empty GPU.
+          observations.push({ id, atMonotonicMs: performance.now(), observationError:
+            error instanceof Error ? error.message : String(error) });
+          if (!(error instanceof NvidiaQueryError) || error.code !== 'GPU_PROBE_TIMEOUT' || !error.cleanupConfirmed) throw error;
+          await delay(1000); continue;
+        }
         const matches = gpu.processes.filter(p => pids.includes(p.pid));
         if (matches.length) directGpuPidObserved = true;
         const log = call.tool === 'yue2' ? join(owner.directory, 'stderr.log') : join(runtimeRoot, 'projects', projectId, 'runs', id, 'service.log');

@@ -7,6 +7,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 import type { GpuCall, Json } from './gpu-queue-contract.ts';
 import type { NativeAdapter, NativeHandle, CleanupResult } from './gpu-worker.ts';
 import { readNvidiaComputeSnapshot, type NvidiaQueryConfig } from './nvidia-query.ts';
+import { settleGpuRelease } from './gpu-release-settling.ts';
 
 export interface NativeCommand { executable: string; args: string[]; cwd: string; env: Record<string, string> }
 const errText = (e: unknown) => e instanceof Error ? e.message : String(e);
@@ -60,12 +61,18 @@ export function createSystemdGpuAdapter(options: {
   /** Explicit native execution limit, captured in the launch plan. Caller must
    * show/configure this deadline; never infer a duration cap from clip length. */
   runtimeLimitSeconds: number;
+  /** Post-stop NVML settling only; errors remain unknown. Default 30 seconds. */
+  gpuReleaseTimeoutMs?: number;
   gpu: NvidiaQueryConfig;
   resolveCommand(call: GpuCall): Promise<NativeCommand>;
 }): NativeAdapter {
   for (const p of [options.runRoot, options.node, options.supervisor]) if (!isAbsolute(p)) throw new Error('Adapter paths must be absolute');
   if (!Number.isSafeInteger(options.runtimeLimitSeconds) || options.runtimeLimitSeconds < 1 || options.runtimeLimitSeconds > 7 * 86400) {
     throw new Error('Expected an explicit native runtime limit between one second and seven days');
+  }
+  const gpuReleaseTimeoutMs = options.gpuReleaseTimeoutMs ?? 30_000;
+  if (!Number.isSafeInteger(gpuReleaseTimeoutMs) || gpuReleaseTimeoutMs < 1 || gpuReleaseTimeoutMs > 2_147_483_647) {
+    throw new Error('Expected a positive bounded GPU release settling deadline');
   }
   return {
     async prepare(call, signal) {
@@ -75,13 +82,13 @@ export function createSystemdGpuAdapter(options: {
       const id = randomUUID(), directory = join(options.runRoot, id), unit = `studio-gpu-${id}.service`;
       await mkdir(directory, { recursive: true, mode: 0o700 });
       const plan = { schemaVersion: 1, callId: call.id, attemptId: call.attemptId, directory, unit,
-        command: { ...cmd }, gateToken: randomUUID(), runtimeLimitSeconds: options.runtimeLimitSeconds,
+        command: { ...cmd }, gateToken: randomUUID(), runtimeLimitSeconds: options.runtimeLimitSeconds, gpuReleaseTimeoutMs,
         bootId: (await readFile('/proc/sys/kernel/random/boot_id', 'utf8')).trim() };
       await writeFile(join(directory, 'plan.json'), JSON.stringify(plan, null, 2), { flag: 'wx', mode: 0o600 });
       return plan;
     },
     async launch(raw, context): Promise<NativeHandle> {
-      const plan = raw as { directory: string; unit: string; gateToken: string; bootId: string; runtimeLimitSeconds: number };
+      const plan = raw as { directory: string; unit: string; gateToken: string; bootId: string; runtimeLimitSeconds: number; gpuReleaseTimeoutMs: number };
       const { directory, unit } = plan;
       const evidencePath = join(directory, 'release.json');
       // The queue has already committed this exact plan before starting a unit.
@@ -170,15 +177,22 @@ export function createSystemdGpuAdapter(options: {
             const after = await show(unit); evidence.after = after;
             if (after.InvocationID && after.InvocationID !== owner.invocationId) throw new Error('Unit invocation changed after stop');
             if (after.LoadState !== 'not-found' && !['inactive', 'failed'].includes(after.ActiveState ?? '')) throw new Error('Owned unit is not inactive');
-            async function empty() {
-              try { return isEmptyCgroup(await readFile(join(cgroupPath, 'cgroup.events'), 'utf8')); }
+            async function empty(signal: AbortSignal) {
+              try { return isEmptyCgroup(await readFile(join(cgroupPath, 'cgroup.events'), { encoding: 'utf8', signal })); }
               catch (e) { if (missing(e)) return true; throw e; }
             }
-            if (!await empty()) throw new Error('Owned cgroup remains populated after stop');
-            const gpu = await readNvidiaComputeSnapshot(options.gpu, AbortSignal.timeout(options.gpu.timeoutMs + options.gpu.cleanupTimeoutMs + 1000));
-            evidence.gpu = JSON.parse(JSON.stringify(gpu)); evidence.rememberedPids = [...remembered].sort((a, b) => a - b);
-            if (gpu.processes.some(p => remembered.has(p.pid))) throw new Error('Owned or retained PID remains in GPU compute listing');
-            if (!await empty()) throw new Error('Owned cgroup changed during GPU release observation');
+            evidence.rememberedPids = [...remembered].sort((a, b) => a - b);
+            const settling = await settleGpuRelease({ rememberedPids: [...remembered], timeoutMs: plan.gpuReleaseTimeoutMs,
+              pollMs: 250, cleanupTimeoutMs: options.gpu.cleanupTimeoutMs + 1000 }, {
+              isCgroupEmpty: empty,
+              query: (remainingMs, signal) => readNvidiaComputeSnapshot({ ...options.gpu,
+                timeoutMs: Math.min(options.gpu.timeoutMs, remainingMs) }, signal),
+            });
+            evidence.gpuSettling = JSON.parse(JSON.stringify(settling));
+            if (settling.state !== 'released') throw new Error(settling.reason ?? 'GPU release settling is uncertain');
+            // Keep the final observation under the prior evidence field too.
+            // Every earlier lingering row and raw command output remains above.
+            evidence.gpu = JSON.parse(JSON.stringify(settling.observations.at(-1)!.gpu));
             evidence.cgroupEmptyBeforeAndAfterGpu = true; evidence.releasedUnixMs = Date.now();
             await writeFile(evidencePath, JSON.stringify(evidence, null, 2), { flag: 'wx', mode: 0o600 });
             return { state: 'released', evidence };

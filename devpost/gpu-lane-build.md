@@ -87,3 +87,36 @@ supported by these checks. CPU payloads cannot establish real CUDA release.
 
 Slice 1/G4 and the original 12-case live suite remain open. The separately
 prepared real-model lane test must pass before claiming model cancellation/handoff.
+
+## First real-model lane run: retained failure and repair
+
+The exact `10f604f` source snapshot on Dundee completed a real YuE2 sample and
+a real song-conditioned H3 clip, with native cleanup/release after each. The
+return YuE2 helper was killed by `systemd-oomd` during decoder loading. Journal
+evidence attributes the kill to sustained host memory pressure, not a proven
+VRAM exhaustion. Its unit peaked at 11.9 GiB RAM. A concurrent progress query
+timed out, and post-stop GPU observation still contained the helper PID; the
+queue correctly retained a reconciliation lease. This run failed and did not
+reach either planned active-model cancellation test.
+
+Snapshot: `gpu-model-lane.8b1d2698-d62b-40a5-af11-38ca4211496b`. Failed evidence
+is retained locally under `.local-evidence/slice-1/gpu-lane/model-failed/` and
+in that immutable remote snapshot. Independent later checks found all owned
+PIDs/cgroups gone and personal Comfy unchanged. The old proof database is left
+held; that is not an implemented restart-reconciliation feature.
+
+Dundee has 22 GiB system RAM. The learner explicitly approved temporarily
+pausing the separate roughly 6 GiB Chatterbox service and restoring it after
+verification. Only that identified service was paused; personal Comfy was not
+stopped. This is test-host preparation, not product permission to stop other
+applications or a fresh-host memory guarantee.
+
+The adapter now allows up to 30 seconds for valid lingering NVML rows to settle
+after its verified unit stop, retaining every observation and checking cgroup
+emptiness around each. Query/schema/cleanup errors or expiry still hold the
+lease. Sixteen focused synthetic assertions cover settling, non-release and
+deadline behavior. Progress telemetry separately permits a cleanly terminated
+query timeout to be observed again, records the gap, and never treats it as an
+empty GPU or as release authority. This repairs premature cleanup assessment;
+it does not repair or disguise an OOM-killed generation. The next native run
+uses a fresh source snapshot and preserves this failure.

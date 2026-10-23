@@ -108,7 +108,7 @@ extra row in overlap chains; do not sacrifice clip identity to compress rows.
   move-up actually raises the whole clip without changing geometry.
 - [x] Full suite/build, disposable browser swap, safe web-only deployment and
   live reported-project verification.
-- [ ] Learner review of the simpler sequence.
+- [x] Learner accepted the simpler sequence with “thats perfect” (24 October).
 
 Follow-up evidence (deployed checkpoint `c5752d0`): **1,411 tests in 100
 files**, typecheck and build pass. The disposable browser swapped two whole
@@ -122,3 +122,32 @@ and application/TTS/personal-Comfy process identities. Nine HTTP-served files
 match the reviewed build; the reported project's complete API snapshot is
 unchanged. Private before/after screenshots and audit receipts are under
 `.local-evidence/slice-9/whole-clip-priority/`.
+
+
+## Follow-up: failures-only notifications and permanent dismissal within an occurrence
+
+The learner reproduced a real bug: dismiss the bottom two of four notices,
+close the panel, then reopen it; all four returned. The previous review action
+explicitly included dismissed IDs and the badge counted the original inputs.
+That behaviour is removed. Collapse does not dismiss; dismissal removes the
+occurrence from both the inbox and count. Review cannot undo dismissal.
+
+- [x] Tests first reproduced the exact four-to-two sequence.
+- [x] Remove success notifications, GPU-lane advisory and timeout explanation;
+  retain actual failures and the initial trusted-LAN security notice.
+- [x] Persist only an opaque LAN-dismissal preference across browser visits;
+  migrate the previous session-based dismissal without retaining error text.
+- [x] Preserve actionable draft-conflict recovery in the music form even when
+  its notification has been dismissed.
+- [x] Full suite: **1,418 tests in 100 files**, typecheck and production build.
+- [x] Browser component proof: four → dismiss bottom two → close → poll → reopen
+  leaves two; a new occurrence of the same failure announces again and expires;
+  resolving failures leaves an empty/disabled inbox; dismissed LAN warning is
+  absent after reload. Exact 5,000ms duration retains fake-timer coverage.
+- [ ] Application success-action check, safe deployment and production proof.
+- [ ] Learner review of notification behaviour.
+
+Private evidence: `.local-evidence/slice-9/notification-dismissal/`. No model
+download or new generation is required. Previous notification tests incorrectly
+encoded manual resurrection as expected behaviour; those expectations are now
+replaced, not presented as proof that the old behaviour was correct.

@@ -674,3 +674,8 @@ Never-dispatched captured jobs can proceed after a same-source restart. Upgrades
 are drained/idle deployments: plans tied to a different immutable source are
 refused rather than silently re-captured or reinterpreted. This is not
 reboot-resumable model inference.
+
+
+### Notification dismissal refinement (24 October 2026)
+
+The notification inbox contains failures and the initial trusted-LAN notice, not successful operations or routine GPU/timeout documentation. Keep collapse, review and dismissal separate: review selects only undismissed IDs and the badge counts only those IDs. Polling must not resurrect a dismissed occurrence; a new error occurrence may announce normally. Persist only the opaque LAN-warning dismissal ID in localStorage, migrating the previous session preference without persisting error or prompt text. Expired five-second announcements remain reviewable until individually dismissed. Draft-conflict recovery also stays in the music form so dismissing an overlay cannot strand an unsaved draft.

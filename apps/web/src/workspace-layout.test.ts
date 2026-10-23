@@ -34,3 +34,21 @@ test('hazard guidance highlights music first, then video without selecting a dif
  expect(fixture()).toMatch(/id="workspace-tab-music"[^>]*class="[^"]*needs-attention/);
  expect(fixture(true)).toMatch(/id="workspace-tab-video"[^>]*class="[^"]*needs-attention/);
 });
+
+
+test('draft-conflict recovery remains in the music form independently of notification dismissal',()=>{
+ fixture();state.current.conflict=true;
+ const html=renderToStaticMarkup(createElement(App));
+ const form=html.slice(html.indexOf('<form'),html.indexOf('</form>'));
+ expect(form).toContain('Save my draft over server version');
+ expect(form).toContain('Discard my draft and load saved');
+});
+
+test('the navbar filters routine advisories and successful actions but retains genuine failures',()=>{
+ fixture();Object.assign(state.current,{notice:'Clip order updated.',messageVersion:1,error:'Save failed.',errorVersion:1});
+ state.current.overview.warnings=['Trusted LAN only: service account access.','Models share one GPU lane.','Each native generation is bounded to 3600 seconds.'];
+ const html=renderToStaticMarkup(createElement(App)),header=html.slice(html.indexOf('<header'),html.indexOf('</header>'));
+ expect(header).toContain('Trusted LAN only:');expect(header).toContain('Save failed.');
+ expect(header).not.toContain('Clip order updated.');expect(header).not.toContain('Models share one GPU lane.');expect(header).not.toContain('Each native generation is bounded to');
+ expect(header).toContain('notice-count">2</span>');
+});

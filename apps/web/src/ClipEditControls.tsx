@@ -9,7 +9,7 @@ type EditResult={context:ClipEditContext;arrangement:SongArrangement};
 const fields=['frames','beats','seconds'] as const;
 const cleanDisplay=(value:string|null|undefined)=>value?.replace(/^≈ /,'')??'';
 
-export function ClipEditControls({studio,song,arrangement,clip,context}:{studio:Studio;song:StudioSong;arrangement:SongArrangement;clip:StudioClip;context:ClipEditContext}){
+export function ClipEditControls({studio,song,arrangement,clip,context,onContinue}:{studio:Studio;song:StudioSong;arrangement:SongArrangement;clip:StudioClip;context:ClipEditContext;onContinue:(context:ClipEditContext)=>Promise<void>}){
  const [base,setBase]=useState(context),[trim,setTrim]=useState<TrimEdit>(()=>trimEditFromContext(context)),[move,setMove]=useState<TimingValue>(()=>moveEditFromContext(context));
  const [dirty,setDirty]=useState<'trim'|'move'|null>(null);
  const reset=(next:ClipEditContext)=>{setBase(next);setTrim(trimEditFromContext(next));setMove(moveEditFromContext(next));setDirty(null);};
@@ -49,6 +49,8 @@ export function ClipEditControls({studio,song,arrangement,clip,context}:{studio:
    <p className="small-copy muted">Only while this clip is visible. Hidden clips never contribute audio. No mixing or fades.</p>
   </fieldset>
   {placement&&<fieldset disabled={disabled||!!dirty} className="overlap-controls"><legend>Visual priority</legend>{overlaps.length?overlaps.map(other=><button key={other.id} type="button" className="button secondary small" onClick={()=>void studio.perform(async()=>{await request(`/api/projects/${song.projectId}/songs/${song.id}/dominance`,{revision:arrangement.revision,firstPlacementId:placement.id,secondPlacementId:other.id});},'Visual priority swapped. Timing, coverage and each audio choice are unchanged.')} >{placement.priority>other.priority?'Send behind':'Bring ahead of'} {studio.snapshot!.clips.find(c=>c.id===other.clipId)?.title??'overlapping clip'} · {other.id.slice(0,6)}</button>):<p className="small-copy muted">No overlapping clips.</p>}</fieldset>}
+  <button type="button" className="button secondary small continue-clip" disabled={disabled||!!dirty} onClick={()=>void onContinue(base)}>Continue From End ↑</button>
+  {dirty&&<p className="small-copy muted">Apply or discard timing edits before preparing a continuation.</p>}
   <button type="button" className="text-button" disabled={disabled||!!dirty} onClick={()=>void mutatePlacement()}>{base.placementId?'Remove from sequence':'Place this saved edit'}</button>
   </div>
  </details>;

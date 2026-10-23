@@ -71,7 +71,7 @@ class Harness:
         self.calls.append((method,route,timeout,self.now))
         if route=='system_stats':
             value={'system':{'argv':self.command[2:],'comfyui_version':'fixture'},'devices':[{'type':'cuda'}]}
-        elif route=='object_info': value={n['class_type']:{} for n in runner.workflow.h3_graph(prompt='x',seed='1',frames=56,audio_filename='conditioning.wav').values()}
+        elif route=='object_info': value={n['class_type']:{} for n in runner.workflow.h3_graph(prompt='x',seed='1',frames=56,audio_filename='conditioning.wav',first_frame_filename='continuation.png' if 'firstFrame' in json.loads(self.request.read_text()) else None).values()}
         elif route=='prompt':
             self.graph=json.loads(request.data)['prompt']
             if self.post_error: raise TimeoutError('submission timed out')
@@ -156,6 +156,20 @@ class PollingTest(unittest.TestCase):
 
     def assert_single_submission(self,h):
         self.assertEqual(sum(m=='POST' for m,_,_,_ in h.calls),1)
+
+    def test_image_snapshot_is_copied_and_both_modalities_are_submitted_once(self):
+        h=self.run_fixture();request=json.loads(h.request.read_text())
+        request['firstFrame']={'path':str(h.root/'captured.png'),'sha256':'a'*64,'pixelSha256':'b'*64};h.request.write_text(json.dumps(request))
+        def prepared(reference,directory,python,project):
+            self.assertEqual(reference,request['firstFrame']);self.assertEqual(project,h.root/'projects/poll-fixture')
+            self.assertEqual(python,h.tool/'venv/bin/python')
+            p=directory/'continuation.png';p.write_bytes(b'EXPLICIT MOCK PNG TRANSPORT')
+            return {'path':str(p),'sourcePath':reference['path'],'sha256':runner.media.sha256(p),'pixelSha256':'b'*64,'bytes':p.stat().st_size,'width':640,'height':480}
+        with patch.object(runner.media,'prepare_first_frame',side_effect=prepared) as prepare:
+            code,r=h.execute()
+        self.assertEqual(code,0,r);prepare.assert_called_once();self.assert_single_submission(h)
+        self.assertEqual(h.graph['5']['inputs']['first_frame'],['19',0]);self.assertEqual(h.graph['7']['inputs']['audio'],['6',0])
+        self.assertEqual(runner.media.sha256(h.run/'comfy-base/input/continuation.png'),r['firstFrame']['sha256'])
 
     def test_history_timeout_then_empty_then_completion_preserves_submission(self):
         h=self.run_fixture(history=[TimeoutError('slow history'),'empty','done'])

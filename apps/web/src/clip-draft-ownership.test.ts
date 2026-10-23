@@ -17,3 +17,9 @@ it('discarded render initializers cannot steal ownership; committed effect repla
  expect(actual.isCurrent()).toBe(true);expect(discarded.isCurrent()).toBe(false);
  actual.claim();expect(actual.isCurrent()).toBe(true);draftWriter('strict');expect(actual.isCurrent()).toBe(true);
 });
+it('preparation can replace only the writer generation observed before its request',()=>{
+ const old=draftWriter('prepare');old.claim();const pending=draftWriter('prepare');
+ const successor=draftWriter('prepare');successor.claim();
+ expect(pending.claimIfUnchanged()).toBe(false);expect(successor.isCurrent()).toBe(true);
+ const next=draftWriter('prepare');expect(next.claimIfUnchanged()).toBe(true);expect(next.isCurrent()).toBe(true);expect(successor.isCurrent()).toBe(false);
+});

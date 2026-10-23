@@ -37,7 +37,7 @@ def audio_input_name(value):
     return value
 
 
-def h3_graph(*, prompt, seed, audio_filename, frames, width=640, height=480):
+def h3_graph(*, prompt, seed, audio_filename, frames, width=640, height=480, first_frame_filename=None):
     """Build native graph; caller supplies sample-exact conditioned audio.
 
     `frames` is the native count from the existing TypeScript planner, not the
@@ -72,6 +72,9 @@ def h3_graph(*, prompt, seed, audio_filename, frames, width=640, height=480):
         "13": node("VAEDecode", samples=["12", 0], vae=["3", 0]),
         "14": node("VAEDecodeAudio", samples=["12", 0], vae=["4", 0]),
     }
+    if first_frame_filename is not None:
+        graph["19"] = node("LoadImage", image=audio_input_name(first_frame_filename))
+        graph["5"]["inputs"]["first_frame"] = ["19", 0]
     return graph | output_branch(["13", 0], ["14", 0])
 
 

@@ -27,6 +27,33 @@ async function fixture(startFrame=0,endFrame=48,sampleCount='96000'){
  const options={runtime,source,origin,attempt,store,queue};
  return {...options,options,songPath,current,finishVideo,cancel,setCall:(v:GpuCall|null)=>{call=v;},setHeld:(v:boolean)=>{held=v;}};
 }
+async function attachContinuation(f:Awaited<ReturnType<typeof fixture>>){
+ const clipId=randomUUID(),contextId=randomUUID(),path=join(f.runtime,'projects',f.attempt.projectId,'retained','frame-5.png');
+ await mkdir(join(path,'..'),{recursive:true});const bytes=Buffer.from('EXPLICIT FIXTURE ORIGINAL PNG BYTES');await writeFile(path,bytes);
+ const frame={assetId:randomUUID(),index:4,sha256:hash(bytes),pixelSha256:'c'.repeat(64),bytes:bytes.length};
+ const continuation={contextId,contextRevision:3,clipId,songId:f.attempt.song.id,sourceOriginFrame:19,sourceStartFrame:2,sourceEndFrame:5,endFrame:24,frame};
+ f.attempt.continuation=continuation;f.attempt.input.continuation={contextId,contextRevision:3};Object.assign(f.current,structuredClone(f.attempt));
+ const oldAsset=f.store.asset,oldProject=f.store.project;
+ f.store.asset=(id:string)=>id===frame.assetId?{projectId:f.attempt.projectId,path,sha256:frame.sha256,mediaType:'image/png'}:oldAsset(id);
+ f.store.project=(id:string)=>({...oldProject(id),clips:[{id:clipId,rawFrames:[frame]}]} as never);
+ const execute:NonNullable<VideoTaskDependencies['execute']>=async c=>{expect(c.executable).toBe(join(f.runtime,'tools/comfyui/venv/bin/python'));expect(c.args).toContain('--inspect-input-png');return{code:0,stdout:JSON.stringify({sha256:hash(await readFile(c.args.at(-1)!)),pixelSha256:frame.pixelSha256,bytes:bytes.length,width:640,height:480}),stderr:''};};
+ return{path,bytes,frame,continuation,execute};
+}
+test('continuation capture copies the exact retained original into private immutable inputs before provider creation',async()=>{
+ const f=await fixture(24,72),c=await attachContinuation(f),p=await prepareVideoTask(f.options,{execute:c.execute}),plan=JSON.parse(await readFile(p.planPath,'utf8'));
+ expect(plan.attempt.continuation).toEqual(c.continuation);expect(plan.firstFrame).toEqual({path:join(p.planPath,'../continuation.png'),sha256:c.frame.sha256,pixelSha256:c.frame.pixelSha256});
+ expect(await readFile(plan.firstFrame.path)).toEqual(c.bytes);expect(plan.firstFrameSource).toEqual({path:c.path,...c.frame});
+ expect(plan.launch.stdin).toContain('firstFrame');expect(plan.launch.stdin).toContain('last retained original');expect(plan.launch.stdin).toContain(c.frame.sha256);
+ await writeFile(c.path,'LATER ORIGINAL MUTATION');expect(await readFile(plan.firstFrame.path)).toEqual(c.bytes);await expect(stat(plan.launch.runDirectory)).rejects.toMatchObject({code:'ENOENT'});
+});
+test.each(['source hash','pixel hash','asset project','source manifest'] as const)('continuation capture rejects changed %s without a captured task',async defect=>{
+ const f=await fixture(),c=await attachContinuation(f);let execute=c.execute;
+ if(defect==='source hash')await writeFile(c.path,'changed');
+ if(defect==='pixel hash')execute=async cmd=>({...await c.execute(cmd),stdout:JSON.stringify({sha256:c.frame.sha256,pixelSha256:'0'.repeat(64),bytes:c.bytes.length,width:640,height:480})});
+ if(defect==='asset project'){const asset=f.store.asset;f.store.asset=id=>{const a=asset(id);return id===c.frame.assetId&&a?{...a,projectId:randomUUID()}:a;};}
+ if(defect==='source manifest'){const project=f.store.project;f.store.project=id=>({...project(id),clips:[]});}
+ await expect(prepareVideoTask(f.options,{execute})).rejects.toThrow();await expect(stat(join(f.runtime,'projects',f.attempt.projectId,'inputs',f.attempt.id,'captured-task.json'))).rejects.toMatchObject({code:'ENOENT'});
+});
 test('video capture preserves visual brief, song identity, maximal seed, and 48 requested versus 56 native frames',async()=>{
  const f=await fixture(),p=await prepareVideoTask(f.options),plan=JSON.parse(await readFile(p.planPath,'utf8'));
  expect(plan.attempt.input).toEqual(f.attempt.input);expect(plan.attempt.song).toEqual(f.attempt.song);expect(plan.attempt.seeds.h3).toBe('18446744073709551615');
@@ -43,11 +70,11 @@ test.each([[0,1,'96000',5,0],[100,148,'96000',56,112000],[0,361,'96000',362,6280
 test('captured song mutation fails preparation instead of silently conditioning a different song',async()=>{const f=await fixture();await writeFile(f.songPath,'changed');await expect(prepareVideoTask(f.options)).rejects.toThrow(/song|hash/i);});
 test('aborted video task never launches a provider and remains queued',async()=>{const f=await fixture();await prepareVideoTask(f.options);const c=new AbortController();c.abort();const provider=vi.fn();await runVideoTask({...f.options,signal:c.signal},{provider});expect(provider).not.toHaveBeenCalled();expect(f.current.state).toBe('queued');});
 
-async function nativeFixture(startFrame=0,endFrame=48,samples='96000'){
- const f=await fixture(startFrame,endFrame,samples),p=await prepareVideoTask(f.options),plan=JSON.parse(await readFile(p.planPath,'utf8'));
+async function nativeFixture(startFrame=0,endFrame=48,samples='96000',continuing=false){
+ const f=await fixture(startFrame,endFrame,samples),continuation=continuing?await attachContinuation(f):null,p=await prepareVideoTask(f.options,continuation?{execute:continuation.execute}:{}),plan=JSON.parse(await readFile(p.planPath,'utf8'));
  const run=join(f.runtime,'projects',f.attempt.projectId,'runs',f.attempt.nativeCallId),root=join(run,'comfy-base/output');
  const write=async(path:string,bytes:string|Buffer)=>{await mkdir(join(path,'..'),{recursive:true});await writeFile(path,bytes);};
- const request={schemaVersion:1,attemptId:f.attempt.nativeCallId,projectId:f.attempt.projectId,song:plan.song,plan:plan.nativePlan,seed:f.attempt.seeds.h3,prompt:'Translated native multimodal robot description'};
+ const request={schemaVersion:1,attemptId:f.attempt.nativeCallId,projectId:f.attempt.projectId,song:plan.song,plan:plan.nativePlan,seed:f.attempt.seeds.h3,prompt:'Translated native multimodal robot description',...(plan.firstFrame?{firstFrame:plan.firstFrame}:{})};
  await save(plan.paths.nativeRequest,request);await write(join(run,'request.json'),await readFile(plan.paths.nativeRequest));
  await write(join(run,'inputs/source-song.wav'),await readFile(f.songPath));const conditioning=join(run,'inputs/conditioning.wav');await write(conditioning,'FAKE EXACT CONDITIONING');await write(join(run,'comfy-base/input/conditioning.wav'),'FAKE EXACT CONDITIONING');
  const condition={...plan.nativePlan.conditioning,path:conditioning,sha256:hash('FAKE EXACT CONDITIONING'),sourceSnapshot:join(run,'inputs/source-song.wav'),songPath:f.songPath,songSha256:f.attempt.song.sha256,songSamples:Number(samples),sampleRate:48000,channels:2,samples:plan.nativePlan.conditioning.totalSamples,whollyPostSong:plan.nativePlan.conditioning.availableSamples===0};
@@ -61,19 +88,21 @@ async function nativeFixture(startFrame=0,endFrame=48,samples='96000'){
   '14':node('VAEDecodeAudio',{samples:['12',0],vae:['4',0]}) as never,'15':node('SaveImage',{images:['13',0]}) as never,
   '16':node('CreateVideo',{images:['13',0],audio:['14',0],fps:24}) as never,'17':node('SaveVideo',{video:['16',0]}) as never,'18':node('SaveAudioAdvanced',{audio:['14',0]}) as never,
  };
+ if(plan.firstFrame){graph['19']=node('LoadImage',{image:'continuation.png'}) as never;graph['5']!.inputs.first_frame=['19',0];await write(join(run,'inputs/continuation.png'),await readFile(plan.firstFrame.path));await write(join(run,'comfy-base/input/continuation.png'),await readFile(plan.firstFrame.path));}
  const frames:{index:number;path:string;sha256:string;pixelSha256:string;bytes:number}[]=[];
  for(let i=1;i<=plan.nativePlan.nativeFrames;i++){const path=join(root,'raw',`frame_${String(i).padStart(5,'0')}_.png`),bytes=`FAKE PNG ${i}`;await write(path,bytes);frames.push({index:i,path,sha256:hash(bytes),pixelSha256:'b'.repeat(64),bytes:Buffer.byteLength(bytes)});}
  const videoPath=join(root,'native/clip.mp4'),audioPath=join(root,'audio/clip.flac');await write(videoPath,'FAKE MP4');await write(audioPath,'FAKE FLAC');const nativeSamples=800*Math.floor((plan.nativePlan.nativeFrames*5+1)/3),muxSamples=Math.min(nativeSamples,Math.ceil(32000*plan.nativePlan.nativeFrames/24));
  const artifact=(path:string)=>({type:'output',filename:path.split('/').at(-1),subfolder:path.slice(root.length+1,path.lastIndexOf('/'))}),promptId=randomUUID();
  const history={[promptId]:{prompt:[0,promptId,graph],status:{completed:true,status_str:'success'},outputs:{'15':{images:frames.map(v=>artifact(v.path))},'17':{images:[artifact(videoPath)]},'18':{audio:[artifact(audioPath)]}}}};
- await save(join(run,'history.json'),history);await save(join(run,'workflow-api.json'),graph);await save(join(run,'submission.json'),{prompt_id:promptId});await save(join(run,'queue-after.json'),{queue_running:[],queue_pending:[]});await save(join(run,'original-frames.json'),{origin:'pre-encode',frames});await save(join(run,'original-frame-inputs.json'),{paths:frames.map(v=>v.path),graph,audioSha256:condition.sha256});
- const receipt={schemaVersion:1,state:'succeeded',synthetic:false,attemptId:f.attempt.nativeCallId,projectId:f.attempt.projectId,plan:plan.nativePlan,requestSha256:hash(await readFile(plan.paths.nativeRequest)),sourceHashes:plan.sourceHashes,modelManifestSha256:plan.modelManifestSha256,verifiedModels:plan.verifiedModels,recipeSha256:plan.recipeSha256,lockSha256:plan.lockSha256,sourceRevision:plan.sourceRevision,actualSeeds:f.attempt.seeds,ownedServiceExited:true,ownedGpuProcessAbsent:true,observerExited:true,conditioning:condition,promptId,outputs:{nativeFrames:plan.nativePlan.nativeFrames,requestedFrames:plan.nativePlan.requestedFrames,initialPlacement:plan.nativePlan.placement,frameManifestPath:join(run,'original-frames.json'),video:{path:videoPath,sha256:hash('FAKE MP4')},audio:{path:audioPath,sha256:hash('FAKE FLAC'),samples:nativeSamples,sampleRate:32000,channels:2,muxInputSamples:muxSamples}}};await save(plan.paths.nativeReceipt,receipt);
+ await save(join(run,'history.json'),history);await save(join(run,'workflow-api.json'),graph);await save(join(run,'submission.json'),{prompt_id:promptId});await save(join(run,'queue-after.json'),{queue_running:[],queue_pending:[]});await save(join(run,'original-frames.json'),{origin:'pre-encode',frames});await save(join(run,'original-frame-inputs.json'),{paths:frames.map(v=>v.path),graph,audioSha256:condition.sha256,...(plan.firstFrame?{firstFrameSha256:plan.firstFrame.sha256}:{})});
+ const receipt={schemaVersion:1,state:'succeeded',synthetic:false,attemptId:f.attempt.nativeCallId,projectId:f.attempt.projectId,plan:plan.nativePlan,requestSha256:hash(await readFile(plan.paths.nativeRequest)),sourceHashes:plan.sourceHashes,modelManifestSha256:plan.modelManifestSha256,verifiedModels:plan.verifiedModels,recipeSha256:plan.recipeSha256,lockSha256:plan.lockSha256,sourceRevision:plan.sourceRevision,actualSeeds:f.attempt.seeds,ownedServiceExited:true,ownedGpuProcessAbsent:true,observerExited:true,conditioning:condition,...(plan.firstFrame?{firstFrame:{path:join(run,'inputs/continuation.png'),sourcePath:plan.firstFrame.path,sha256:plan.firstFrame.sha256,pixelSha256:plan.firstFrame.pixelSha256,bytes:continuation!.bytes.length,width:640,height:480}}:{}),promptId,outputs:{nativeFrames:plan.nativePlan.nativeFrames,requestedFrames:plan.nativePlan.requestedFrames,initialPlacement:plan.nativePlan.placement,frameManifestPath:join(run,'original-frames.json'),video:{path:videoPath,sha256:hash('FAKE MP4')},audio:{path:audioPath,sha256:hash('FAKE FLAC'),samples:nativeSamples,sampleRate:32000,channels:2,muxInputSamples:muxSamples}}};await save(plan.paths.nativeReceipt,receipt);
  const directory=join(f.runtime,'jobs/native-units',randomUUID()),owner={kind:'systemd-unit',unit:'fixture.service',invocationId:'f'.repeat(32),directory,supervisor:{pid:12345}},release={owner,cgroupEmptyBeforeAndAfterGpu:true,gpuSettling:{state:'released'},gpu:{processes:[]},rememberedPids:[12345]};await save(join(directory,'release.json'),release);await save(join(directory,'exit.json'),{code:0,signal:null});
  const call:GpuCall={id:f.attempt.nativeCallId,attemptId:f.attempt.id,projectId:f.attempt.projectId,tool:'h3',request:request as never,state:'succeeded',sequence:1,cancelRequested:false,launch:{command:{args:['-I','-u',join(f.source,'integrations/h3/generate.py'),'--request',plan.paths.nativeRequest,'--run']}},owner,release,result:{code:0,signal:null},error:null};f.setCall(call);
  const events:string[]=[];const provider=vi.fn(async(launch:Parameters<NonNullable<VideoTaskDependencies['provider']>>[0])=>{
   events.push('provider');await mkdir(launch.runDirectory,{recursive:true});const receiptPath=join(launch.runDirectory,'provider-receipt.json'),stdoutPath=join(launch.runDirectory,'provider.stdout.log'),stderrPath=join(launch.runDirectory,'provider.stderr.log');await write(stdoutPath,'Natural fixture prose, not evidence');await write(stderrPath,'');await save(receiptPath,{state:'exited',succeeded:true,code:0,signal:null,inputDelivered:true,executable:launch.executable,argv:launch.argv,cwd:launch.cwd});return{succeeded:true,code:0,signal:null,inputDelivered:true,receiptPath,stdoutPath,stderrPath,owner:null};
  });
  const execute:NonNullable<VideoTaskDependencies['execute']>=async c=>{
+  if(c.executable.endsWith('/python')&&c.args.includes('--inspect-input-png'))return continuation!.execute(c);
   if(c.executable.endsWith('/python')){events.push('png-decode');await save(c.args.at(-1)!,frames);return{code:0,stdout:'',stderr:''};}
   if(c.executable==='/usr/bin/ffprobe'){
    const path=c.args.at(-1),audio=(codec_name:string,sample_rate:string,duration_ts:number)=>({codec_type:'audio',codec_name,sample_rate,channels:2,duration_ts,time_base:`1/${sample_rate}`});
@@ -113,3 +142,20 @@ test('wholly post-song native conditioning uses explicit silence and retains the
  await save(join(f.run,'workflow-api.json'),f.graph);await save(join(f.run,'history.json'),f.history);await save(join(f.run,'original-frame-inputs.json'),{paths:f.frames.map(v=>v.path),graph:f.graph,audioSha256:f.receipt.conditioning.sha256});
  await runVideoTask(f.options,f.dependencies);expect(f.current.state).toBe('failed');expect(f.finishVideo).not.toHaveBeenCalled();
 });
+
+test('verified image plus audio continuation retains captured source after predecessor context changes',async()=>{
+ const f=await nativeFixture(24,72,'96000',true);f.store.project=()=>{throw Error('Must not consult mutable context after acceptance');};
+ await runVideoTask(f.options,f.dependencies);expect(f.current.state).toBe('succeeded');expect(f.finishVideo).toHaveBeenCalledTimes(1);expect(f.current.details).toHaveProperty('continuation',f.attempt.continuation);
+});
+test.each(['snapshot','native copy','request image','graph image','fingerprint input','receipt pixel','captured source'] as const)('continuation rejects mismatched %s and never places text-only output',async defect=>{
+ const f=await nativeFixture(24,72,'96000',true);
+ if(defect==='snapshot')await writeFile(f.plan.firstFrame.path,'changed');
+ if(defect==='native copy')await writeFile(join(f.run,'comfy-base/input/continuation.png'),'changed');
+ if(defect==='request image'){delete (f.call.request as Record<string,unknown>).firstFrame;await save(f.plan.paths.nativeRequest,f.call.request);}
+ if(defect==='graph image'){delete f.graph['5']!.inputs.first_frame;await save(join(f.run,'workflow-api.json'),f.graph);await save(join(f.run,'history.json'),f.history);}
+ if(defect==='fingerprint input'){const p=join(f.run,'original-frame-inputs.json'),v=JSON.parse(await readFile(p,'utf8'));v.firstFrameSha256='0'.repeat(64);await save(p,v);}
+ if(defect==='receipt pixel'){f.receipt.firstFrame!.pixelSha256='0'.repeat(64);await save(f.plan.paths.nativeReceipt,f.receipt);}
+ if(defect==='captured source')f.attempt.continuation!.frame.index++;
+ await runVideoTask(f.options,f.dependencies);expect(f.current.state).toBe('failed');expect(f.finishVideo).not.toHaveBeenCalled();
+});
+test('ordinary attempt rejects an unrequested native image input',async()=>{const f=await nativeFixture();f.graph['5']!.inputs.first_frame=['19',0];await save(join(f.run,'workflow-api.json'),f.graph);await save(join(f.run,'history.json'),f.history);await runVideoTask(f.options,f.dependencies);expect(f.current.state).toBe('failed');expect(f.finishVideo).not.toHaveBeenCalled();});

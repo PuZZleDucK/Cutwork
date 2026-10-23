@@ -276,6 +276,31 @@ The historical initial origin and originating song remain immutable. Warn for cl
 
 Continue From End snapshots the clicked edit-context ID/revision, song, source PNG frame `b`, trim and origin, and starts at `origin+b`, the next frame boundary with no blank frame. Calculate its end by adding the adaptive count in the same beat map from that exact possibly off-beat instant, then realise the new interval once. Later edits to the predecessor do not alter this submitted request.
 
+**Slice 6 implementation detail:** preparation atomically checks the clicked edit
+context and target-song draft revisions, saves the captured PNG identity and
+exact timing in that song's draft, and does not allocate seeds, reserve time or
+submit generation. It preserves the target draft's shot description. Missing
+beat analysis preserves the exact start and image but leaves the end blank for
+explicit entry. Other-song actions name their song; the UI selects that song
+only after successful preparation. Unapplied predecessor timing must first be
+applied or discarded.
+
+The browser submits only a context ID/revision, never a trusted file path or
+caller-supplied hash. A new request resolves and validates the saved original;
+a stale context fails visibly. Existing idempotency-key replay is resolved first,
+so later edits cannot block recovery of an already accepted immutable request.
+Native preparation copies the captured PNG into attempt-owned inputs, verifies
+both file and decoded RGB hashes, and supplies it through the pinned H3
+image-to-video first-frame input alongside the unchanged audio-conditioning
+branch. This uses the existing model pins, not an added image generator.
+
+Schema 6 is a metadata-only compatibility boundary for these optional draft and
+attempt fields. No old context, creative row, native call, render snapshot or
+asset is rewritten. Clean cross-song session recovery acknowledges the prepared
+draft; genuinely dirty or concurrently changed recovery remains visible rather
+than being silently replaced. Acceptance of an old generation cannot clear a
+newer starting image or its associated timing.
+
 ### Presets, free gaps and warnings
 
 For each preset start `s`, choose count 8 if estimated BPM ≥50, otherwise 4. Convert `beat(s)+count` with the saved map; halve the count while duration is strictly over 15 seconds and count >1. Missing/invalid BPM is not zero-BPM music.

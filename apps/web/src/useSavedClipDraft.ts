@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ClipDraft } from '../../../packages/core/src/contracts/studio.ts';
+import { continuationRef } from './continuation-state.ts';
 import { draftWriter, draftResolutionGuard } from './clip-draft-ownership.ts';
 import { ApiError, request } from './api.ts';
 import { clipSessionKey, decodeClipTiming, readSession, writeSession } from './clip-session.ts';
@@ -37,7 +38,7 @@ export function useSavedClipDraft(server:ClipDraft) {
     while(!clipDraftEqual(current.current.value,clipDraftValues(current.current.base))){
      const s=current.current;if(s.conflict)throw new Error('Choose which clip draft to keep before continuing.');
      const submitted=structuredClone(s.value);
-     const saved=await request<ClipDraft>(`/api/projects/${server.projectId}/songs/${server.songId}/clip-draft`,{revision:s.base.revision,...submitted},'PUT');
+     const saved=await request<ClipDraft>(`/api/projects/${server.projectId}/songs/${server.songId}/clip-draft`,{revision:s.base.revision,...submitted,...(submitted.continuation!==undefined?{continuation:continuationRef(submitted.continuation)}:{})},'PUT');
      put(acknowledgeClipDraft(current.current,submitted,saved));
     }
     if(mounted.current)setError(null);
@@ -72,5 +73,5 @@ export function useSavedClipDraft(server:ClipDraft) {
   }catch(e){if(mounted.current)setError(e instanceof Error?e.message:'Could not resolve the clip draft.');}
   finally{resolutionFlight.current=false;if(mounted.current)setResolving(false);}
  };
- return {value:state.value,edit,save,resolve,dirty,saving,resolving,error,conflict:state.conflict};
+ return {value:state.value,baseRevision:state.base.revision,edit,save,resolve,dirty,saving,resolving,error,conflict:state.conflict};
 }

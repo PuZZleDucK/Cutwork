@@ -194,8 +194,10 @@ def main():
     project = request["projectId"]
     require(isinstance(project, str) and re.fullmatch(r"[A-Za-z0-9_-]+", project), "Invalid project directory ID")
     plan = media.validate_plan(request["plan"])
-    graph = workflow.h3_graph(prompt=request["prompt"], seed=request["seed"], frames=plan["nativeFrames"], audio_filename="conditioning.wav")
+    graph = workflow.h3_graph(prompt=request["prompt"], seed=request["seed"], frames=plan["nativeFrames"], audio_filename="conditioning.wav",
+                              first_frame_filename="continuation.png" if "firstFrame" in request else None)
     if args.fixture:
+        require("firstFrame" not in request, "Synthetic fixture cannot prove image-conditioned native inference")
         require(plan["nativeFrames"] == 56, "The explicit synthetic fixture has exactly 56 frames")
         graph = workflow.synthetic_graph("conditioning.wav")
     root = Path(os.environ.get("STUDIO_DATA_ROOT", str(Path(os.environ.get("XDG_DATA_HOME", str(Path.home() / ".local/share"))) / "music-video-studio")))
@@ -305,12 +307,17 @@ def main():
         model_directory = None if args.fixture else verify_models(root, receipt, persist)
         check()
         receipt["conditioning"] = media.prepare_conditioning(request["song"], plan, run / "inputs")
+        if "firstFrame" in request:
+            receipt["firstFrame"] = media.prepare_first_frame(request["firstFrame"], run / "inputs", tool / "venv/bin/python", root / "projects" / project)
         base = run / "comfy-base"
         base.mkdir()
         for name in ("user", "custom_nodes", "models", "input", "output", "temp"):
             (base / name).mkdir()
         shutil.copyfile(receipt["conditioning"]["path"], base / "input/conditioning.wav")
         require(media.sha256(base / "input/conditioning.wav") == receipt["conditioning"]["sha256"], "Native audio input copy changed")
+        if "firstFrame" in receipt:
+            shutil.copyfile(receipt["firstFrame"]["path"], base / "input/continuation.png")
+            require(media.sha256(base / "input/continuation.png") == receipt["firstFrame"]["sha256"], "Native continuation input copy changed")
         command = [str(tool / "venv/bin/python"), "-s", str(tool / "source/main.py"),
                    "--listen", "127.0.0.1", "--port", str(args.port), "--base-directory", str(base),
                    "--user-directory", str(base / "user"), "--disable-auto-launch", "--log-stdout"]

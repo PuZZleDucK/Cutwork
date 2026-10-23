@@ -7,6 +7,7 @@ general imported-audio conversion is not silently added here.
 from fractions import Fraction
 import hashlib
 import json
+import re
 from pathlib import Path
 import shutil
 import subprocess
@@ -121,6 +122,39 @@ def prepare_conditioning(song, plan, directory):
     return result
 
 
+def inspect_input_png(path):
+    """Run only inside the isolated Comfy interpreter; reject conversion/resizing."""
+    from PIL import Image
+    path = Path(path)
+    require(path.stat().st_size <= 32_000_000, "Continuation PNG exceeds bounded reader")
+    with Image.open(path) as image:
+        require(image.format == "PNG" and image.mode == "RGB" and image.size == (640, 480)
+                and getattr(image, "n_frames", 1) == 1, "Continuation must be one original 640x480 RGB PNG")
+        image.load()
+        return {"sha256": sha256(path), "pixelSha256": hashlib.sha256(image.tobytes()).hexdigest(),
+                "bytes": path.stat().st_size, "width": 640, "height": 480}
+
+
+def prepare_first_frame(reference, directory, python, project):
+    require(isinstance(reference, dict) and set(reference) == {"path", "sha256", "pixelSha256"}, "Invalid continuation reference")
+    source, directory, project = Path(reference["path"]), Path(directory), Path(project)
+    require(source.is_absolute() and source == source.resolve() and source.is_file()
+            and source.is_relative_to(project.resolve()), "Continuation source is not managed project media")
+    require(all(isinstance(reference[k], str) and re.fullmatch(r"[0-9a-f]{64}", reference[k])
+                for k in ("sha256", "pixelSha256")), "Invalid continuation hashes")
+    require(source.stat().st_size <= 32_000_000 and sha256(source) == reference["sha256"], "Continuation source hash changed")
+    dest = directory / "continuation.png"
+    with source.open("rb") as original, dest.open("xb") as snapshot:
+        shutil.copyfileobj(original, snapshot)
+    require(sha256(dest) == reference["sha256"] and sha256(source) == reference["sha256"], "Continuation changed during capture")
+    decoded = json.loads(subprocess.check_output([str(python), "-I", str(Path(__file__).resolve()),
+                         "--inspect-input-png", str(dest)], timeout=120))
+    require(decoded["sha256"] == reference["sha256"] and decoded["pixelSha256"] == reference["pixelSha256"], "Continuation PNG pixels differ from captured original")
+    result = {"path": str(dest), "sourcePath": str(source), **decoded}
+    save(directory / "first-frame.json", result)
+    return result
+
+
 def collect_outputs(*, result, graph, run, output, python, plan, synthetic):
     """Validate actual files/history, not the agent's success assertion."""
     require(result["prompt"][2] == graph, "Executed graph differs from captured inputs")
@@ -143,7 +177,8 @@ def collect_outputs(*, result, graph, run, output, python, plan, synthetic):
     require(len(outputs["17"]["images"]) == 1 and len(outputs["18"]["audio"]) == 1, "Expected one video and one audio source")
     video, audio = artifact(outputs["17"]["images"][0]), artifact(outputs["18"]["audio"][0])
     save(run / "original-frame-inputs.json", {"paths": [str(p) for p in frames], "graph": graph,
-                                              "audioSha256": sha256(run / "inputs/conditioning.wav")})
+                                              "audioSha256": sha256(run / "inputs/conditioning.wav"),
+                                              **({"firstFrameSha256": sha256(run / "inputs/continuation.png")} if "19" in graph else {})})
     # Independent PNG decoding and metadata inspection in the isolated tool env.
     observed = json.loads(subprocess.check_output([str(python), "-I", str(Path(__file__).resolve()),
                                                    "--inspect-png", str(run / "original-frame-inputs.json")], timeout=180))
@@ -199,12 +234,14 @@ def validate_audio_profiles(original, encoded, native_frames, synthetic):
     return rate, samples, mux_samples
 
 
-def validate_png_prompt(observed, submitted, audio_sha256):
+def validate_png_prompt(observed, submitted, audio_sha256, first_frame_sha256=None):
     require(isinstance(observed, dict) and observed.keys() == submitted.keys(), "PNG graph node IDs differ")
     for key, node in observed.items():
         require(isinstance(node, dict) and set(node) <= set(submitted[key]) | {"is_changed"}, "Unknown PNG runtime annotation")
         require({k: v for k, v in node.items() if k != "is_changed"} == submitted[key], "PNG graph semantic inputs differ")
     require(observed["6"].get("is_changed") == [audio_sha256], "PNG LoadAudio fingerprint differs from the conditioned input")
+    if first_frame_sha256 is not None:
+        require(observed["19"].get("is_changed") == [first_frame_sha256], "PNG LoadImage fingerprint differs from the captured original")
 
 
 def inspect_pngs(input_path):
@@ -217,7 +254,7 @@ def inspect_pngs(input_path):
             image.load()
             require(image.format == "PNG" and image.mode == "RGB" and image.size == (640, 480), "Original PNG format/size differs")
             observed = json.loads(image.info.get("prompt", "null"))
-            validate_png_prompt(observed, inputs["graph"], inputs["audioSha256"])
+            validate_png_prompt(observed, inputs["graph"], inputs["audioSha256"], inputs.get("firstFrameSha256"))
             # Full observed annotations remain in every original PNG; also save
             # the first graph as readable evidence, never replace the originals.
             if index == 1:
@@ -228,5 +265,5 @@ def inspect_pngs(input_path):
 
 
 if __name__ == "__main__":
-    require(len(sys.argv) == 3 and sys.argv[1] == "--inspect-png", "Internal PNG inspection requires a captured input file")
-    print(json.dumps(inspect_pngs(sys.argv[2])))
+    require(len(sys.argv) == 3 and sys.argv[1] in {"--inspect-png", "--inspect-input-png"}, "Internal PNG inspection requires a captured input file")
+    print(json.dumps(inspect_input_png(sys.argv[2]) if sys.argv[1] == "--inspect-input-png" else inspect_pngs(sys.argv[2])))

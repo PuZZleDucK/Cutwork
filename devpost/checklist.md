@@ -47,6 +47,14 @@ are unchanged. See [slice-5-evidence.md](slice-5-evidence.md). The final learner
 review still includes perceptual listening; exact sample/packet and headless
 playback verification is not described as human listening.
 
+Slice 6 is deployed with **1,135/1,135 tests per host**, three real image-plus-audio
+H3 continuations, independently verified partial/wholly silent conditioning and
+two 13.5-second exports. Both source updates passed **46/46** preservation checks;
+the final update preserves all **789 assets**. TTS is restored, personal ComfyUI
+unchanged, and the original user project reopened with its inputs intact. See
+[slice-6-evidence.md](slice-6-evidence.md), including the transient read-only
+monitor timeout and perceptual-review boundary.
+
 ## Working Agreement
 
 - The build order is approved. Write tests and record their assertions, fixtures and live-test boundaries before implementation; the learner's fast-mode standing approval removes routine waiting for sign-off. A missing import or unavailable GPU is not meaningful behavioural test evidence.
@@ -300,7 +308,7 @@ The next work is the prepared real-model lane verification; no slice/G4 gate is 
   Learner check: Enter a fractional beat/time, trim both ends of a clip and inspect the gaps, then deliberately move it. Overlap two clips, swap dominance and toggle clip audio; compare the result in preview and VLC. Check that precision is understandable rather than merely exposed.
   Commit: `Add precise clip editing and dominant audio selection`
 
-- [ ] **6. Continue a trimmed clip and extend the video beyond its song**
+- [x] **6. Continue a trimmed clip and extend the video beyond its song**
   Becomes usable: Use Continue From End on an individual clip to prepare the next request from its last retained original frame and current edited end, including repeated continuation after the music finishes.
   Why now: Continuation depends on the exact trim/move semantics just verified. It is also the remaining high-risk native input combination: preserved-image conditioning plus the correct song or silent interval.
   PRD ref: `prd.md > Continue From End`; `prd.md > Raw Frame Preservation`; `prd.md > Default Clip Timing`; `prd.md > Frame-Based Trimming and Locked Frame Rate`; `prd.md > Clip Audio`; `prd.md > Preview, Black Gaps, and Export`.
@@ -365,6 +373,13 @@ Reflection: Not offered yet; any personal response belongs in the ignored learne
 Activity mode: Proposed focused planning/verification investigation suitable for an experienced developer; not yet performed.
 
 ## Revisions
+
+- 23 October 2026 slice 6: added captured continuation identity and image-plus-audio
+  workflow wiring without changing ordinary generation. Independent review fixed
+  prepared-draft/late-response ownership races. Three real continuations and exact
+  exports pass; a host-pressure status timeout did not trigger duplicate work.
+  Technical provenance/playback is verified; no seamless-motion or perceptual
+  listening claim is made. No scope or agent-authority change.
 
 - 23 October 2026 slice 5: made the existing spec precise about signed source
   origins, move-floor-once/constant length, absolute song trim units, stable

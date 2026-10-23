@@ -1,13 +1,13 @@
 import Database from 'better-sqlite3';
 import { decimal as exactDecimal } from '../../../../packages/core/src/time/decimal.ts';
 import { parseTimingValue, resolveTiming, timingValueFromSeconds, type TimingValue } from '../../../../packages/core/src/time/linked-timing.ts';
-import { songCoverage } from '../../../../packages/core/src/time/studio-timing.ts';
+import { continuationPreset, songCoverage } from '../../../../packages/core/src/time/studio-timing.ts';
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { isAbsolute, normalize } from 'node:path';
 import { providerModels } from '../providers/launch.ts';
 import { RENDER_PROFILE } from './render-contract.ts';
-import type { AttemptPatch, ClipEditPatch, ClipEditResult, RegisteredAssetInput, SongInput, StudioStore, VideoOutputInput } from './store-contract.ts';
-import type { ClipDraft, ClipEditContext, MusicAttempt, MusicDraft, MusicInput, Provider, SetupJob, SongAnalysis, StudioProject, StudioSong,
+import type { AttemptPatch, ClipDraftInput, ClipEditPatch, ClipEditResult, RegisteredAssetInput, SongInput, StudioStore, VideoOutputInput } from './store-contract.ts';
+import type { ClipDraft, ClipEditContext, ContinuationCapture, ContinuationReference, MusicAttempt, MusicDraft, MusicInput, Provider, SetupJob, SongAnalysis, StudioProject, StudioSong,
   ToolId, ToolStatus, VideoInput, VideoAttempt, StudioClip, SongArrangement, StudioRender, ProjectEvent, ProjectEventKind } from '../../../../packages/core/src/contracts/studio.ts';
 
 export class StudioStoreError extends Error {
@@ -114,9 +114,14 @@ function musicInput(value: unknown): MusicInput {
   return { musicPrompt: text(input.musicPrompt, 'Music prompt', 16000, true), lyrics: text(input.lyrics, 'Lyrics', 32000) };
 }
 /** Drafts preserve incomplete edits; only submission resolves timing against music. */
-function clipDraftInput(value: unknown): Pick<ClipDraft, 'clipPrompt' | 'timingIntent'> {
-  const input = object(value, ['clipPrompt', 'timingIntent']), clipPrompt = text(input.clipPrompt, 'Clip prompt', 16000);
-  if (input.timingIntent === null) return { clipPrompt, timingIntent: null };
+function continuationReference(value: unknown): ContinuationReference {
+  const input = object(value, ['contextId', 'contextRevision']);
+  return { contextId: uuid(input.contextId), contextRevision: integer(input.contextRevision, 'Continuation context revision') };
+}
+function clipDraftInput(value: unknown): ClipDraftInput {
+  const input = object(value, ['clipPrompt', 'timingIntent'], ['continuation']), clipPrompt = text(input.clipPrompt, 'Clip prompt', 16000);
+  const continuation = input.continuation === undefined ? {} : { continuation: input.continuation === null ? null : continuationReference(input.continuation) };
+  if (input.timingIntent === null) return { clipPrompt, timingIntent: null, ...continuation };
   const intent = object(input.timingIntent, ['start', 'end']);
   const endpoint = (value: unknown): TimingValue => {
     const point = object(value, ['unit', 'value']);
@@ -127,7 +132,7 @@ function clipDraftInput(value: unknown): Pick<ClipDraft, 'clipPrompt' | 'timingI
     if (point.unit !== 'frames' && point.unit !== 'beats' && point.unit !== 'seconds') invalid('Unsupported timing unit');
     return { unit: point.unit, value: text(point.value, 'Timing value', 1000) };
   };
-  return { clipPrompt, timingIntent: { start: endpoint(intent.start), end: endpoint(intent.end) } };
+  return { clipPrompt, timingIntent: { start: endpoint(intent.start), end: endpoint(intent.end) }, ...continuation };
 }
 function analysis(value: unknown, sampleCount: string): SongAnalysis {
   const a = object(value, ['state', 'estimatedBpm', 'sampleIndices', 'waveformBucketSamples', 'peaks', 'error', 'version']);
@@ -172,7 +177,7 @@ function registeredAsset(value: unknown): RegisteredAssetInput {
   return { assetId: uuid(a.assetId), path: absolutePath(a.path), sha256: digest(a.sha256) };
 }
 function videoInput(value: unknown): VideoInput {
-  const v = object(value, ['songId', 'clipPrompt', 'style', 'startFrame', 'endFrame'], ['requestedIntervalSeconds', 'timingIntent']);
+  const v = object(value, ['songId', 'clipPrompt', 'style', 'startFrame', 'endFrame'], ['requestedIntervalSeconds', 'timingIntent', 'continuation']);
   const input: VideoInput = { songId: uuid(v.songId), clipPrompt: text(v.clipPrompt, 'Clip prompt', 16000, true),
     style: text(v.style, 'Visual style', 16000), startFrame: integer(v.startFrame, 'Start frame'), endFrame: integer(v.endFrame, 'End frame') };
   if (input.endFrame <= input.startFrame) invalid('Video interval must be nonempty');
@@ -202,6 +207,7 @@ function videoInput(value: unknown): VideoInput {
     };
     input.timingIntent = { start: endpoint(intent.start), end: endpoint(intent.end) };
   }
+  if (v.continuation !== undefined) input.continuation = continuationReference(v.continuation);
   return input;
 }
 function videoOutput(value: unknown): VideoOutputInput {
@@ -259,7 +265,7 @@ export function openStudioStore(path: string): StudioStore {
       db.exec(`CREATE TABLE IF NOT EXISTS studio_meta (singleton INTEGER PRIMARY KEY CHECK(singleton=1), version INTEGER NOT NULL,
         provider TEXT NOT NULL, selected_project TEXT); INSERT OR IGNORE INTO studio_meta VALUES (1,1,'codex',NULL);`);
       const meta = db.prepare('SELECT version FROM studio_meta WHERE singleton=1').get() as { version: number };
-      if (![1, 2, 3, 4, 5].includes(meta.version)) conflict('Unsupported studio schema version');
+      if (![1, 2, 3, 4, 5, 6].includes(meta.version)) conflict('Unsupported studio schema version');
       db.exec(`
         CREATE TABLE IF NOT EXISTS studio_projects (sequence INTEGER PRIMARY KEY AUTOINCREMENT, id TEXT NOT NULL UNIQUE, data TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS studio_attempts (sequence INTEGER PRIMARY KEY AUTOINCREMENT, id TEXT NOT NULL UNIQUE,
@@ -349,7 +355,8 @@ export function openStudioStore(path: string): StudioStore {
             sourceStartFrame: 0, sourceEndFrame: clip.requestedFrames, audioSource: 'song', placementIntent: null, trimIntent: null });
         }
       }
-      db.exec('UPDATE studio_meta SET version=5 WHERE singleton=1');
+      // Version6 guards new conditioning metadata without changing existing rows/schema.
+      db.exec('UPDATE studio_meta SET version=6 WHERE singleton=1');
       for (const id of toolIds) {
         const t: ToolStatus = { id, label: labels[id], state: 'missing', installed: false, detail: 'Not checked', log: '', checkedAt: null, jobId: null, active: false, queued: 0 };
         db.prepare('INSERT OR IGNORE INTO studio_tools VALUES (?,?)').run(id, canonical(t));
@@ -424,6 +431,38 @@ export function openStudioStore(path: string): StudioStore {
   function getContext(projectId: string, contextId: string): ClipEditContext {
     const p = project(projectId), row = db.prepare('SELECT data FROM studio_edit_contexts WHERE id=? AND project_id=?').get(uuid(contextId), p.id) as JsonRow | undefined;
     if (!row) missing('Edit context not found in this project'); return decode(row);
+  }
+  function captureContinuation(projectId: string, reference: ContinuationReference, songId?: string): ContinuationCapture {
+    const c = getContext(projectId, reference.contextId);
+    if (songId !== undefined && c.songId !== songId) missing('Continuation belongs to another song');
+    if (c.revision !== reference.contextRevision) conflict('Predecessor changed; prepare continuation again before generating');
+    const clip = clipById(c.clipId), song = songById(c.songId);
+    if (clip.projectId !== c.projectId || song.projectId !== c.projectId) conflict('Continuation media does not match this project');
+    integer(c.sourceStartFrame, 'Retained source start'); integer(c.sourceEndFrame, 'Retained source end', 1, clip.nativeFrames);
+    if (c.sourceStartFrame >= c.sourceEndFrame) conflict('Continuation has no retained source frame');
+    integer(c.sourceOriginFrame + c.sourceStartFrame, 'Retained timeline start');
+    const endFrame = integer(c.sourceOriginFrame + c.sourceEndFrame, 'Continuation start', 1, Number.MAX_SAFE_INTEGER - 1);
+    const frame = clip.rawFrames[c.sourceEndFrame - 1];
+    if (!frame || frame.index !== c.sourceEndFrame - 1) conflict('Preserved continuation frame is missing');
+    const asset = store.asset(frame.assetId);
+    if (!asset || asset.projectId !== c.projectId || asset.mediaType !== 'image/png' || asset.sha256 !== frame.sha256) conflict('Preserved continuation frame registration differs');
+    return { contextId: c.id, contextRevision: c.revision, clipId: c.clipId, songId: c.songId, sourceOriginFrame: c.sourceOriginFrame,
+      sourceStartFrame: c.sourceStartFrame, sourceEndFrame: c.sourceEndFrame, endFrame, frame: { ...frame } };
+  }
+  function currentClipDraft(projectId: string, songId: string, revision: number): ClipDraft {
+    integer(revision, 'Clip draft revision'); const p = project(projectId), song = songById(songId);
+    if (song.projectId !== p.id) missing('Song not found in this project');
+    const row = db.prepare('SELECT data FROM studio_clip_drafts WHERE song_id=? AND project_id=?').get(song.id, p.id) as JsonRow | undefined;
+    if (!row) conflict('Clip draft is missing'); const draft = decode<ClipDraft>(row);
+    if (draft.revision !== revision) conflict('Clip draft changed; reload before saving'); return draft;
+  }
+  function persistClipDraft(before: ClipDraft, value: Pick<ClipDraft, 'clipPrompt' | 'timingIntent' | 'continuation'>): ClipDraft {
+    const updated = { ...before, ...value };
+    const changedFields = (['clipPrompt', 'timingIntent', 'continuation'] as const).filter(key => canonical(before[key] ?? null) !== canonical(updated[key] ?? null));
+    if (changedFields.length === 0) return before;
+    updated.revision = integer(before.revision + 1, 'Clip draft revision');
+    db.prepare('UPDATE studio_clip_drafts SET data=? WHERE song_id=?').run(canonical(updated), before.songId);
+    recordEvent(before.projectId, 'clip_draft.saved', { songId: before.songId, revision: updated.revision, changedFields }); return updated;
   }
   function editState(projectId: string, contextId: string, revision: number, arrangementRevision: number): ClipEditResult {
     integer(revision, 'Edit context revision'); const context = getContext(projectId, contextId);
@@ -557,20 +596,29 @@ export function openStudioStore(path: string): StudioStore {
         return saveProject({ ...p, revision: p.revision + 1, draft: input }); });
     },
     saveClipDraft(projectId, songId, revision, draft) {
-      integer(revision, 'Clip draft revision'); const input = clipDraftInput(draft);
+      const input = clipDraftInput(draft);
       return write(() => {
-        const p = project(projectId), song = songById(songId);
-        if (song.projectId !== p.id) missing('Song not found in this project');
-        const row = db.prepare('SELECT data FROM studio_clip_drafts WHERE song_id=? AND project_id=?').get(song.id, p.id) as JsonRow | undefined;
-        if (!row) conflict('Clip draft is missing');
-        const before = decode<ClipDraft>(row);
-        if (before.revision !== revision) conflict('Clip draft changed; reload before saving');
-        const changedFields = (['clipPrompt', 'timingIntent'] as const).filter(key => canonical(before[key]) !== canonical(input[key]));
-        if (changedFields.length === 0) return before;
-        const updated: ClipDraft = { ...before, ...input, revision: integer(before.revision + 1, 'Clip draft revision') };
-        db.prepare('UPDATE studio_clip_drafts SET data=? WHERE song_id=?').run(canonical(updated), song.id);
-        recordEvent(p.id, 'clip_draft.saved', { songId: song.id, revision: updated.revision, changedFields });
-        return updated;
+        const before = currentClipDraft(projectId, songId, revision);
+        const value: Pick<ClipDraft, 'clipPrompt' | 'timingIntent' | 'continuation'> = { clipPrompt: input.clipPrompt, timingIntent: input.timingIntent };
+        if (input.continuation !== undefined) {
+          const ref = input.continuation, old = before.continuation;
+          value.continuation = ref === null ? null : old && old.contextId === ref.contextId && old.contextRevision === ref.contextRevision
+            ? old : captureContinuation(before.projectId, ref, before.songId);
+        }
+        return persistClipDraft(before, value);
+      });
+    },
+    prepareContinuation(projectId, contextId, revision, draftRevision) {
+      const reference = continuationReference({ contextId, contextRevision: revision });
+      return write(() => {
+        const captured = captureContinuation(projectId, reference), before = currentClipDraft(projectId, captured.songId, draftRevision), song = songById(captured.songId);
+        let preset: ReturnType<typeof continuationPreset>;
+        try { preset = continuationPreset(song, captured.endFrame); }
+        catch (error) { invalid(error instanceof Error ? error.message : 'Continuation timing is unavailable'); }
+        const timingIntent: NonNullable<ClipDraft['timingIntent']> = { start: exactFrameTime(captured.endFrame),
+          end: preset ? timingValueFromSeconds(preset.endSeconds) : { unit: 'seconds', value: '' } };
+        const draft = persistClipDraft(before, { clipPrompt: before.clipPrompt, timingIntent, continuation: captured });
+        return { draft, presetBeatCount: preset?.beatCount ?? null };
       });
     },
     selectSong(projectId, songId, revision) {
@@ -662,6 +710,7 @@ export function openStudioStore(path: string): StudioStore {
         if (song.projectId !== p.id) missing('Song not found in this project');
         const old = db.prepare('SELECT * FROM studio_video_attempts WHERE project_id=? AND idempotency_key=?').get(p.id, key) as AttemptRow | undefined;
         if (old) { if (old.input_json !== inputJson) conflict('Submission key already belongs to different inputs'); return videoSnapshot(old); }
+        const continuation = captured.continuation ? captureContinuation(p.id, captured.continuation, song.id) : undefined;
         let timingResolution: VideoAttempt['timingResolution'];
         if (captured.timingIntent) {
           const timing = resolveTiming(song, captured.timingIntent);
@@ -680,7 +729,7 @@ export function openStudioStore(path: string): StudioStore {
           createdAt: timestamp, updatedAt: timestamp, state: 'queued', provider, model: providerModels[provider], input: captured,
           seeds: { h3: (randomBytes(8).readBigUInt64BE() & ((1n << 63n) - 1n)).toString() },
           song: { id: song.id, assetId: song.assetId, sha256: song.sha256, sampleCount: song.sampleCount, sampleRate: song.sampleRate, channels: song.channels },
-          stage: 'Queued', error: null, clipId: null, details: {}, ...(timingResolution ? { timingResolution } : {}) };
+          stage: 'Queued', error: null, clipId: null, details: {}, ...(timingResolution ? { timingResolution } : {}), ...(continuation ? { continuation } : {}) };
         db.prepare('INSERT INTO studio_video_attempts(sequence,id,native_call_id,project_id,idempotency_key,input_json,data) VALUES (?,?,?,?,?,?,?)')
           .run(a.sequence, a.id, a.nativeCallId, p.id, key, inputJson, canonical(a)); return a;
       });

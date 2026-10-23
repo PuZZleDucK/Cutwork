@@ -16,10 +16,12 @@ interface VideoOptions { runtime:string; source:string; origin:string; attempt:V
 interface RunOptions extends VideoOptions { queue:GpuQueue; signal?:AbortSignal }
 export interface VideoTaskDependencies { provider?:typeof runProvider; execute?:SetupExecutor }
 type Rec=Record<string,unknown>;
-type CapturedAttempt=Pick<VideoAttempt,'id'|'nativeCallId'|'projectId'|'provider'|'model'|'input'|'seeds'|'song'>;
+type CapturedAttempt=Pick<VideoAttempt,'id'|'nativeCallId'|'projectId'|'provider'|'model'|'input'|'seeds'|'song'|'continuation'>;
 interface TaskPlan {
  schemaVersion:1; runtime:string; source:string; origin:string; attempt:CapturedAttempt; nativePlan:VideoPlan;
  song:{path:string;sha256:string}; launch:ProviderLaunch;
+ firstFrame?:{path:string;sha256:string;pixelSha256:string};
+ firstFrameSource?:{path:string;assetId:string;index:number;sha256:string;pixelSha256:string;bytes:number};
  guidance:{name:string;sourcePath:string;text:string;sha256:string}[];
  sourceHashes:Record<string,string>; modelManifestSha256:string; verifiedModels:{path:string;sha256:string;bytes:number}[];
  recipeSha256:string; lockSha256:string; sourceRevision:string;
@@ -29,12 +31,22 @@ const hash=(b:Buffer|string)=>createHash('sha256').update(b).digest('hex');
 const record=(v:unknown):Rec=>{assert.ok(v&&typeof v==='object'&&!Array.isArray(v),'Expected evidence object');return v as Rec;};
 const message=(e:unknown)=>(e instanceof Error?e.message:String(e)).slice(0,12000);
 const quote=(v:string)=>`'${v.replaceAll("'","'\\''")}'`;
-const captured=(a:VideoAttempt):CapturedAttempt=>structuredClone({id:a.id,nativeCallId:a.nativeCallId,projectId:a.projectId,provider:a.provider,model:a.model,input:a.input,seeds:a.seeds,song:a.song});
+const captured=(a:VideoAttempt):CapturedAttempt=>structuredClone({id:a.id,nativeCallId:a.nativeCallId,projectId:a.projectId,provider:a.provider,model:a.model,input:a.input,seeds:a.seeds,song:a.song,...(a.continuation?{continuation:a.continuation}:{})});
 function parse(text:string):unknown{return JSON.parse(text,(_k,v:unknown,c?:{source?:string})=>{if(typeof v==='number'&&Number.isInteger(v)&&!Number.isSafeInteger(v)){assert.ok(c?.source,'Node 24 lossless native JSON parsing required');return c.source;}return v;});}
 async function json(path:string,max=16_000_000){assert.ok((await stat(path)).size<=max,'Evidence exceeds reader bound');return record(parse(await readFile(path,'utf8')));}
 async function sha(path:string,signal?:AbortSignal){signal?.throwIfAborted();const h=createHash('sha256');for await(const b of createReadStream(path,{signal:signal?AbortSignal.any([signal,AbortSignal.timeout(300000)]):AbortSignal.timeout(300000)}))h.update(b);return h.digest('hex');}
 async function managed(root:string,path:string){assert.ok(isAbsolute(path)&&resolve(path)===path,'Absolute normalized media path required');const r=relative(root,path);assert.ok(r&&r!=='..'&&!r.startsWith('../')&&!isAbsolute(r),'Media must belong to the captured project');assert.equal(await realpath(path),path,'Linked media not accepted');assert.ok((await stat(path)).isFile(),'Regular file required');}
 function planPath(o:VideoOptions){return join(o.runtime,'projects',o.attempt.projectId,'inputs',o.attempt.id,'captured-task.json');}
+/** Deterministic server-owned capture, never a path accepted from the browser. */
+export function continuationFrameInput(runtime:string,attempt:Pick<VideoAttempt,'id'|'projectId'|'continuation'>){
+ const c=attempt.continuation;return c?{path:join(runtime,'projects',attempt.projectId,'inputs',attempt.id,'continuation.png'),sha256:c.frame.sha256,pixelSha256:c.frame.pixelSha256}:undefined;
+}
+async function inspectFirstFrame(o:VideoOptions,path:string,execute:SetupExecutor,signal?:AbortSignal){
+ const result=await execute({executable:join(o.runtime,'tools/comfyui/venv/bin/python'),args:['-I',join(o.source,'integrations/h3/media.py'),'--inspect-input-png',path],cwd:join(o.runtime,'projects',o.attempt.projectId),env:{...process.env,STUDIO_DATA_ROOT:o.runtime},timeoutMs:120000,...(signal?{signal}:{})});
+ assert.equal(result.code,0,`Continuation PNG inspection failed: ${result.stderr.slice(-4000)}`);
+ const decoded=record(parse(result.stdout)),frame=o.attempt.continuation!.frame;
+ assert.deepEqual(decoded,{sha256:frame.sha256,pixelSha256:frame.pixelSha256,bytes:frame.bytes,width:640,height:480},'Continuation PNG pixels/identity differ from captured original');
+}
 /** Only native granularity; there is no four-second minimum or 15-second cap. */
 export function nativeVideoPlan(attempt:Pick<VideoAttempt,'input'|'song'>):VideoPlan {
  const {startFrame,endFrame,requestedIntervalSeconds}=attempt.input;
@@ -48,9 +60,16 @@ function validate(o:VideoOptions){
  assert.ok(u.protocol==='http:'&&['127.0.0.1','localhost','[::1]'].includes(u.hostname)&&!u.username&&!u.password&&u.pathname==='/'&&!u.search&&!u.hash,'Use loopback studio origin');
  for(const id of [o.attempt.id,o.attempt.nativeCallId,o.attempt.projectId,o.attempt.song.id,o.attempt.song.assetId])assert.match(id,/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
  assert.equal(o.attempt.song.id,o.attempt.input.songId);assert.deepEqual(Object.keys(o.attempt.seeds),['h3']);assert.match(o.attempt.seeds.h3,/^(0|[1-9][0-9]*)$/);assert.ok(BigInt(o.attempt.seeds.h3)<2n**64n);
+ const c=o.attempt.continuation;
+ assert.equal(!!c,!!o.attempt.input.continuation,'Continuation reference/capture disagree');
+ if(c){assert.deepEqual(o.attempt.input.continuation,{contextId:c.contextId,contextRevision:c.contextRevision});assert.equal(c.songId,o.attempt.song.id);
+  assert.ok(Number.isSafeInteger(c.sourceOriginFrame)&&Number.isSafeInteger(c.sourceStartFrame)&&Number.isSafeInteger(c.sourceEndFrame)&&c.sourceStartFrame>=0&&c.sourceEndFrame>c.sourceStartFrame);
+  assert.equal(c.endFrame,c.sourceOriginFrame+c.sourceEndFrame);assert.ok(Number.isSafeInteger(c.endFrame)&&c.endFrame>0);assert.equal(c.frame.index,c.sourceEndFrame-1);
+  for(const h of [c.frame.sha256,c.frame.pixelSha256])assert.match(h,/^[a-f0-9]{64}$/);assert.ok(Number.isSafeInteger(c.frame.bytes)&&c.frame.bytes>0&&c.frame.bytes<=32_000_000);
+ }
  nativeVideoPlan(o.attempt);
 }
-export async function prepareVideoTask(o:VideoOptions):Promise<{planPath:string}>{
+export async function prepareVideoTask(o:VideoOptions,deps:Pick<VideoTaskDependencies,'execute'>={}):Promise<{planPath:string}>{
  validate(o);const {runtime,source,origin,attempt,store}=o,project=join(runtime,'projects',attempt.projectId);
  const asset=store.asset(attempt.song.assetId);assert.ok(asset&&asset.projectId===attempt.projectId&&asset.sha256===attempt.song.sha256,'Captured song asset not registered');
  await managed(project,asset.path);assert.equal(await sha(asset.path),attempt.song.sha256,'Captured song hash changed');
@@ -64,7 +83,19 @@ export async function prepareVideoTask(o:VideoOptions):Promise<{planPath:string}
  const models=await json(join(source,'integrations/h3/models.json')),recipe=await json(join(source,'integrations/comfyui/recipe.json'));
  assert.ok(Array.isArray(models.models));const verifiedModels=models.models.flatMap(m=>{const model=record(m);assert.ok(Array.isArray(model.files));return model.files.map(f=>{const file=record(f);return{path:join(runtime,'models/h3',String(model.repository).split('/')[1]!,String(model.revision),String(file.path)),sha256:String(file.sha256),bytes:Number(file.bytes)};});});
  const nativePlan=nativeVideoPlan(attempt),song={path:asset.path,sha256:asset.sha256};
- const nativeTemplate={schemaVersion:1,attemptId:attempt.nativeCallId,projectId:attempt.projectId,song,plan:nativePlan,seed:attempt.seeds.h3};
+ await mkdir(join(project,'inputs'),{recursive:true,mode:0o700});await mkdir(join(paths.planPath,'..'),{mode:0o700});
+ const firstFrame=continuationFrameInput(runtime,attempt);let firstFrameSource:TaskPlan['firstFrameSource'];
+ if(firstFrame){
+  const c=attempt.continuation!,frameAsset=store.asset(c.frame.assetId),clip=store.project(attempt.projectId).clips.find(v=>v.id===c.clipId);
+  assert.ok(frameAsset&&frameAsset.projectId===attempt.projectId&&frameAsset.mediaType==='image/png'&&frameAsset.sha256===c.frame.sha256,'Captured original PNG asset is not registered in this project');
+  assert.ok(clip,'Captured predecessor source is missing');assert.deepEqual(clip.rawFrames.find(v=>v.index===c.frame.index),c.frame,'Captured original frame manifest differs');
+  await managed(project,frameAsset.path);assert.equal((await stat(frameAsset.path)).size,c.frame.bytes);assert.equal(await sha(frameAsset.path),c.frame.sha256,'Captured continuation source hash changed');
+  await writeFile(firstFrame.path,await readFile(frameAsset.path),{flag:'wx',mode:0o600});assert.equal(await sha(firstFrame.path),c.frame.sha256,'Continuation changed during capture');
+  assert.equal(await sha(frameAsset.path),c.frame.sha256,'Original continuation changed during capture');await inspectFirstFrame(o,firstFrame.path,deps.execute??executeSetupCommand);
+  assert.equal(await sha(join(source,'integrations/h3/media.py')),sourceHashes['media.py'],'PNG inspector changed during capture');
+  firstFrameSource={path:frameAsset.path,...c.frame};
+ }
+ const nativeTemplate={schemaVersion:1,attemptId:attempt.nativeCallId,projectId:attempt.projectId,song,plan:nativePlan,seed:attempt.seeds.h3,...(firstFrame?{firstFrame}:{})};
  const storedSong=store.project(attempt.projectId).songs.find(s=>s.id===attempt.song.id);assert.ok(storedSong,'Captured song is missing');
  const beats=storedSong.analysis.sampleIndices.map((s,i)=>({beat:i+1,sample:s,relativeSamples:(BigInt(s)-BigInt(nativePlan.conditioning.startSample)).toString()})).filter(b=>BigInt(b.relativeSamples)>=0n&&BigInt(b.relativeSamples)<BigInt(nativePlan.conditioning.totalSamples));
  const command=[join(runtime,`tools/runtime/node-v${record(pins.node).version}-linux-x64/bin/node`),join(source,'scripts/native-call.ts'),origin,attempt.projectId,attempt.id,'h3',paths.agentRequest].map(quote).join(' ');
@@ -74,6 +105,7 @@ export async function prepareVideoTask(o:VideoOptions):Promise<{planPath:string}
   `Project ${attempt.projectId}; parent attempt ${attempt.id}; native H3 call ${attempt.nativeCallId}; captured song ${attempt.song.id}.`,
   `Persistent VISUAL style:\n${attempt.input.style}\n\nIndividual clip brief:\n${attempt.input.clipPrompt}`,
   `Requested interval is [${attempt.input.startFrame}, ${attempt.input.endFrame}) at exactly 24 fps (${nativePlan.requestedFrames} frames). Native generation is ${nativePlan.nativeFrames} frames, beginning at the same start. Preserve all original frames; initial placement includes only the ${nativePlan.requestedFrames} requested frames. Do not stretch or retime. Durations over 15 seconds are advisory warnings, not a cap.`,
+  ...(firstFrame?[`Continue from the selected last retained original PNG: ${firstFrame.path}; source frame ${attempt.continuation!.frame.index+1}, SHA256 ${firstFrame.sha256}. Inspect this supplied image with your normal tools and preserve its visual continuity. It is the first-frame input, not a replacement for the captured song audio. Do not use an MP4 extraction or the discarded untrimmed ending. The user may edit prepared times; the immutable interval below is authoritative. No seamless-motion guarantee or automatic chain is requested.`]:[]),
   `Captured beat anchors inside the native interval: ${JSON.stringify(beats)}. Exact relative event time is relativeSamples / 48000 seconds. These are analysis estimates, not guaranteed visual alignment; do not invent beat data.`,
   `Create ${paths.agentRequest} using these immutable native inputs, adding your translated tool prompt in the native "prompt" field:\n${JSON.stringify(nativeTemplate,null,2)}\nThe helper conditions every native frame with the matching original song samples and pads only beyond the actual song. Do not replace the song, borrow the current UI selection, generate a new song or use the two-second proof convenience builder.`,
   `Use the existing helper through the running queue:\n${command}\nIt captures the actual tool request and owns only its own Comfy service. Wait for client state succeeded and inspect ${paths.nativeReceipt}. Never bypass a held lease or stop another application. If failed or uncertain, retain the evidence and explain.`,
@@ -81,8 +113,8 @@ export async function prepareVideoTask(o:VideoOptions):Promise<{planPath:string}
   'Keep the complete original pre-encode PNG batch, encoded video, and generated native audio. No frame-rate conversion, trimming of preserved originals, export, fades, mastering or audio mixing is requested. State actual outputs, assumptions and what you reviewed; prose is not proof of success.',
   ...guidance.map(g=>`Product guidance ${g.sourcePath}; SHA256 ${g.sha256}:\n\n${g.text}`),
  ].join('\n\n');
- const plan:TaskPlan={schemaVersion:1,runtime,source,origin,attempt:captured(attempt),nativePlan,song,launch,guidance,sourceHashes,verifiedModels,modelManifestSha256:await sha(join(source,'integrations/h3/models.json')),recipeSha256:await sha(join(source,'integrations/comfyui/recipe.json')),lockSha256:await sha(join(source,'integrations/comfyui/requirements.lock')),sourceRevision:String(record(recipe.source).revision),paths};
- await mkdir(join(project,'inputs'),{recursive:true,mode:0o700});await mkdir(join(paths.planPath,'..'),{mode:0o700});await mkdir(launch.cwd,{recursive:true,mode:0o700});
+ const plan:TaskPlan={schemaVersion:1,runtime,source,origin,attempt:captured(attempt),nativePlan,song,launch,...(firstFrame?{firstFrame,firstFrameSource:firstFrameSource!}:{}),guidance,sourceHashes,verifiedModels,modelManifestSha256:await sha(join(source,'integrations/h3/models.json')),recipeSha256:await sha(join(source,'integrations/comfyui/recipe.json')),lockSha256:await sha(join(source,'integrations/comfyui/requirements.lock')),sourceRevision:String(record(recipe.source).revision),paths};
+ await mkdir(launch.cwd,{recursive:true,mode:0o700});
  await writeFile(paths.planPath,JSON.stringify(plan,null,2)+'\n',{flag:'wx',mode:0o600});return{planPath:paths.planPath};
 }
 async function verifyRelease(call:GpuCall,queue:GpuQueue,runtime:string){
@@ -99,11 +131,16 @@ async function verifyVideo(plan:TaskPlan,call:GpuCall,execute:SetupExecutor,sign
  assert.equal(call.state,'succeeded');assert.equal(call.tool,'h3');assert.equal(call.id,attempt.nativeCallId);assert.equal(call.attemptId,attempt.id);assert.equal(call.projectId,attempt.projectId);
  const command=record(record(call.launch).command);assert.ok(Array.isArray(command.args));const args=command.args as string[];assert.equal(args[args.indexOf('--request')+1],paths.nativeRequest);assert.ok(args.includes('--run')&&!args.includes('--fixture'),'Native command cannot use synthetic output');
  await managed(project,paths.nativeRequest);await managed(project,paths.nativeReceipt);
- const request=await json(paths.nativeRequest),receipt=await json(paths.nativeReceipt);assert.deepEqual(request,call.request);assert.equal(request.schemaVersion,1);assert.equal(request.attemptId,attempt.nativeCallId);assert.equal(request.projectId,attempt.projectId);assert.deepEqual(request.song,plan.song);assert.deepEqual(request.plan,nativePlan);assert.equal(request.seed,attempt.seeds.h3);assert.ok(typeof request.prompt==='string'&&request.prompt.trim());
+ const request=await json(paths.nativeRequest),receipt=await json(paths.nativeReceipt);assert.deepEqual(request,call.request);assert.equal(request.schemaVersion,1);assert.equal(request.attemptId,attempt.nativeCallId);assert.equal(request.projectId,attempt.projectId);assert.deepEqual(request.song,plan.song);assert.deepEqual(request.plan,nativePlan);assert.equal(request.seed,attempt.seeds.h3);assert.deepEqual(request.firstFrame,plan.firstFrame);assert.ok(typeof request.prompt==='string'&&request.prompt.trim());
  assert.equal(receipt.schemaVersion,1);assert.equal(receipt.state,'succeeded');assert.equal(receipt.synthetic,false);assert.equal(receipt.attemptId,attempt.nativeCallId);assert.equal(receipt.projectId,attempt.projectId);assert.deepEqual(receipt.plan,nativePlan);
  assert.equal(receipt.requestSha256,await sha(paths.nativeRequest,signal));assert.equal(await sha(join(run,'request.json'),signal),receipt.requestSha256);
  assert.deepEqual(receipt.sourceHashes,plan.sourceHashes);assert.equal(receipt.modelManifestSha256,plan.modelManifestSha256);assert.deepEqual(receipt.verifiedModels,plan.verifiedModels);assert.equal(receipt.recipeSha256,plan.recipeSha256);assert.equal(receipt.lockSha256,plan.lockSha256);assert.equal(receipt.sourceRevision,plan.sourceRevision);assert.deepEqual(receipt.actualSeeds,attempt.seeds);
  assert.equal(receipt.ownedServiceExited,true);assert.equal(receipt.ownedGpuProcessAbsent,true);assert.equal(receipt.observerExited,true);
+ if(plan.firstFrame){
+  const frame=attempt.continuation!.frame,observed=record(receipt.firstFrame);
+  assert.deepEqual(observed,{path:join(run,'inputs/continuation.png'),sourcePath:plan.firstFrame.path,sha256:frame.sha256,pixelSha256:frame.pixelSha256,bytes:frame.bytes,width:640,height:480});
+  for(const path of [plan.firstFrame.path,String(observed.path),join(run,'comfy-base/input/continuation.png')]){await managed(project,path);assert.equal((await stat(path)).size,frame.bytes);assert.equal(await sha(path,signal),frame.sha256,'Continuation input copy changed');}
+ }else assert.equal(receipt.firstFrame,undefined,'Unexpected continuation receipt');
  const condition=record(receipt.conditioning);assert.equal(condition.songPath,plan.song.path);assert.equal(condition.songSha256,plan.song.sha256);assert.equal(condition.songSamples,Number(attempt.song.sampleCount));assert.equal(condition.sampleRate,48000);assert.equal(condition.channels,2);assert.equal(condition.samples,nativePlan.conditioning.totalSamples);
  for(const[k,v]of Object.entries(nativePlan.conditioning))assert.equal(condition[k],v,`Conditioning ${k} differs`);
  assert.equal(condition.whollyPostSong,nativePlan.conditioning.availableSamples===0);
@@ -118,7 +155,8 @@ async function verifyVideo(plan:TaskPlan,call:GpuCall,execute:SetupExecutor,sign
  assert.deepEqual(node('5','MiniMaxH3ImageToVideo').clip,['2',0]);assert.deepEqual(node('5','MiniMaxH3ImageToVideo').vae,['3',0]);
  assert.deepEqual(node('7','MiniMaxH3AddGuide').latent,['5',1]);assert.deepEqual(node('7','MiniMaxH3AddGuide').audio_vae,['4',0]);assert.equal(node('7','MiniMaxH3AddGuide').frame_idx,0);
  assert.deepEqual(node('8','BasicGuider').model,['1',0]);assert.deepEqual(node('12','SamplerCustomAdvanced').noise,['9',0]);assert.deepEqual(node('13','VAEDecode').vae,['3',0]);assert.deepEqual(node('14','VAEDecodeAudio').vae,['4',0]);
- const visual=node('5','MiniMaxH3ImageToVideo');assert.equal(visual.length,nativePlan.nativeFrames);assert.equal(visual.prompt,request.prompt);assert.equal(visual.width,640);assert.equal(visual.height,480);
+ const visual=node('5','MiniMaxH3ImageToVideo');assert.equal(visual.length,nativePlan.nativeFrames);assert.equal(visual.prompt,request.prompt);assert.equal(visual.width,640);assert.equal(visual.height,480);assert.equal(visual.last_frame,undefined,'Unrequested ending image');
+ if(plan.firstFrame){assert.deepEqual(visual.first_frame,['19',0]);assert.equal(node('19','LoadImage').image,'continuation.png');}else{assert.equal(visual.first_frame,undefined,'Unrequested starting image');assert.equal(graph['19'],undefined);}
  assert.equal(String(node('9','RandomNoise').noise_seed),attempt.seeds.h3);assert.equal(node('6','LoadAudio').audio,'conditioning.wav');
  assert.deepEqual(node('7','MiniMaxH3AddGuide').audio,['6',0]);assert.deepEqual(node('7','MiniMaxH3AddGuide').positive,['5',0]);assert.deepEqual(node('8','BasicGuider').conditioning,['7',0]);assert.deepEqual(node('12','SamplerCustomAdvanced').guider,['8',0]);assert.deepEqual(node('12','SamplerCustomAdvanced').latent_image,['5',1]);assert.deepEqual(node('13','VAEDecode').samples,['12',0]);
  assert.deepEqual(node('15','SaveImage').images,['13',0]);assert.deepEqual(node('16','CreateVideo').images,['13',0]);assert.equal(node('16','CreateVideo').fps,24);assert.deepEqual(node('17','SaveVideo').video,['16',0]);
@@ -135,7 +173,7 @@ async function verifyVideo(plan:TaskPlan,call:GpuCall,execute:SetupExecutor,sign
  for(const[p,expected]of [[videoPath,video.sha256],[audioPath,audio.sha256]] as const){await managed(outputRoot,p);assert.equal(await sha(p,signal),expected,'Native media checksum differs');}
  await mkdir(join(paths.validation,'..'),{recursive:true,mode:0o700});await mkdir(paths.validation,{mode:0o700});
  const exec=async(executable:string,args:string[])=>{signal?.throwIfAborted();const result=await execute({executable,args,cwd:plan.launch.cwd,env:{...process.env,STUDIO_DATA_ROOT:runtime},timeoutMs:600000,...(signal?{signal}:{})});assert.equal(result.code,0,`${executable} failed: ${(result.stderr||result.stdout).slice(-4000)}`);return result.stdout;};
- const inspectInput=join(run,'original-frame-inputs.json');await managed(project,inspectInput);const originalInputs=await json(inspectInput);assert.deepEqual(originalInputs.paths,framePaths);assert.deepEqual(originalInputs.graph,graph);assert.equal(originalInputs.audioSha256,condition.sha256);
+ const inspectInput=join(run,'original-frame-inputs.json');await managed(project,inspectInput);const originalInputs=await json(inspectInput);assert.deepEqual(originalInputs.paths,framePaths);assert.deepEqual(originalInputs.graph,graph);assert.equal(originalInputs.audioSha256,condition.sha256);assert.equal(originalInputs.firstFrameSha256,plan.firstFrame?.sha256);
  // Preserve integer lexical form in the graph: copying raw JSON avoids 64-bit seed rounding.
  const inspectionInput=join(paths.validation,'png-inputs.json'),inspectionResult=join(paths.validation,'png-result.json');await writeFile(inspectionInput,await readFile(inspectInput),{flag:'wx',mode:0o600});
  assert.equal(await sha(join(source,'integrations/h3/media.py'),signal),plan.sourceHashes['media.py'],'PNG inspector changed since capture');
@@ -165,9 +203,15 @@ export async function runVideoTask(o:RunOptions,deps:VideoTaskDependencies={}):P
  try{
   o.signal?.throwIfAborted();validate(o);plan=await json(planPath(o)) as unknown as TaskPlan;
   assert.equal(plan.schemaVersion,1);assert.equal(plan.runtime,runtime);assert.equal(plan.source,o.source);assert.equal(plan.origin,o.origin);assert.deepEqual(plan.attempt,captured(attempt));assert.deepEqual(plan.nativePlan,nativeVideoPlan(attempt));assert.equal(plan.paths.planPath,planPath(o));
+  assert.deepEqual(plan.firstFrame,continuationFrameInput(runtime,attempt));
   assert.equal(plan.launch.cwd,join(runtime,'projects',attempt.projectId,'workspace'));assert.equal(plan.launch.runDirectory,join(plan.launch.cwd,'runs',attempt.id));
   const asset=store.asset(attempt.song.assetId);assert.ok(asset&&asset.projectId===attempt.projectId&&asset.sha256===attempt.song.sha256);assert.deepEqual(plan.song,{path:asset.path,sha256:asset.sha256});await managed(join(runtime,'projects',attempt.projectId),asset.path);assert.equal(await sha(asset.path,o.signal),asset.sha256,'Source song changed since capture');
-  details={...details,guidance:plan.guidance.map(({text:_text,...g})=>g),capturedProvider:attempt.provider,capturedModel:attempt.model,sourceSong:attempt.song,nativePlan:plan.nativePlan};
+  if(plan.firstFrame){await managed(join(runtime,'projects',attempt.projectId),plan.firstFrame.path);assert.equal(await sha(plan.firstFrame.path,o.signal),plan.firstFrame.sha256,'Captured continuation snapshot changed');
+   assert.ok(plan.firstFrameSource);
+   const {path:_sourcePath,...sourceFrame}=plan.firstFrameSource;assert.deepEqual(sourceFrame,attempt.continuation!.frame);
+   assert.equal(await sha(join(o.source,'integrations/h3/media.py'),o.signal),plan.sourceHashes['media.py'],'PNG inspector changed since capture');await inspectFirstFrame(o,plan.firstFrame.path,execute,o.signal);
+  }
+  details={...details,...(attempt.continuation?{continuation:attempt.continuation,firstFrame:plan.firstFrame,firstFrameSource:plan.firstFrameSource}:{}),guidance:plan.guidance.map(({text:_text,...g})=>g),capturedProvider:attempt.provider,capturedModel:attempt.model,sourceSong:attempt.song,nativePlan:plan.nativePlan};
   o.signal?.throwIfAborted();store.patchVideoAttempt(attempt.id,{state:'running',stage:'Creative agent translating visual brief',details});dispatched=true;
   const result=await provider(plan.launch,o.signal?{signal:o.signal}:{}),path=join(plan.launch.runDirectory,'provider-receipt.json');assert.equal(result.receiptPath,path);const receipt=await json(path);knownStopped=['exited','failed'].includes(String(receipt.state))&&(typeof receipt.code==='number'||typeof receipt.signal==='string');
   details={...details,providerReceiptPath:path,providerOutcome:bounded(receipt,path,40000),providerFinalProse:await tail(result.stdoutPath)};store.patchVideoAttempt(attempt.id,{state:'validating',stage:'Verifying native clip and complete original frame batch',details});

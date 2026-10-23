@@ -1,4 +1,4 @@
-# H3 video guidance — revision 1
+# H3 video guidance — revision 2
 
 Combine the user's persistent visual style with the individual clip brief.
 Use the captured song and interval, not whichever song or timeline gap is now
@@ -52,6 +52,20 @@ must never be presented as a native generation. The request has `schemaVersion`,
 canonical UUID `attemptId`, `projectId`, source-song path/hash, shared `plan`,
 exact decimal-string `seed` in [0, 2^64), and final tool `prompt` text.
 
+A captured continuation also supplies `firstFrame` with a server-owned PNG path,
+SHA256 and decoded RGB pixel SHA256. Use those exact bytes, not an MP4 extraction,
+thumbnail, discarded ending or an image invented from a description. The frame
+is the clicked edit context's last retained original; the supplied timing is
+already captured and can be off-beat or beyond the song. Inspect the image with
+your normal image tools to inform the creative prompt. Your usual research,
+browsing, scripts and other tools remain available; no JSON response is required.
+The helper loads this PNG into `MiniMaxH3ImageToVideo.first_frame`, while the
+existing audio guide still conditions the joint AV generation. The model may
+reinterpret motion; the reference does not promise an identical first output
+frame, a seamless join, or an automatic chain. Preserve image identity in the
+brief and describe the intended continuation rather than contradicting the
+supplied scene. Do not add image conditioning when no reference was captured.
+
 The standalone `scripts/h3-proof-request.ts` convenience script is deliberately
 limited to a fresh two-second request in `native-h3-proof`. It allocates its own
 seed; it is **not** a general project/request builder and should not overwrite
@@ -67,5 +81,7 @@ required in addition to an agent's success report.
 Measured baseline: 640×480, 24 fps, 56 frames, 20 steps, `res_multistep` with
 `simple`, w6a8 diffusion / NVFP4 text encoder / INT8 video VAE / FP32 audio VAE.
 The RTX 4060 Ti run used CPU offloading, emulated NVFP4 and process swap. It is
-not a VRAM-only recipe or an 8 GB compatibility claim. No image-input controls,
-durable scheduler or job-cancellation API are exposed by this proof helper yet.
+not a VRAM-only recipe or an 8 GB compatibility claim. The helper now accepts the
+narrow original-frame continuation input; combined image-plus-audio inference
+and silent post-song quality require their own real proof. The standalone helper
+is not itself the durable scheduler or job-cancellation API.

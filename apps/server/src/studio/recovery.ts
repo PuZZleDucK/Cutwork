@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { validateNativeSubmission } from '../generation/native-command.ts';
-import { nativeVideoPlan } from './video.ts';
+import { isAbsolute, resolve } from 'node:path';
+import { continuationFrameInput, nativeVideoPlan } from './video.ts';
 import { GpuQueueError } from '../jobs/gpu-queue.ts';
 import type { CallInput, GpuQueue } from '../jobs/gpu-queue-contract.ts';
 import type { StudioStore } from './store-contract.ts';
@@ -13,7 +14,7 @@ export function reconcileStudioStartup(store: StudioStore, queue: GpuQueue): voi
  const held = queue.heldLease(), heldAttempt = held ? queue.get(held.callId)?.attemptId : undefined;
  for (const call of queue.list()) if (call.state === 'queued' && call.attemptId !== heldAttempt) queue.cancelAttempt(call.attemptId);
 }
-export function validateStudioNativeCall(store: StudioStore, call: CallInput): void {
+export function validateStudioNativeCall(store: StudioStore, call: CallInput, runtime?:string): void {
  validateNativeSubmission(call);
  if (call.tool === 'h3') {
   try {
@@ -23,6 +24,8 @@ export function validateStudioNativeCall(store: StudioStore, call: CallInput): v
    const r = call.request as Record<string, unknown>, asset = store.asset(attempt.song.assetId);
    assert.ok(asset && asset.projectId === attempt.projectId && asset.sha256 === attempt.song.sha256);
    assert.equal(r.seed, attempt.seeds.h3); assert.deepEqual(r.song, { path: asset.path, sha256: asset.sha256 });
+   if(attempt.continuation){assert.ok(runtime&&isAbsolute(runtime)&&resolve(runtime)===runtime,'Trusted runtime required for continuation');assert.deepEqual(r.firstFrame,continuationFrameInput(runtime,attempt));}
+   else assert.equal(r.firstFrame,undefined);
    assert.deepEqual(r.plan, nativeVideoPlan(attempt)); assert.ok(typeof r.prompt === 'string' && r.prompt.trim());
   } catch { throw new GpuQueueError('GPU_QUEUE_INPUT', 'Native video request differs from its active captured parent, song, interval or seed'); }
   return;

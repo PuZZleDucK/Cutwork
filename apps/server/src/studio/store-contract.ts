@@ -1,4 +1,4 @@
-import type { ClipDraft, ClipEditContext, MusicAttempt, MusicDraft, MusicInput, ProjectSnapshot, ProjectSummary, Provider, SetupJob,
+import type { ClipDraft, ClipEditContext, ContinuationReference, MusicAttempt, MusicDraft, MusicInput, ProjectSnapshot, ProjectSummary, Provider, SetupJob,
   SongAnalysis, StudioProject, StudioSong, ToolId, ToolStatus, VideoAttempt, VideoInput, StudioClip, SongArrangement, StudioRender } from '../../../../packages/core/src/contracts/studio.ts';
 export type AttemptPatch = Partial<Pick<MusicAttempt, 'state' | 'stage' | 'error' | 'details'>>;
 export type SongInput = Omit<StudioSong, 'id' | 'projectId' | 'attemptId' | 'createdAt'> & { assetPath: string };
@@ -15,6 +15,7 @@ export interface ClipEditPatch {
   startFrame?: number; placementIntent?: ClipEditContext['placementIntent']; audioSource?: 'song' | 'clip';
 }
 export interface ClipEditResult { context: ClipEditContext; arrangement: SongArrangement }
+export interface ClipDraftInput extends Pick<ClipDraft, 'clipPrompt' | 'timingIntent'> { continuation?: ContinuationReference | null }
 export interface RenderOutputInput extends RegisteredAssetInput { frameCount: number; planHash: string; receiptPath: string }
 export interface StudioStore {
   close(): void;
@@ -26,7 +27,8 @@ export interface StudioStore {
   listProjects(): ProjectSummary[];
   project(id: string): ProjectSnapshot;
   saveDraft(id: string, revision: number, draft: MusicDraft): StudioProject;
-  saveClipDraft(projectId: string, songId: string, revision: number, draft: Pick<ClipDraft, 'clipPrompt' | 'timingIntent'>): ClipDraft;
+  saveClipDraft(projectId: string, songId: string, revision: number, draft: ClipDraftInput): ClipDraft;
+  prepareContinuation(projectId: string, contextId: string, revision: number, draftRevision: number): { draft: ClipDraft; presetBeatCount: number | null };
   selectSong(projectId: string, songId: string, revision: number): StudioProject;
   submitMusic(projectId: string, idempotencyKey: string, input: MusicInput): MusicAttempt;
   attempts(): MusicAttempt[];

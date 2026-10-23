@@ -19,6 +19,14 @@ export interface MusicDraft extends MusicInput { style: string }
 /** Unsubmitted per-song form state; incomplete timing text is valid draft data. */
 export interface ClipDraft {
   projectId: string; songId: string; revision: number; clipPrompt: string; timingIntent: ClipTimingIntent | null;
+  /** Optional for legacy rows; absence/null means ordinary text-to-video. */
+  continuation?: ContinuationCapture | null;
+}
+export interface ContinuationReference { contextId: string; contextRevision: number }
+export interface ContinuationCapture extends ContinuationReference {
+  clipId: string; songId: string; sourceOriginFrame: number; sourceStartFrame: number; sourceEndFrame: number;
+  /** Exact next-frame timeline boundary, not a containing-frame label. */
+  endFrame: number; frame: RawClipFrame;
 }
 export interface StudioProject {
   id: string; name: string; createdAt: string; revision: number;
@@ -62,6 +70,7 @@ export interface VideoInput {
   songId: string; clipPrompt: string; style: string; startFrame: number; endFrame: number;
   requestedIntervalSeconds?: { start: string; end: string };
   timingIntent?: ClipTimingIntent;
+  continuation?: ContinuationReference;
 }
 export interface VideoAttempt {
   id: string; nativeCallId: string; projectId: string; sequence: number;
@@ -70,6 +79,7 @@ export interface VideoAttempt {
   song: Pick<StudioSong, 'id' | 'assetId' | 'sha256' | 'sampleCount' | 'sampleRate' | 'channels'>;
   stage: string; error: string | null; clipId: string | null; details: Record<string, unknown>;
   timingResolution?: { startSeconds: { numerator: string; denominator: string }; endSeconds: { numerator: string; denominator: string } };
+  continuation?: ContinuationCapture;
 }
 export interface RawClipFrame { index: number; assetId: string; sha256: string; pixelSha256: string; bytes: number }
 export interface StudioClip {

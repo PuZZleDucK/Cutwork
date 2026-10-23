@@ -3,9 +3,9 @@ import fastifyStatic from '@fastify/static';
 import { isAbsolute, resolve } from 'node:path';
 import { StudioStoreError } from './store.ts';
 import { sendStudioAsset } from './assets.ts';
-import type { ClipEditPatch, PlacementInput, StudioStore } from './store-contract.ts';
+import type { ClipDraftInput, ClipEditPatch, PlacementInput, StudioStore } from './store-contract.ts';
 import type { StudioRuntime } from './runtime-contract.ts';
-import type { ClipDraft, MusicDraft, MusicInput, Provider, ToolId, VideoInput } from '../../../../packages/core/src/contracts/studio.ts';
+import type { MusicDraft, MusicInput, Provider, ToolId, VideoInput } from '../../../../packages/core/src/contracts/studio.ts';
 
 interface StudioApiOptions { store: StudioStore; runtime: StudioRuntime; dataRoot: string; webRoot: string | null }
 const uuid = { type: 'string', pattern: '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$' };
@@ -37,14 +37,16 @@ const draftTimingValue = { oneOf: [
   plain({ unit: { type: 'string', enum: ['frames', 'beats', 'seconds'] }, value: draftTimingText }),
   plain({ unit: { const: 'rational' }, value: plain({ numerator: draftTimingText, denominator: draftTimingText }) }),
 ] };
-const clipDraft = plain({ revision, clipPrompt: { type: 'string', maxLength: 16000 },
+const continuation = plain({ contextId: uuid, contextRevision: revision });
+const clipDraftBase = plain({ revision, clipPrompt: { type: 'string', maxLength: 16000 },
   timingIntent: { anyOf: [{ type: 'null' }, plain({ start: draftTimingValue, end: draftTimingValue })] } });
+const clipDraft = { ...clipDraftBase, properties: { ...clipDraftBase.properties, continuation: { anyOf: [{ type: 'null' }, continuation] } } };
 const videoInput = { ...plain({ songId: uuid, clipPrompt: { type: 'string', maxLength: 16000, minLength: 1 }, style: draft.properties.style,
   startFrame: revision, endFrame: { ...revision, minimum: 1 } }), properties: {
     songId: uuid, clipPrompt: { type: 'string', maxLength: 16000, minLength: 1 }, style: draft.properties.style,
     startFrame: revision, endFrame: { ...revision, minimum: 1 },
     requestedIntervalSeconds: plain({ start: { type: 'string', maxLength: 1000 }, end: { type: 'string', maxLength: 1000 } }),
-    timingIntent: plain({ start: timingValue, end: timingValue }),
+    timingIntent: plain({ start: timingValue, end: timingValue }), continuation,
   } };
 function lossless(value: unknown, depth = 0): void {
   if (depth > 64 || (typeof value === 'number' && (!Number.isFinite(value) || Object.is(value, -0) || (Number.isInteger(value) && !Number.isSafeInteger(value))))) {
@@ -77,7 +79,7 @@ export async function registerStudioApi(app: FastifyInstance, { store, runtime, 
     api.post<{ Params: { id: string; songId: string }; Body: { revision: number } }>('/api/projects/:id/songs/:songId/select',
       { schema: { params: plain({ id: uuid, songId: uuid }), body: plain({ revision }), querystring: empty } },
       request => store.selectSong(request.params.id, request.params.songId, request.body.revision));
-    api.put<{ Params: SongParams; Body: Pick<ClipDraft, 'revision' | 'clipPrompt' | 'timingIntent'> }>('/api/projects/:id/songs/:songId/clip-draft',
+    api.put<{ Params: SongParams; Body: ClipDraftInput & { revision: number } }>('/api/projects/:id/songs/:songId/clip-draft',
       { schema: { params: songParams, body: clipDraft, querystring: empty } }, request => {
         const { revision, ...draft } = request.body;
         return store.saveClipDraft(request.params.id, request.params.songId, revision, draft);
@@ -110,6 +112,9 @@ export async function registerStudioApi(app: FastifyInstance, { store, runtime, 
     api.put<{ Params: ContextParams; Body: { revision: number; arrangementRevision: number; edit: ClipEditPatch } }>('/api/projects/:id/edit-contexts/:contextId',
       { schema: { params: contextParams, body: plain({ revision, arrangementRevision: revision, edit: clipEdit }), querystring: empty } }, request =>
         store.editClipContext(request.params.id, request.params.contextId, request.body.revision, request.body.arrangementRevision, request.body.edit));
+    api.post<{ Params: ContextParams; Body: { revision: number; draftRevision: number } }>('/api/projects/:id/edit-contexts/:contextId/continue',
+      { schema: { params: contextParams, body: plain({ revision, draftRevision: revision }), querystring: empty } }, request =>
+        store.prepareContinuation(request.params.id, request.params.contextId, request.body.revision, request.body.draftRevision));
     api.post<{ Params: ContextParams; Body: { revision: number; arrangementRevision: number; placed: boolean } }>('/api/projects/:id/edit-contexts/:contextId/placement',
       { schema: { params: contextParams, body: plain({ revision, arrangementRevision: revision, placed: { type: 'boolean' } }), querystring: empty } }, request =>
         store.setContextPlacement(request.params.id, request.params.contextId, request.body.revision, request.body.arrangementRevision, request.body.placed));

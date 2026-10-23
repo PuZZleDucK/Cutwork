@@ -81,7 +81,7 @@ test('schema4 migration derives placement and unplaced contexts without changing
  const {s,p,song,clip,path}=fixture(),unplaced=addClip(s,p.id,song.id,100,2),remove=s.arrangement(p.id,song.id).placements.find(x=>x.clipId===unplaced.id)!;s.removePlacement(p.id,song.id,2,remove.id);s.enqueueRender(p.id,song.id,3,randomUUID());s.close();
  const db=new Database(path),tables=['studio_projects','studio_attempts','studio_songs','studio_assets','studio_video_attempts','studio_clips','studio_arrangements','studio_renders','studio_events','studio_clip_drafts'],rows=Object.fromEntries(tables.map(t=>[t,db.prepare(`SELECT * FROM ${t}`).all()]));
  db.exec('DROP TABLE IF EXISTS studio_edit_contexts; UPDATE studio_meta SET version=4');db.close();const r=open(path),check=new Database(path,{readonly:true});
- expect(check.prepare('SELECT version FROM studio_meta').get()).toEqual({version:5});for(const t of tables)expect(check.prepare(`SELECT * FROM ${t}`).all(),t).toEqual(rows[t]);check.close();
+ expect(check.prepare('SELECT version FROM studio_meta').get()).toEqual({version:6});for(const t of tables)expect(check.prepare(`SELECT * FROM ${t}`).all(),t).toEqual(rows[t]);check.close();
  const contexts=r.project(p.id).editContexts;expect(contexts).toHaveLength(2);expect(contexts.find(c=>c.clipId===clip.id)).toMatchObject({placementId:r.arrangement(p.id,song.id).placements[0]!.id,sourceOriginFrame:0,sourceStartFrame:0,sourceEndFrame:80,audioSource:'song',revision:0});expect(contexts.find(c=>c.clipId===unplaced.id)).toMatchObject({placementId:null,sourceOriginFrame:100,sourceStartFrame:0,sourceEndFrame:2,revision:0});
  r.close();const twice=open(path);expect(twice.project(p.id).editContexts).toEqual(contexts);
 });

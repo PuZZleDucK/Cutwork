@@ -1,10 +1,10 @@
 import { useRef, useState } from 'react';
-import type { SongArrangement, StudioSong, VideoAttempt, VideoReservation } from '../../../packages/core/src/contracts/studio.ts';
+import type { SongArrangement, StudioSong, VideoAttempt, VideoReservation, ContinuationCapture } from '../../../packages/core/src/contracts/studio.ts';
 import { displayTimingDuration, displayTimingValue, resolveTiming, timingFromFrames, type ClipTimingIntent, type TimingUnit, type LinkedTimingDisplay } from '../../../packages/core/src/time/linked-timing.ts';
 import { request } from './api.ts';
 import { useStudio } from './useStudio.ts';
-import { clipTimingEqual } from './clip-draft-state.ts';
-import { acceptedClipPrompt } from './feedback-state.ts';
+import { acceptedClipDraft } from './clip-draft-state.ts';
+import { continuationRef } from './continuation-state.ts';
 import { useSavedClipDraft } from './useSavedClipDraft.ts';
 import { clipSessionKey, readSession, writeSession, decodeSubmission, clearMatchingSession } from './clip-session.ts';
 import { clipSuggestion, submissionIdentity, videoInput } from './video-state.ts';
@@ -23,7 +23,7 @@ export function useClipDraft(studio:Studio,song:StudioSong,arrangement:SongArran
  const intent=manual??timingFromFrames(suggestion?.startFrame??0,suggestion?.endFrame??24);
  const timing=resolveTiming(song,intent);
  return {intent,timing,suggestion,manual,persistence,setManual,setAccepted,error,setError,target,setTarget,
-  clearAccepted:(prompt:string,submitted:ClipTimingIntent)=>{persistence.edit(current=>({clipPrompt:acceptedClipPrompt(current.clipPrompt,prompt,true),timingIntent:clipTimingEqual(current.timingIntent,submitted)?null:current.timingIntent}));void persistence.save().catch(()=>{});},
+  clearAccepted:(prompt:string,submitted:ClipTimingIntent,continuation:ContinuationCapture|null|undefined)=>{persistence.edit(current=>acceptedClipDraft(current,{clipPrompt:prompt,timingIntent:submitted,...(continuation!==undefined?{continuation}:{})}));void persistence.save().catch(()=>{});},
   change:(next:ClipTimingIntent)=>{setManual(next);setError(null);}};
 }
 export type ClipDraft=ReturnType<typeof useClipDraft>;
@@ -33,6 +33,10 @@ export function ClipForm({studio,song,draft}:{studio:Studio;song:StudioSong;draf
  const setPrompt=(value:string)=>draft.persistence.edit(current=>({...current,clipPrompt:value}));
  const submission=useRef<{signature:string;key:string}|null>(decodeSubmission(readSession(submissionKey)));
  const {timing,intent}=draft;
+ const continuation=draft.persistence.value.continuation;
+ const context=continuation?studio.snapshot!.editContexts.find(c=>c.id===continuation.contextId):undefined;
+ const continuationStale=!!continuation&&(!context||context.revision!==continuation.contextRevision);
+ const sourceClip=continuation?studio.snapshot!.clips.find(c=>c.id===continuation.clipId):undefined;
  const duration=displayTimingDuration(song,timing);
  const songEnd={numerator:BigInt(song.sampleCount),denominator:BigInt(song.sampleRate)};
  const pastEnd=(n:bigint,d:bigint)=>n*songEnd.denominator-songEnd.numerator*d;
@@ -43,7 +47,7 @@ export function ClipForm({studio,song,draft}:{studio:Studio;song:StudioSong;draf
  const ready=studio.overview!.provider.auth==='signed-in'&&['agent','comfyui','h3'].every(id=>studio.overview!.tools.some(t=>t.id===id&&t.installed&&t.state==='ready'));
  const generate=async()=>{
   if(!timing.valid){draft.setError(timing.error);return;}
-  let submitted;try{submitted={...videoInput(song.id,prompt,studio.draft.style,String(timing.startFrame),String(timing.endFrame)),timingIntent:intent};}catch(e){draft.setError((e as Error).message);return;}
+  let submitted;try{submitted={...videoInput(song.id,prompt,studio.draft.style,String(timing.startFrame),String(timing.endFrame)),timingIntent:intent,...(continuation?{continuation:continuationRef(continuation)!}:{})};}catch(e){draft.setError((e as Error).message);return;}
   // Freeze exactly what was sent even if acceptance is ambiguous and polling advances the preset.
   draft.setManual(intent);draft.setError(null);
   submission.current=submissionIdentity(submission.current,{projectId:song.projectId,input:submitted});const idempotencyKey=submission.current.key;
@@ -53,13 +57,14 @@ export function ClipForm({studio,song,draft}:{studio:Studio;song:StudioSong;draf
    const result=await request<VideoAttempt>(`/api/projects/${song.projectId}/video`,{idempotencyKey,input:submitted});
    draft.setAccepted(old=>[...old,{attemptId:result.id,songId:result.input.songId,startFrame:result.input.startFrame,endFrame:result.input.endFrame}]);
   },'Clip queued at its captured time. You can describe the next shot.');
-  if(ok){submission.current=null;clearMatchingSession(submissionKey,persistedIdentity);draft.clearAccepted(submitted.clipPrompt,intent);}
+  if(ok){submission.current=null;clearMatchingSession(submissionKey,persistedIdentity);draft.clearAccepted(submitted.clipPrompt,intent,continuation);}
  };
  return <section className="video-compose" aria-label="Clip generation"><div className="section-code">03 / DIRECT</div><div className="video-section-heading"><h2>Give the sound a scene.</h2><span className="micro">H3 / NATIVE 24 FPS</span></div>
   <p className="small-copy muted">Your agent combines the visual direction, this shot and the matching song audio. Each request keeps its own time and seeds.</p>
   <form onSubmit={e=>{e.preventDefault();void generate();}}><fieldset disabled={studio.busy||draft.persistence.resolving}>
    <label htmlFor="visual-style">Project visual style <span className="optional">VIDEO ONLY · OPTIONAL</span></label><textarea id="visual-style" rows={2} value={studio.draft.style} onChange={e=>studio.edit({...studio.draft,style:e.target.value})} placeholder="Consistent characters, palette, setting and camera language across all your clips…" />
    <label htmlFor="clip-prompt">Clip description</label><textarea id="clip-prompt" rows={4} value={prompt} maxLength={16000} onChange={e=>setPrompt(e.target.value)} placeholder="Describe one shot and what changes during it. The agent translates your idea and beat timing into H3’s native prompt." required />
+   {continuation&&<div className="continuation-input"><img src={`/api/assets/${encodeURIComponent(continuation.frame.assetId)}`} alt={`Starting image: source frame ${continuation.frame.index+1} from ${sourceClip?.title??'saved clip'}`} /><div><span className="eyebrow">CONTINUE FROM END / PRESERVED ORIGINAL</span><strong>{sourceClip?.title??'Saved clip'}</strong><p className="small-copy">Source frame {continuation.frame.index+1} · saved edit {continuation.contextId.slice(0,8)} / revision {continuation.contextRevision}. Prepared at frame boundary {continuation.endFrame}. Timing remains editable.</p>{!draft.suggestion&&<p className="warning">Beat analysis is unavailable. The starting image and exact start are prepared; enter the end time manually.</p>}{continuationStale&&<p className="warning" role="status">The predecessor changed since preparation. A new generation requires Continue From End again, or remove this starting image. Retrying an already accepted request still recovers that original request.</p>}<button type="button" className="text-button" onClick={()=>draft.persistence.edit(current=>({...current,continuation:null}))}>Remove starting image</button><details><summary>Frame provenance</summary><p className="micro">PNG SHA256 {continuation.frame.sha256}<br/>Pixels SHA256 {continuation.frame.pixelSha256}</p></details></div></div>}
    <div className="clip-draft-status" role="status">{draft.persistence.saving?'Saving clip draft…':draft.persistence.conflict?'Clip draft conflict':draft.persistence.error?'Clip draft not saved':draft.persistence.dirty?'Clip draft unsaved':'Clip draft saved'}</div>
    {(draft.persistence.conflict||draft.persistence.error)&&<div className="clip-draft-recovery"><p>{draft.persistence.conflict?'This song’s clip draft changed elsewhere. Your edits are retained; choose which draft to keep.':draft.persistence.error}</p>{draft.persistence.conflict?<><button type="button" className="button secondary small" onClick={()=>void draft.persistence.resolve(false)}>Load saved clip draft</button><button type="button" className="button secondary small" onClick={()=>void draft.persistence.resolve(true)}>Keep my clip draft</button></>:<button type="button" className="button secondary small" onClick={()=>void draft.persistence.save().catch(()=>{})}>Retry saving clip draft</button>}</div>}
    <div className="clip-timing-heading"><span className="eyebrow">TIMING / EDIT ANY UNIT</span><button type="button" className="text-button" disabled={!draft.suggestion} onClick={()=>{draft.setManual(null);draft.setError(null);}}>Next free beat window</button></div>

@@ -28,7 +28,8 @@ established runtime and retained media for these UI checks.
 - [x] Focused tests, full suite (1,347 in 92 files), typecheck and build.
 - [x] Browser before/after, visible actions and functional workflow checks; details below.
 - [x] Existing runtime deployment and no creative-data changes.
-- [ ] Learner retry of the revised workspace.
+- [ ] Learner functional retry of the revised workspace. Visual feedback is positive:
+  "that's looking a lot better". This is not yet final end-to-end acceptance.
 
 ## Verified interactions (CPU fixture, not new model inference)
 

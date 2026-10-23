@@ -380,7 +380,7 @@ The next work is the prepared real-model lane verification; no slice/G4 gate is 
 
 ## Final Review
 
-- [ ] 23 October requested refinement: replace inefficient card layout with a dense workspace and make continuation/restored placement plainly reachable. Implementation and browser checks are recorded in `workbench-feedback.md`; learner retry remains open.
+- [ ] 23 October requested refinement: replace inefficient card layout with a dense workspace and make continuation/restored placement plainly reachable. Implementation and browser checks are recorded in `workbench-feedback.md`. The learner's visual response is positive ("that's looking a lot better"); final hands-on functional review remains open, not inferred from visual approval.
 
 - [ ] Final review complete — feedback resolved and learner confirms ready to ship
 
@@ -392,8 +392,8 @@ Record actual observations here after the learner tries the final app. Add agree
 - [ ] Optional edit and transfer reflection addressed — offered/declined/already covered/not applicable as appropriate
 - [ ] `devpost/app-map.html` generated from finished code, checked, and shown, including a project-grounded practice to reuse
 
-Activity and evidence: Not started. Proposed focused activity: follow one actual timing/continuation or setup decision from scope to PRD to spec to its reviewed tests and running implementation. Use a real build discovery if one is more instructive; do not claim learning merely because it was explained.
-Route and stops: Not yet available; record actual implementation paths/symbols and verification evidence after the build, rather than inventing an app map from planned files.
+Activity and evidence: The app-map HTML is already prepared and its earlier visual check is recorded in `slice-9-readiness.md`; the learner wrap-up has not been conducted. Proposed focused activity: follow one actual timing/continuation or setup decision from scope to PRD to spec to its reviewed tests and running implementation. Use a real build discovery if one is more instructive; do not claim learning merely because it was explained.
+Route and stops: Prepared in `devpost/app-map.html`; check against the latest workspace changes before showing it. A prepared route is not a completed learner activity.
 Edit outcome: Not offered yet; optional, not a second mandatory exercise.
 Reflection: Not offered yet; any personal response belongs in the ignored learner profile, not the public checklist/map.
 Activity mode: Proposed focused planning/verification investigation suitable for an experienced developer; not yet performed.

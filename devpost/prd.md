@@ -693,7 +693,7 @@ The approved definition includes the review amendments covering typography, reco
 - Additional agent providers and user-selectable models. The prototype is limited to Codex with the requested Sol 6.1 model or Claude with the requested Opus 5.5 model, subject to verifying those exact pairings in the spec.
 - Shareable workflows, generation replay, and a deep creative-history editor. The bounded inspection history above is the explicit exception to the earlier broad deferral.
 - An optional "also delete from history" choice alongside permanent media deletion. The prototype always retains the generation record, thumbnail, and text logs and adds a deletion event; the later option's exact removal behaviour will be defined before it is built.
-- Dedicated licensing/about UI and specialised fast-preview/high-quality-export modes. Applicable dependency terms still require investigation regardless of whether there is a licensing screen.
+- Dedicated licensing/about UI and additional proxy/export-quality modes beyond the immediate browser preview and explicit MP4 export. Applicable dependency terms still require investigation regardless of whether there is a licensing screen.
 - A selectable background colour or image for uncovered intervals. Black is sufficient for the prototype; a white/background-image treatment remains a later creative option, not an automatic fade feature.
 
 Source: `scope.md > Later` and the subsequent interview decisions.

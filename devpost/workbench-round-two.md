@@ -33,7 +33,7 @@ preview becomes immediate browser playback of the current saved edit plan.
 - [x] Compact 4–5-across desktop clip cards, distinct in-sequence treatment,
   always-visible trim/placement/audio controls with reduced repeated prose.
 - [x] Priority editing in sequence only; top lane wins and lower lanes move up.
-- [ ] Regression/full tests, typecheck/build, actual browser live-preview and
+- [x] Regression/full tests, typecheck/build, actual browser live-preview and
   dismissal/tab/layout checks, safe server deployment and preservation audit.
 - [ ] Learner review; no final readiness inferred from agent tests.
 
@@ -65,6 +65,26 @@ Actual disposable CPU-fixture browser checks:
 - Browser testing found Ctrl+Home was intercepted by the tab keyboard handler;
   modified browser shortcuts are now left alone, with a regression test.
 
-Deployment/preservation evidence pending. No production creative edits, model
-inference or downloads were needed for this refinement. Private logs/screenshots
-are under `.local-evidence/slice-9/workbench-round-two/`.
+Deployed code checkpoint: `3e462fc`. The frozen candidate passed the same **1,410
+tests in 100 files** and typecheck on Dundee. All **46 preservation checks** pass:
+**832 registered assets** retain exact identities, paths, hashes, sizes, mtimes and
+inodes; all existing creative/history/native-queue/Debug rows are unchanged.
+Schema 8 → 9 adds only the empty prompt-template table. Existing readiness records
+only refresh their check timestamps; all tools return ready. TTS and personal
+ComfyUI process identities are unchanged. All nine HTTP-served frontend files
+match the reviewed build hashes.
+
+The deployed browser shows the navbar selector/notices, retained project/style/
+continuation, five-column library, always-visible timing/audio and templates in
+Config. Existing real project media plays immediately: picture muted and playing,
+original soundtrack unmuted and playing, next media paused; Pause stops all media.
+The preview volume control defaults to 0.5. Config inspection made no production
+template changes. Production screenshots: `production-top.png` and
+`production-library.png` in the private evidence folder below. Browser black-gap
+and responsive checks remain disposable-fixture evidence; no new native generation
+or perceptual audio-quality claim is made.
+
+No production creative edits, model inference or downloads were needed for this
+refinement. Private logs/screenshots are under
+`.local-evidence/slice-9/workbench-round-two/`. Final learner review, the separate
+fresh-install journey, and the learning wrap-up remain open.

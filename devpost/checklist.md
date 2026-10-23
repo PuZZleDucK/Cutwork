@@ -11,18 +11,22 @@ The scope, PRD and technical specification are approved. The learner approved th
 
 ## Latest fast-mode verification index
 
-**Latest: the learner-requested compact workspace is deployed; slice 9 is not complete.**
-The card stack is replaced by Music / Video / Archive / History tabs, a compact
-project selector, side-by-side direction/preview and horizontal clip rows.
-Continue and Place/Remove are visible actions; timeline clips open their exact
-edit context. **1,347 tests in 92 files**, typecheck/build, synthetic browser
-archive/restore/place/trim/continuation/reuse and CPU rendering pass. The web-only
-deployment preserves exact databases, all **831 assets** and service identities;
-the existing live tab displays the new controls with saved drafts intact. No
-generator download or restart was required. See
-[workbench-feedback.md](workbench-feedback.md). Final learner retry remains open.
+**Latest: the second requested workspace refinement is deployed; slice 9 is not complete.**
+Project selection and five-second floating notices are in the navbar; tabs persist
+across project switches. Config exposes captured music/video agent templates.
+Preview plays the current edit directly without a render; explicit export remains
+revision-bound. Clip cards are 4–5 across on desktop with visible timing/audio,
+placed styling and priority controls in the sequence. **1,410 tests in 100 files**
+pass locally and on Dundee; typecheck/build pass. Actual browser checks cover live
+playback/scrub/audio switching, priority, tabs, dismissal, templates, continuation,
+export and responsive layout. All **46 preservation checks** pass for **832 assets**;
+existing creative/native/Debug rows and unrelated service identities are unchanged.
+Schema 9 adds only an empty prompt-template table. See
+[workbench-round-two.md](workbench-round-two.md). Final learner retry remains open.
+The earlier compact-layout pass is recorded in
+[workbench-feedback.md](workbench-feedback.md).
 
-The preceding slice 9 packaging checkpoint remains deployed:
+The preceding slice 9 packaging checkpoint remains historical evidence:
 The corrected source passes **1,332 tests in 88 files** on Dundee, typecheck/build
 and 30 Python bootstrap cases. Actual persistent-service installation exposed and
 repaired a working-directory quoting error missed by mocks. All **55/55** final
@@ -380,7 +384,7 @@ The next work is the prepared real-model lane verification; no slice/G4 gate is 
 
 ## Final Review
 
-- [ ] Second workspace refinement: navbar/project/notification layout, persistent guided tabs, editable captured agent templates, live preview, compact clip cards and sequence-only priority. Explicitly requested; implementation and verification tracked in `workbench-round-two.md`.
+- [ ] Second workspace refinement: navbar/project/notification layout, persistent guided tabs, editable captured agent templates, live preview, compact clip cards and sequence-only priority. Implemented, deployed and mechanically/browser verified in `workbench-round-two.md`; learner retry remains open.
 
 - [ ] 23 October requested refinement: replace inefficient card layout with a dense workspace and make continuation/restored placement plainly reachable. Implementation and browser checks are recorded in `workbench-feedback.md`. The learner's visual response is positive ("that's looking a lot better"); final hands-on functional review remains open, not inferred from visual approval.
 

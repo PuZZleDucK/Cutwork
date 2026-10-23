@@ -45,9 +45,23 @@ test('restoring music uses the original user fields, preserves current visual st
 });
 
 test('cancelled attempts keep request and cancellation evidence without inventing an output',()=>{
- const s=snapshot();s.attempts[0]!.state='cancelled';s.attempts[0]!.songId=null;s.videoAttempts[0]!.state='cancelled';s.videoAttempts[0]!.clipId=null;s.songs=[];s.clips=[];
+ const s=snapshot();s.attempts[0]!.state='cancelled';s.attempts[0]!.songId=null;s.videoAttempts[0]!.state='cancelled';s.videoAttempts[0]!.clipId=null;s.songs[0]!.attemptId='prior-song-attempt';s.clips=[];
  const rows=creativeHistoryRows(s);expect(rows.filter(r=>r.kind.endsWith('.cancelled'))).toHaveLength(2);
  const studio={snapshot:s,draft:s.project.draft,busy:false,dirty:false} as unknown as ReturnType<typeof useStudio>;
  const html=renderToStaticMarkup(createElement(CreativeHistory,{studio,onRestoreVideo:vi.fn()}));
  expect(html.match(/>Restart</g)).toHaveLength(2);expect(html.match(/>Restore parameters</g)).toHaveLength(2);expect(html).not.toContain('<video');expect(html).not.toContain('<audio');
+});
+
+test('deleted outputs retain prompts, waveform and small thumbnail but no original audio/video/raw-frame URL or retry from deleted source',()=>{
+ const s=snapshot();s.artifactLifecycles=[{kind:'song',id:'song',projectId:'project',state:'deleted',revision:1,thumbnailAssetId:null,deletionId:'delete-song',updatedAt:timestamp},{kind:'clip',id:'clip',projectId:'project',state:'deleted',revision:1,thumbnailAssetId:'small-thumbnail',deletionId:'delete-clip',updatedAt:timestamp}];
+ const studio={snapshot:s,draft:s.project.draft,busy:false,dirty:false} as unknown as ReturnType<typeof useStudio>;
+ const html=renderToStaticMarkup(createElement(CreativeHistory,{studio,onRestoreVideo:vi.fn()}));
+ for(const text of ['ORIGINAL user idea','ORIGINAL lyrics','AGENT processed prompt','999','VISUAL user idea','/api/assets/small-thumbnail','Audio waveform','deleted'])expect(html).toContain(text);
+ expect(html).not.toContain('/api/assets/song-asset');expect(html).not.toContain('/api/assets/video-asset');expect(html).not.toContain('/api/assets/frame-asset');expect(html).not.toContain('<video');expect(html).not.toContain('<audio');expect(html.match(/Reuse parameters/g)).toHaveLength(1);
+});
+test('historical managed render is unavailable immediately at accepted purge, not only after successful deletion',()=>{
+ const s=snapshot();s.renders=[{id:'render',projectId:'project',songId:'song',revision:1,createdAt:timestamp,updatedAt:timestamp,state:'succeeded',stage:'Complete',error:null,snapshot:{song:s.songs[0]!,arrangement:s.arrangements[0]!,clips:s.clips},snapshotHash:'1'.repeat(64),assetId:'render-asset',sha256:'2'.repeat(64),frameCount:24,planHash:'3'.repeat(64),details:{receipt:'ORIGINAL render receipt'}}];
+ s.deletions=[{id:'purge',projectId:'project',artifact:{kind:'clip',id:'clip'},state:'failed',inventory:{affectedRenderIds:['render']}} as NonNullable<ProjectSnapshot['deletions']>[number]];
+ const studio={snapshot:s,draft:s.project.draft,busy:false,dirty:false} as unknown as ReturnType<typeof useStudio>;
+ const html=renderToStaticMarkup(createElement(CreativeHistory,{studio,onRestoreVideo:vi.fn()}));expect(html).not.toContain('/api/assets/render-asset');expect(html).toContain('ORIGINAL render receipt');expect(html).toContain('Managed render media unavailable');
 });

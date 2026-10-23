@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import type { ClipDraft, MusicAttempt, MusicDraft, ProjectSnapshot, StudioOverview, StudioProject, ToolId, Provider } from '../../../packages/core/src/contracts/studio.ts';
+import type {PurgeRecord} from '../../../packages/core/src/contracts/lifecycle.ts';
+import {acknowledgeDeletionSnapshot} from './artifact-lifecycle.ts';
 import { acknowledgeRecoverySnapshot, cancellationFlights, restoredProjectState } from './generation-recovery.ts';
 import { restoredSnapshot } from './restore-video.ts';
 import { prepareMusicSubmission, clearMusicSubmission } from './music-session.ts';
@@ -34,6 +36,7 @@ export function useStudio() {
     if (!reset && c.project?.id !== next.project.id) return;
     if (!reset && c.project && next.project.revision < c.project.revision) return;
     acknowledgeRecoverySnapshot(next);
+    acknowledgeDeletionSnapshot(next);
     setSnapshot(next);
     if (reset || (!c.dirty && !c.conflict && !saveFlight.current)) {
       c.project = next.project; c.draft = next.project.draft; c.dirty = false; c.conflict = false;
@@ -51,7 +54,7 @@ export function useStudio() {
       setOverview(next);
       if (project) receive(project, current.current.project === null);
       setConnection(null);
-      return next.tools.some(t => t.active || t.queued > 0 || ['checking','installing','queued'].includes(t.state)) || !!project?.attempts.some(a => attemptIsActive(a.state)) || !!project?.videoAttempts.some(a => attemptIsActive(a.state)) || !!project?.renders.some(r => ['queued','running'].includes(r.state));
+      return next.tools.some(t => t.active || t.queued > 0 || ['checking','installing','queued'].includes(t.state)) || !!project?.attempts.some(a => attemptIsActive(a.state)) || !!project?.videoAttempts.some(a => attemptIsActive(a.state)) || !!project?.renders.some(r => ['queued','running'].includes(r.state)) || !!project?.deletions?.some(d => ['pending','purging'].includes(d.state));
     } catch (error) {
       if (!mounted.current || !reads.current.isCurrent(sequence)) return false;
       throw error;
@@ -208,8 +211,12 @@ export function useStudio() {
       await refresh().catch(e=>setConnection(e instanceof Error?e.message:'Waiting for the next studio update.'));
     });
   };
+  const acceptDeletion = (record:PurgeRecord) => {
+    reads.current.begin();
+    setSnapshot(old=>old?.project.id===record.projectId?{...old,deletions:[...(old.deletions??[]).filter(row=>row.id!==record.id),record]}:old);
+  };
   const provider = (value: Provider) => act(async () => { await request('/api/provider', { provider: value }); await refresh(); });
   const checkProvider = () => act(async () => { await request('/api/provider/check', {}); await refresh(); });
   const setup = (tool: ToolId | 'all') => act(async () => { await request(`/api/setup/${tool}`, {}); await refresh(); });
-  return { overview, snapshot, draft, dirty, saving, busy, cancelling, error, connection, conflict, notice, messageVersion, errorVersion: errorNotice.occurrence, edit, save, selectProject, createProject, resolveConflict, selectSong, generate, provider, checkProvider, setup, refresh, perform, performImmediate, performCancellation, saveProjectForRestore, acceptRestoredProject, restoreMusic, clearError: () => dispatchError({type:'clear'}) };
+  return { overview, snapshot, draft, dirty, saving, busy, cancelling, error, connection, conflict, notice, messageVersion, errorVersion: errorNotice.occurrence, edit, save, selectProject, createProject, resolveConflict, selectSong, generate, provider, checkProvider, setup, refresh, perform, performImmediate, performCancellation, saveProjectForRestore, acceptRestoredProject, restoreMusic, acceptDeletion, clearError: () => dispatchError({type:'clear'}) };
 }

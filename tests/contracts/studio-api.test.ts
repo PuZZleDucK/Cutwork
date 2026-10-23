@@ -251,3 +251,10 @@ test('render request/read/download binds project and current arrangement revisio
   expect((await f.request('GET', `/api/assets/${done.assetId}`)).statusCode).toBe(200);
   expect((await f.request('POST', `${base}/songs/${f.song.id}/renders`, { revision: 1, idempotencyKey: randomUUID() })).statusCode).toBe(409);
 });
+
+test('asset access rechecks lifecycle after asynchronous open before sending any media bytes', async () => {
+ const f=await fixture(),a=await f.asset(),original=f.store.asset(a.song.assetId);
+ const lookup=vi.spyOn(f.store,'asset').mockReturnValueOnce(original).mockReturnValue(null);
+ const response=await f.request('GET',`/api/assets/${a.song.assetId}`);
+ expect(response.statusCode).toBe(404);expect(response.body).not.toContain('RIFF');expect(lookup.mock.calls.length).toBeGreaterThan(1);
+});

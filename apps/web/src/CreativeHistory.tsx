@@ -3,6 +3,7 @@ import type { MusicAttempt, MusicDraft, ProjectEvent, ProjectSnapshot, StudioRen
 import type { useStudio } from './useStudio.ts';
 import { formatDuration, historySong, legacyMusicVisualStyle, stateLabel, waveformEnvelope } from './studio-state.ts';
 import './creative-history.css';
+import {artifactLifecycle,artifactMediaAvailable,artifactState,renderMediaAvailable} from './artifact-lifecycle.ts';
 import { PreviewVideo } from './PreviewVideo.tsx';
 import { GenerationActions } from './GenerationActions.tsx';
 
@@ -42,6 +43,7 @@ export function restoreMusicDraft(draft: MusicDraft, attempt: MusicAttempt): Mus
 const asset = (id: string) => `/api/assets/${encodeURIComponent(id)}`;
 const json = (value: unknown) => JSON.stringify(value, null, 2);
 const labels: Record<string, string> = {
+  'artifact.archived':'Media archived', 'artifact.restored':'Archived media restored', 'artifact.deletion_requested':'Media deletion accepted', 'artifact.deleted':'Full media deleted', 'artifact.purge_failed':'Media purge needs attention', 'clip.retargeted':'Clip edit retargeted',
   'attempt.cancel_requested':'Cancellation requested', 'attempt.cancelled':'Cancellation confirmed', 'attempt.recovered':'Generation recovery accepted', 'attempt.restored':'Generation parameters restored', 'attempt.discarded':'Placeholder discarded',
   'project.created': 'Project created', 'project.selected': 'Project opened', 'draft.saved': 'Music inputs saved', 'style.changed': 'Visual style changed',
   'clip_draft.saved': 'Clip inputs saved', 'clip.trimmed':'Source trim changed', 'clip.moved':'Clip position changed', 'clip.audio_changed':'Soundtrack source changed', 'placement.priority_swapped':'Visual priority swapped', 'song.selected': 'Soundtrack selected', 'placement.added': 'Clip placed', 'placement.moved': 'Clip moved', 'placement.removed': 'Clip removed from sequence',
@@ -50,14 +52,14 @@ const labels: Record<string, string> = {
   'video.requested': 'Video requested', 'video.succeeded': 'Video generated', 'video.failed': 'Video generation failed', 'video.cancelled':'Cancelled video record',
   'render.requested': 'Preview / export requested', 'render.succeeded': 'Preview / export rendered', 'render.failed': 'Preview / export failed',
 };
-function HistoryWaveform({ song }: { song: StudioSong }) {
+function HistoryWaveform({ song,playable=true }: { song: StudioSong;playable?:boolean }) {
   const peaks = useMemo(() => waveformEnvelope(song.analysis.peaks, 240), [song.analysis.peaks]);
   return <section className="history-output" aria-label="Generated music output"><div className="history-output-heading"><strong>{song.title}</strong><span className="duration">{formatDuration(song.durationSeconds)}</span></div>
     {peaks.length ? <svg className="waveform" viewBox="0 0 960 130" preserveAspectRatio="none" role="img" aria-label={`Audio waveform with ${song.analysis.sampleIndices.length} estimated beats`}>
       <line x1="0" x2="960" y1="65" y2="65" className="wave-axis" />{song.analysis.sampleIndices.length <= 1000 && song.analysis.sampleIndices.map((sample, i) => <line key={i} x1={Number(sample) / Number(song.sampleCount) * 960} x2={Number(sample) / Number(song.sampleCount) * 960} y1="8" y2="122" className="beat-line" />)}
       {peaks.map((peak, i) => <rect key={i} x={i / peaks.length * 960} y={65 - Math.max(.7, peak * 48)} width={Math.max(1, 960 / peaks.length - 1.7)} height={Math.max(1.4, peak * 96)} className="wave-bar" />)}
-    </svg> : <p className="small-copy muted">{song.analysis.state === 'pending' ? 'Audio analysis pending.' : 'Waveform unavailable; original audio remains available.'}</p>}
-    <audio controls preload="none" src={asset(song.assetId)} aria-label={`History output: ${song.title}`} />
+    </svg> : <p className="small-copy muted">{song.analysis.state === 'pending' ? 'Audio analysis pending.' : playable?'Waveform unavailable; original audio remains available.':'Waveform unavailable; full media has been removed.'}</p>}
+    {playable?<audio controls preload="none" src={asset(song.assetId)} aria-label={`History output: ${song.title}`} />:<p className="history-media-tombstone">Full song media deleted or being removed. This waveform and the generation record are retained, not playable audio.</p>}
   </section>;
 }
 function Provenance({ attempt, tool }: { attempt: MusicAttempt | VideoAttempt; tool: string }) {
@@ -82,16 +84,16 @@ export function CreativeHistory({ studio,onRestoreVideo }: { studio: Studio;onRe
         {row.source === 'music' && <>
           <div className="history-input"><h4>Your original music description</h4><p>{row.record.input.musicPrompt}</p>{row.record.input.lyrics && <details><summary>Your original lyrics</summary><pre>{row.record.input.lyrics}</pre></details>}{legacyMusicVisualStyle(row.record.input) && <details><summary>Historical visual style (legacy music input)</summary><pre>{legacyMusicVisualStyle(row.record.input)}</pre></details>}</div>
           <Provenance attempt={row.record} tool="YuE2" />
-          {row.phase === 'result' ? <>{historySong(row.record, snapshot.songs) && <HistoryWaveform song={historySong(row.record, snapshot.songs)!} />}<WorkDetails details={row.record.details} error={row.record.error} /></> : <><p className="small-copy muted">Current request status: {stateLabel(row.record.state)} · {row.record.stage}</p>{!['succeeded','failed'].includes(row.record.state) && <WorkDetails details={row.record.details} error={row.record.error} />}<GenerationActions studio={studio} attempt={row.record} onRestore={()=>restore(row.record)}/></>}
+          {row.phase === 'result' ? <>{historySong(row.record, snapshot.songs) && <HistoryWaveform song={historySong(row.record, snapshot.songs)!} playable={artifactMediaAvailable(snapshot,{kind:'song',id:historySong(row.record,snapshot.songs)!.id})} />}<WorkDetails details={row.record.details} error={row.record.error} /></> : <><p className="small-copy muted">Current request status: {stateLabel(row.record.state)} · {row.record.stage}</p>{!['succeeded','failed'].includes(row.record.state) && <WorkDetails details={row.record.details} error={row.record.error} />}<GenerationActions studio={studio} attempt={row.record} onRestore={()=>restore(row.record)}/></>}
         </>}
         {row.source === 'video' && <>
-          {row.phase === 'result' && (() => { const clip = snapshot.clips.find(c => c.attemptId === row.record.id); return clip ? <section className="history-output"><strong>{clip.title}</strong>{clip.rawFrames[0] && <img className="creative-history-thumbnail" src={asset(clip.rawFrames[0].assetId)} loading="lazy" alt="Generated clip first preserved raw frame" />}<PreviewVideo controls preload="none" src={asset(clip.assetId)} poster={clip.rawFrames[0] ? asset(clip.rawFrames[0].assetId) : undefined} aria-label={`History clip output: ${clip.title}`} /></section> : null; })()}
-          {row.phase==='request'&&onRestoreVideo&&<GenerationActions studio={studio} attempt={row.record} onRestore={()=>onRestoreVideo(row.record)}/>}
+          {row.phase === 'result' && (() => { const clip=snapshot.clips.find(c=>c.attemptId===row.record.id);if(!clip)return null;const ref={kind:'clip' as const,id:clip.id},playable=artifactMediaAvailable(snapshot,ref),thumbnail=artifactLifecycle(snapshot,ref)?.thumbnailAssetId??(playable?clip.rawFrames[0]?.assetId:undefined);return <section className="history-output"><strong>{clip.title}</strong>{thumbnail?<img className="creative-history-thumbnail" src={asset(thumbnail)} loading="lazy" alt={playable?'Generated clip thumbnail':'Retained small generation thumbnail; full media deleted'}/>:<p className="small-copy muted">Retained thumbnail unavailable.</p>}{playable?<PreviewVideo controls preload="none" src={asset(clip.assetId)} poster={thumbnail?asset(thumbnail):undefined} aria-label={`History clip output: ${clip.title}`}/>:<p className="history-media-tombstone">Full clip media {artifactState(snapshot,ref)==='deleted'?'deleted':'being removed'}. Its generation record and text remain; there is no media restore.</p>}</section>;})()}
+          {row.phase==='request'&&<GenerationActions studio={studio} attempt={row.record} onRestore={onRestoreVideo?()=>onRestoreVideo(row.record):undefined}/>}
           <h4>Your original video inputs</h4><pre>{json(row.record.input)}</pre><Provenance attempt={row.record} tool="H3" /><details><summary>Captured song and exact timing</summary><pre>{json({ song: row.record.song, ...(row.record.timingResolution ? { timingResolution: row.record.timingResolution } : {}) })}</pre></details>
           {row.phase === 'result' || !['succeeded','failed'].includes(row.record.state) ? <WorkDetails details={row.record.details} error={row.record.error} /> : <p className="small-copy muted">Current request status: {stateLabel(row.record.state)}</p>}
         </>}
         {row.source === 'render' && <>
-          <p>Song {row.record.songId} · arrangement revision {row.record.revision}</p>{row.phase === 'result' && row.record.assetId && <PreviewVideo controls preload="none" src={asset(row.record.assetId)} aria-label="Historical rendered output" />}
+          <p>Song {row.record.songId} · arrangement revision {row.record.revision}</p>{row.phase === 'result' && row.record.assetId && (renderMediaAvailable(snapshot,row.record)?<PreviewVideo controls preload="none" src={asset(row.record.assetId)} aria-label="Historical rendered output" />:<p className="history-media-tombstone">Managed render media unavailable after artifact deletion. The captured edit and receipt remain below; previously downloaded files are independent.</p>)}
           <details><summary>Captured arrangement, media and render settings</summary><pre>{json({ revision: row.record.revision, snapshotHash: row.record.snapshotHash, planHash: row.record.planHash, snapshot: row.record.snapshot, details: row.record.details })}</pre></details>{row.record.error && <p className="error-copy">{row.record.error}</p>}
           <p className="small-copy muted">This is the historical render record, not an assertion that it matches the current edit.</p>
         </>}

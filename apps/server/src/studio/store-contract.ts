@@ -1,3 +1,4 @@
+import type { AcceptDeletionInput, ArtifactRef, ArtifactLifecycle, ArtifactUseReservation, DeletionContext, PurgeRecord } from '../../../../packages/core/src/contracts/lifecycle.ts';
 import type { ClipDraft, ClipEditContext, ContinuationReference, MusicAttempt, MusicDraft, MusicInput, ProjectSnapshot, ProjectSummary, Provider, SetupJob,
   SongAnalysis, StudioAttempt, StudioProject, StudioSong, ToolId, ToolStatus, VideoAttempt, VideoInput, StudioClip, SongArrangement, StudioRender } from '../../../../packages/core/src/contracts/studio.ts';
 export type AttemptPatch = Partial<Pick<MusicAttempt, 'state' | 'stage' | 'error' | 'details'>>;
@@ -21,6 +22,25 @@ export interface RestoreAttemptInput { projectRevision: number; clipDraftRevisio
 export interface RestoreAttemptResult { project: StudioProject; draft: ClipDraft | null; attempt: StudioAttempt }
 export interface StudioStore {
   close(): void;
+  lifecycle(projectId: string, artifact: ArtifactRef): ArtifactLifecycle;
+  assertArtifactAvailable(projectId: string, artifact: ArtifactRef, options?: { allowArchived?: boolean }): void;
+  archiveArtifact(projectId: string, artifact: ArtifactRef, revision: number): ArtifactLifecycle;
+  restoreArtifact(projectId: string, artifact: ArtifactRef, revision: number): ArtifactLifecycle;
+  deletionContext(projectId: string, artifact: ArtifactRef): DeletionContext;
+  acceptDeletion(projectId: string, artifact: ArtifactRef, input: AcceptDeletionInput): PurgeRecord;
+  deletions(projectId?: string): PurgeRecord[];
+  deletion(id: string): PurgeRecord | null;
+  deletionForKey(projectId: string, idempotencyKey: string): PurgeRecord | null;
+  patchDeletion(id: string, patch: { completedEntryIds?: string[]; error?: string | null }): PurgeRecord;
+  finishDeletion(id: string): PurgeRecord;
+  retargetClipContext(projectId: string, contextId: string, revision: number, songId: string): ClipEditContext;
+  /** Durable reservations cover native use and cache checks not yet represented by queued work. */
+  reserveArtifactUse(projectId: string, artifact: ArtifactRef, ownerId: string, detail: string, allowArchived?: boolean): ArtifactUseReservation;
+  releaseArtifactUse(id: string): void;
+  artifactUses(projectId?: string): ArtifactUseReservation[];
+  /** Trusted inventory access; asset() is the public availability-filtered view. */
+  rawAsset(id: string): ReturnType<StudioStore['asset']>;
+  assets(projectId: string): (NonNullable<ReturnType<StudioStore['asset']>> & { id: string })[];
   provider(): Provider;
   setProvider(provider: Provider): void;
   selectedProject(): string | null;

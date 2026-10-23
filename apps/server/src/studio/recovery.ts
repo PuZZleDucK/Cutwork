@@ -19,6 +19,12 @@ export function reconcileStudioStartup(store: StudioStore, queue: GpuQueue): voi
 export function validateStudioNativeCall(store: StudioStore, call: CallInput, runtime?:string): void {
  validateNativeSubmission(call);
  const recovering=store.videoAttempt(call.attemptId)??store.attempt(call.attemptId);
+ // Parent acceptance and this synchronous registration guard bracket native
+ // inputs. Archived captured sources remain valid; purging ones never do.
+ if(recovering&&'song' in recovering){
+  store.assertArtifactAvailable(recovering.projectId,{kind:'song',id:recovering.song.id},{allowArchived:true});
+  if(recovering.continuation)store.assertArtifactAvailable(recovering.projectId,{kind:'clip',id:recovering.continuation.clipId},{allowArchived:true});
+ }
  if(recovering?.details?.nativeReplayRequest){
   try{assert.equal(call.tool,'song' in recovering?'h3':'yue2');assert.ok(recovering.projectId===call.projectId&&recovering.nativeCallId===call.id&&['preparing','waiting_gpu','running','validating'].includes(recovering.state)&&!recovering.cancellation);assert.deepEqual(call.request,recovering.details.nativeReplayRequest);}catch{throw new GpuQueueError('GPU_QUEUE_INPUT','Native recovery request differs from its captured resolved call');}
   return;

@@ -68,9 +68,9 @@ test('foreign/changed asset registration or forged continuation metadata cannot 
  status(()=>s.prepareContinuation(p.id,context.id,0,0),409);status(()=>s.submitVideo(p.id,randomUUID(),input),409);expect(s.project(p.id)).toEqual(before);
 });
 
-test('schema5 to current is a metadata-only guard and does not rewrite legacy drafts, requests, render snapshots or any creative rows',()=>{
+test('schema5 to current does not rewrite legacy drafts, requests, render snapshots or creative rows',()=>{
  const {s,p,audio,path}=fixture();s.saveClipDraft(p.id,audio.id,0,{clipPrompt:'Preserved unsent legacy draft',timingIntent:{start:{unit:'beats',value:'1.333333333333'},end:{unit:'seconds',value:''}}});const render=s.enqueueRender(p.id,audio.id,1,randomUUID());s.finishRender(render.id,{assetId:randomUUID(),path:`/managed/${p.id}/${randomUUID()}.mp4`,sha256:'d'.repeat(64),frameCount:240,planHash:'e'.repeat(64),receiptPath:`/managed/${p.id}/receipt.json`},{nativeVersion:'fixture'});s.enqueueRender(p.id,audio.id,1,randomUUID());s.close();const db=new Database(path);db.exec('UPDATE studio_meta SET version=5');const tables=(db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name!='studio_meta' ORDER BY name").all() as {name:string}[]).map(r=>r.name),before=Object.fromEntries(tables.map(t=>[t,db.prepare(`SELECT * FROM ${t}`).all()])),schema=db.prepare('SELECT * FROM sqlite_master ORDER BY name').all();db.close();
- const r=open(path),check=new Database(path,{readonly:true});expect(check.prepare('SELECT version FROM studio_meta').get()).toEqual({version:7});expect(check.prepare('SELECT * FROM sqlite_master ORDER BY name').all()).toEqual(schema);for(const t of tables)expect(check.prepare(`SELECT * FROM ${t}`).all(),t).toEqual(before[t]);check.close();expect(r.project(p.id).clipDrafts[0]).not.toHaveProperty('continuation');
+ const r=open(path),check=new Database(path,{readonly:true});expect(check.prepare('SELECT version FROM studio_meta').get()).toEqual({version:8});expect(check.prepare('SELECT * FROM sqlite_master ORDER BY name').all()).toEqual(schema);for(const t of tables)expect(check.prepare(`SELECT * FROM ${t}`).all(),t).toEqual(before[t]);check.close();expect(r.project(p.id).clipDrafts[0]).not.toHaveProperty('continuation');
 });
 
 

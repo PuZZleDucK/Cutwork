@@ -484,3 +484,19 @@ test.each(['wrong project','wrong media type','missing'] as const)('render refus
  const render=await f.runtime.render(p.id,song.id,enabled.arrangement.revision,randomUUID());await f.runtime.start();
  await vi.waitFor(()=>expect(f.store.render(render.id)?.state).toBe('failed'));expect(f.render).not.toHaveBeenCalled();expect(f.store.render(render.id)?.error).toMatch(/audio/i);
 });
+
+test('render cache validation reserves source use before async reads and releases after result',async()=>{
+ const f=await fixture(),p=f.store.createProject('Cache barrier'),song=fixtureSong(f,p.id);
+ const old=f.store.enqueueRender(p.id,song.id,0,randomUUID()),path=join(f.root,'projects',p.id,'renders',old.id,'output.mp4');
+ await mkdir(join(path,'..'),{recursive:true});await writeFile(path,'cache fixture');
+ f.store.finishRender(old.id,{assetId:randomUUID(),path,sha256:createHash('sha256').update('cache fixture').digest('hex'),frameCount:48,planHash:'b'.repeat(64),receiptPath:join(path,'..','receipt.json')},{});
+ const pending=f.runtime.render(p.id,song.id,0,randomUUID());
+ expect(f.store.deletionContext(p.id,{kind:'song',id:song.id}).blockers.some(b=>b.kind==='reservation')).toBe(true);
+ await pending;expect(f.store.artifactUses()).toEqual([]);
+});
+test('startup retires only stale in-process read-only cache checks, never unknown use reservations',async()=>{
+ const f=await fixture(),p=f.store.createProject('Cache restart'),song=fixtureSong(f,p.id),ref={kind:'song' as const,id:song.id};
+ f.store.reserveArtifactUse(p.id,ref,`render-cache-check:${randomUUID()}`,'Previous in-process read-only cache check');
+ const unknown=f.store.reserveArtifactUse(p.id,ref,'unknown-native-owner','Unresolved native ownership');
+ await f.runtime.start();expect(f.store.artifactUses().map(r=>r.id)).toEqual([unknown.id]);
+});

@@ -10,6 +10,8 @@ import { resolveNativeCommand } from './generation/native-command.ts';
 import { openStudioStore } from './studio/store.ts';
 import { createStudioRuntime } from './studio/runtime.ts';
 import { createDebugManager, type DebugManager } from './studio/debug.ts';
+import { createLifecycleManager, type LifecycleManager } from './studio/lifecycle-manager.ts';
+import { nativeMediaBlockers } from './studio/lifecycle-native.ts';
 import { createSetupAdapter } from './studio/setup.ts';
 import { registerStudioApi } from './studio/api.ts';
 import { reconcileStudioStartup, validateStudioNativeCall,studioNativeSource } from './studio/recovery.ts';
@@ -44,6 +46,7 @@ const adapter = createSystemdGpuAdapter({ runRoot: join(dataRoot, 'jobs/native-u
  resolveCommand: async call => resolveNativeCommand({ runtime: dataRoot, source:await studioNativeSource(store,call,source), call }) });
 let studio: ReturnType<typeof createStudioRuntime> | undefined;
 let debug: DebugManager | undefined;
+let lifecycle: LifecycleManager | undefined;
 const debugChecks=createSetupAdapter({runtime:dataRoot,source});
 try {
  const server = await startNativeCoordinator({ database: join(dataRoot, 'jobs/gpu-queue.sqlite'), adapter, host, port, allowedHosts,
@@ -53,9 +56,13 @@ try {
   async configure(app, queue) {
    reconcileStudioStartup(store, queue);
    studio = createStudioRuntime({ store, queue, runtime: dataRoot, source, origin: `http://127.0.0.1:${port}`, nativeRuntimeLimitSeconds: nativeLimit, hasExternalMaintenance:()=>debug?.isBlocking()??false });
+   lifecycle=createLifecycleManager({runtime:dataRoot,store,externalBlockers:(projectId)=>[
+    ...nativeMediaBlockers(queue,projectId),
+    ...(debug?.isBlocking()?[{kind:'reservation' as const,id:'shared-debug',state:'active',detail:'Shared host-changing Debug is active.'}]:[]),
+   ]});
    debug=await createDebugManager({runtime:dataRoot,source,queue,
     context:tool=>({provider:store.provider(),tool:store.tool(tool),setupJob:store.setupJobs().find(j=>j.id===store.tool(tool).jobId)??null}),
-    hasActiveWork:()=>studio!.hasActiveWork(),
+    hasActiveWork:()=>studio!.hasActiveWork()||lifecycle!.hasActiveWork(),
     checkProvider:async provider=>studio!.applyProviderStatus(await debugChecks.checkProvider(provider)),
     probe:async(tool,provider)=>{
      if(tool!=='agent')return debugChecks.probe(tool,provider);
@@ -73,7 +80,7 @@ try {
       log:[record.error,record.outcome?.provider?.report,readiness?.detail,record.outcome?.boundary].filter(Boolean).join('\n\n')});
     },
    });
-   await registerStudioApi(app, { store, runtime: studio, dataRoot, webRoot, debug });
+   await registerStudioApi(app, { store, runtime: studio, dataRoot, webRoot, debug, lifecycle });
   },
  });
  let stopping = false;
@@ -81,7 +88,7 @@ try {
   if (stopping) return; stopping = true;
   // runProvider receives the same process signal and stops its owned CLI group.
   // Keep coordinator/DB alive while its registered client and native work drain.
-  try { const results=await Promise.allSettled([studio!.close(),debug!.close()]); const failed=results.find(r=>r.status==='rejected'); if(failed?.status==='rejected')throw failed.reason; }
+  try { const results=await Promise.allSettled([studio!.close(),debug!.close(),lifecycle!.close()]); const failed=results.find(r=>r.status==='rejected'); if(failed?.status==='rejected')throw failed.reason; }
   catch (error) { console.error('Studio tasks need shutdown review:', error); process.exitCode = 1; }
   finally {
    try { await server.close(); }
@@ -92,5 +99,5 @@ try {
  process.on('SIGTERM', () => { void stop(); }); process.on('SIGINT', () => { void stop(); });
  console.log(JSON.stringify({ event: 'studio-listening', host, port, allowedHosts, dataRoot, nativeRuntimeLimitSeconds: nativeLimit,
   warning: 'Trusted LAN only. Full-access agents; no user accounts. Never expose to the public Internet.' }));
- void studio!.start().catch(error => { console.error('Studio initial checks failed:', error); });
-} catch (error) { debugChecks.close(); await Promise.allSettled([studio?.close(),debug?.close()]); store.close(); throw error; }
+ void studio!.start().then(()=>lifecycle!.start()).catch(error => { console.error('Studio initial checks failed:', error); });
+} catch (error) { debugChecks.close(); await Promise.allSettled([studio?.close(),debug?.close(),lifecycle?.close()]); store.close(); throw error; }

@@ -1,13 +1,15 @@
 import type { StudioAttempt } from '../../../packages/core/src/contracts/studio.ts';
 import type { useStudio } from './useStudio.ts';
+import {attemptSourceUnavailable} from './artifact-lifecycle.ts';
 import { request } from './api.ts';
 import { recoveryActions,prepareRecoverySubmission,markRecoveryAccepted,type RecoveryAction } from './generation-recovery.ts';
 type Studio=ReturnType<typeof useStudio>;
 const labels:Record<RecoveryAction,string>={cancel:'Cancel generation',retry:'Retry same inputs',restart:'Restart',restore:'Restore parameters',discard:'Discard placeholder',reuse:'Reuse parameters'};
-export function GenerationActions({attempt,studio,onRestore}:{attempt:StudioAttempt;studio:Studio;onRestore:()=>Promise<unknown>}){
- const actions=recoveryActions(attempt.state,!!attempt.placeholderDiscardedAt);
+export function GenerationActions({attempt,studio,onRestore}:{attempt:StudioAttempt;studio:Studio;onRestore?:(()=>Promise<unknown>)|undefined}){
+ const unavailable=attemptSourceUnavailable(studio.snapshot,attempt);
+ const actions=recoveryActions(attempt.state,!!attempt.placeholderDiscardedAt).filter(action=>(!unavailable||!['retry','restart','restore','reuse'].includes(action))&& (!!onRestore||!['restore','reuse'].includes(action)));
  const act=async(action:RecoveryAction)=>{
-  if(action==='restore'||action==='reuse'){await onRestore();return;}
+  if(action==='restore'||action==='reuse'){await onRestore?.();return;}
   if(action==='cancel'){
    await studio.performCancellation(attempt.id,async()=>{await request(`/api/attempts/${attempt.id}/cancel`,undefined,'POST');},'Cancellation requested. Recovery choices appear only after the agent and registered generation work are confirmed stopped.');return;
   }
@@ -21,6 +23,7 @@ export function GenerationActions({attempt,studio,onRestore}:{attempt:StudioAtte
   },'Recovery accepted with the original seeds and captured inputs. Existing results and failure records are retained.');
  };
  return <div className="generation-recovery" aria-label={`Generation recovery ${attempt.id}`}>
+  {unavailable&&<p className="small-copy warning">{unavailable}</p>}
   {attempt.state==='cancel_requested'&&<p className="small-copy warning" role="status">Stopping the agent and registered tool work… Restart, Discard and Restore remain unavailable until cleanup is confirmed.</p>}
   {attempt.state==='reconciling'&&<p className="small-copy warning">Work ownership or cleanup needs review. No automatic retry or force-clear is offered.</p>}
   {!!actions.length&&<div className="row-actions">{actions.map(action=><button key={action} type="button" className="button secondary small" disabled={action==='cancel'?studio.cancelling.has(attempt.id):studio.busy} onClick={()=>void act(action)}>{labels[action]}</button>)}</div>}

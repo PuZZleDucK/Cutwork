@@ -1,3 +1,4 @@
+import type { ArtifactLifecycle, PurgeRecord } from './lifecycle.ts';
 import type { Provider } from './generation.ts';
 import type { ClipTimingIntent, TimingValue } from '../time/linked-timing.ts';
 export type { Provider };
@@ -63,6 +64,7 @@ export interface ProjectSnapshot {
   project: StudioProject; songs: StudioSong[]; attempts: MusicAttempt[]; videoAttempts: VideoAttempt[];
   clips: StudioClip[]; arrangements: SongArrangement[]; reservations: VideoReservation[]; renders: StudioRender[]; events: ProjectEvent[];
   clipDrafts: ClipDraft[]; editContexts: ClipEditContext[];
+  artifactLifecycles?: ArtifactLifecycle[]; deletions?: PurgeRecord[];
 }
 export interface StudioOverview {
   projects: ProjectSummary[]; selectedProjectId: string | null;
@@ -120,6 +122,7 @@ export interface StudioRender {
 export type ProjectEventKind = 'project.created' | 'project.selected' | 'draft.saved' | 'style.changed' | 'song.selected'
   | 'placement.added' | 'placement.moved' | 'placement.removed' | 'analysis.updated' | 'render.reused' | 'render.cache_invalidated' | 'clip_draft.saved'
   | 'clip.trimmed' | 'clip.moved' | 'clip.audio_changed' | 'placement.priority_swapped'
+  | 'artifact.archived' | 'artifact.restored' | 'artifact.deletion_requested' | 'artifact.deleted' | 'clip.retargeted'
   | 'attempt.cancel_requested' | 'attempt.cancelled' | 'attempt.recovered' | 'attempt.discarded' | 'attempt.restored';
 export interface ProjectEvent {
   id: string; projectId: string; sequence: number; createdAt: string; kind: ProjectEventKind; data: Record<string, unknown>;

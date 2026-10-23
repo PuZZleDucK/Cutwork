@@ -86,6 +86,9 @@ export function createStudioRuntime(options: RuntimeOptions): StudioRuntime & { 
  }
  async function initialChecks() {
   store.markInterrupted();
+  // Only read-only work in the previous Node process is safe to retire here.
+  // Native/unknown ownership reservations stay blocking for reconciliation.
+  for(const use of store.artifactUses())if(/^render-cache-check:[0-9a-f-]{36}$/.test(use.ownerId))store.releaseArtifactUse(use.id);
   // Songs are committed before optional CPU analysis. A crash in that interval
   // must not leave an eternal pending badge or silently rerun analysis on boot.
   for (const project of store.listProjects()) {
@@ -354,6 +357,12 @@ export function createStudioRuntime(options: RuntimeOptions): StudioRuntime & { 
   },
   render(projectId, songId, revision, idempotencyKey) {
    assertOpen();
+   const uses:string[]=[],owner=`render-cache-check:${randomUUID()}`;
+   try {
+    uses.push(store.reserveArtifactUse(projectId,{kind:'song',id:songId},owner,'Preview cache validation is reading this song').id);
+    for(const clipId of new Set(store.arrangement(projectId,songId).placements.map(p=>p.clipId)))uses.push(store.reserveArtifactUse(projectId,{kind:'clip',id:clipId},owner,'Preview cache validation is reading this clip').id);
+   }catch(error){for(const id of uses)store.releaseArtifactUse(id);return Promise.reject(error);}
+
    const work = (async () => {
     for (const previous of store.renders().filter(r => r.projectId === projectId && r.songId === songId && r.revision === revision && r.state === 'succeeded')) {
      if (!await cachedRenderValid(previous)) store.invalidateRenderCache(previous.id);
@@ -366,7 +375,7 @@ export function createStudioRuntime(options: RuntimeOptions): StudioRuntime & { 
      throw new StudioStoreError(409, 'STUDIO_RENDER_UNAVAILABLE', 'The previously rendered file is missing or changed. Request a new render with a new idempotency key.');
     }
     return result;
-   })();
+   })().finally(()=>{for(const id of uses)store.releaseArtifactUse(id);});
    renderChecks.add(work); void work.then(() => renderChecks.delete(work), () => renderChecks.delete(work)); return work;
   },
   close() {

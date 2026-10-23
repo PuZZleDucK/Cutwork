@@ -1,3 +1,4 @@
+import type { ArtifactRef, ArtifactLifecycle, ArtifactBlocker, ArtifactUseReservation, DeletionContext, ManagedMediaInventory, PurgeRecord, RetainedThumbnail } from '../../../../packages/core/src/contracts/lifecycle.ts';
 import Database from 'better-sqlite3';
 import { decimal as exactDecimal } from '../../../../packages/core/src/time/decimal.ts';
 import { parseTimingValue, resolveTiming, timingValueFromSeconds, type TimingValue } from '../../../../packages/core/src/time/linked-timing.ts';
@@ -266,7 +267,7 @@ export function openStudioStore(path: string): StudioStore {
       db.exec(`CREATE TABLE IF NOT EXISTS studio_meta (singleton INTEGER PRIMARY KEY CHECK(singleton=1), version INTEGER NOT NULL,
         provider TEXT NOT NULL, selected_project TEXT); INSERT OR IGNORE INTO studio_meta VALUES (1,1,'codex',NULL);`);
       const meta = db.prepare('SELECT version FROM studio_meta WHERE singleton=1').get() as { version: number };
-      if (![1, 2, 3, 4, 5, 6, 7].includes(meta.version)) conflict('Unsupported studio schema version');
+      if (![1, 2, 3, 4, 5, 6, 7, 8].includes(meta.version)) conflict('Unsupported studio schema version');
       db.exec(`
         CREATE TABLE IF NOT EXISTS studio_projects (sequence INTEGER PRIMARY KEY AUTOINCREMENT, id TEXT NOT NULL UNIQUE, data TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS studio_attempts (sequence INTEGER PRIMARY KEY AUTOINCREMENT, id TEXT NOT NULL UNIQUE,
@@ -356,8 +357,16 @@ export function openStudioStore(path: string): StudioStore {
             sourceStartFrame: 0, sourceEndFrame: clip.requestedFrames, audioSource: 'song', placementIntent: null, trimIntent: null });
         }
       }
-      // Version7 guards lifecycle metadata without changing any existing row or schema object.
-      db.exec('UPDATE studio_meta SET version=7 WHERE singleton=1');
+      // Version8 adds mutable lifecycle/purge metadata without rewriting creative snapshots.
+      db.exec(`CREATE TABLE IF NOT EXISTS studio_artifact_lifecycle (
+        artifact_id TEXT PRIMARY KEY, kind TEXT NOT NULL, project_id TEXT NOT NULL REFERENCES studio_projects(id), data TEXT NOT NULL);
+        CREATE TABLE IF NOT EXISTS studio_deletions (id TEXT PRIMARY KEY,
+          project_id TEXT NOT NULL REFERENCES studio_projects(id), idempotency_key TEXT NOT NULL, input_json TEXT NOT NULL, data TEXT NOT NULL,
+          UNIQUE(project_id,idempotency_key));
+        CREATE TABLE IF NOT EXISTS studio_artifact_uses (id TEXT PRIMARY KEY,
+          project_id TEXT NOT NULL REFERENCES studio_projects(id), artifact_id TEXT NOT NULL, owner_id TEXT NOT NULL, data TEXT NOT NULL,
+          UNIQUE(artifact_id,owner_id));
+        UPDATE studio_meta SET version=8 WHERE singleton=1;`);
       for (const id of toolIds) {
         const t: ToolStatus = { id, label: labels[id], state: 'missing', installed: false, detail: 'Not checked', log: '', checkedAt: null, jobId: null, active: false, queued: 0 };
         db.prepare('INSERT OR IGNORE INTO studio_tools VALUES (?,?)').run(id, canonical(t));
@@ -427,7 +436,7 @@ export function openStudioStore(path: string): StudioStore {
       .run(c.id, c.projectId, c.songId, c.clipId, c.placementId, canonical(c));
   }
   function saveContext(c: ClipEditContext): ClipEditContext {
-    db.prepare('UPDATE studio_edit_contexts SET placement_id=?,data=? WHERE id=?').run(c.placementId, canonical(c), c.id); return c;
+    db.prepare('UPDATE studio_edit_contexts SET song_id=?,placement_id=?,data=? WHERE id=?').run(c.songId, c.placementId, canonical(c), c.id); return c;
   }
   function getContext(projectId: string, contextId: string): ClipEditContext {
     const p = project(projectId), row = db.prepare('SELECT data FROM studio_edit_contexts WHERE id=? AND project_id=?').get(uuid(contextId), p.id) as JsonRow | undefined;
@@ -438,6 +447,7 @@ export function openStudioStore(path: string): StudioStore {
     if (songId !== undefined && c.songId !== songId) missing('Continuation belongs to another song');
     if (c.revision !== reference.contextRevision) conflict('Predecessor changed; prepare continuation again before generating');
     const clip = clipById(c.clipId), song = songById(c.songId);
+    assertAvailable(projectId, { kind: 'clip', id: clip.id }); assertAvailable(projectId, { kind: 'song', id: song.id });
     if (clip.projectId !== c.projectId || song.projectId !== c.projectId) conflict('Continuation media does not match this project');
     integer(c.sourceStartFrame, 'Retained source start'); integer(c.sourceEndFrame, 'Retained source end', 1, clip.nativeFrames);
     if (c.sourceStartFrame >= c.sourceEndFrame) conflict('Continuation has no retained source frame');
@@ -478,6 +488,7 @@ export function openStudioStore(path: string): StudioStore {
   function editState(projectId: string, contextId: string, revision: number, arrangementRevision: number): ClipEditResult {
     integer(revision, 'Edit context revision'); const context = getContext(projectId, contextId);
     if (context.revision !== revision) conflict('Clip edit changed; reload before editing');
+    assertAvailable(projectId, { kind: 'clip', id: context.clipId }); assertAvailable(projectId, { kind: 'song', id: context.songId });
     const a = currentArrangement(projectId, context.songId, arrangementRevision);
     if (context.placementId !== null && !a.placements.some(p => p.id === context.placementId && p.clipId === context.clipId)) conflict('Clip edit placement is missing');
     return { context, arrangement: a };
@@ -557,7 +568,197 @@ export function openStudioStore(path: string): StudioStore {
   }
   function saveRender(r: StudioRender): StudioRender { db.prepare('UPDATE studio_renders SET data=? WHERE id=?').run(canonical(r), r.id); return r; }
 
+  function checkedArtifact(projectId: string, value: ArtifactRef): ArtifactRef {
+    const p = project(projectId), input = object(value, ['kind', 'id']);
+    if (input.kind !== 'song' && input.kind !== 'clip') invalid('Artifact kind must be song or clip');
+    const id = uuid(input.id), media = input.kind === 'song' ? songById(id) : clipById(id);
+    if (media.projectId !== p.id) missing('Artifact not found in this project');
+    return { kind: input.kind, id };
+  }
+  function lifecycle(projectId: string, value: ArtifactRef): ArtifactLifecycle {
+    projectId = project(projectId).id;
+    const ref = checkedArtifact(projectId, value), row = db.prepare('SELECT data FROM studio_artifact_lifecycle WHERE artifact_id=?').get(ref.id) as JsonRow | undefined;
+    return row ? decode<ArtifactLifecycle>(row) : { ...ref, projectId, state: 'active', revision: 0, thumbnailAssetId: null, deletionId: null, updatedAt: null };
+  }
+  function saveLifecycle(value: ArtifactLifecycle): ArtifactLifecycle {
+    db.prepare('INSERT INTO studio_artifact_lifecycle VALUES (?,?,?,?) ON CONFLICT(artifact_id) DO UPDATE SET data=excluded.data')
+      .run(value.id, value.kind, value.projectId, canonical(value)); return value;
+  }
+  function assertAvailable(projectId: string, ref: ArtifactRef, options: { allowArchived?: boolean } = {}): void {
+    const value = lifecycle(projectId, ref);
+    if (value.state !== 'active' && !(options.allowArchived && value.state === 'archived')) conflict(`${ref.kind} is ${value.state}; restore or explicitly choose available media before using it`);
+  }
+  function removeArtifactPlacements(projectId: string, ref: ArtifactRef): void {
+    for (const row of db.prepare('SELECT data FROM studio_arrangements WHERE project_id=?').all(projectId) as JsonRow[]) {
+      const a = decode<SongArrangement>(row), removed = a.placements.filter(p => ref.kind === 'song' ? a.songId === ref.id : p.clipId === ref.id);
+      if (!removed.length) continue;
+      const ids = new Set(removed.map(p => p.id));
+      for (const row of db.prepare('SELECT data FROM studio_edit_contexts WHERE project_id=?').all(projectId) as JsonRow[]) {
+        const c = decode<ClipEditContext>(row); if (c.placementId && ids.has(c.placementId)) saveContext({ ...c, revision: c.revision + 1, placementId: null });
+      }
+      saveArrangement({ ...a, revision: a.revision + 1, placements: a.placements.filter(p => !ids.has(p.id)) });
+    }
+  }
+  function deselectSong(projectId: string, songId: string): void {
+    const p = project(projectId); if (p.selectedSongId === songId) saveProject({ ...p, revision: p.revision + 1, selectedSongId: null });
+  }
+  function lifecycleChange(projectId: string, ref: ArtifactRef, revision: number, state: 'active' | 'archived'): ArtifactLifecycle {
+    projectId = project(projectId).id; ref = checkedArtifact(projectId, ref); integer(revision, 'Artifact revision'); return write(() => {
+      const before = lifecycle(projectId, ref);
+      if (before.state === state && (revision === before.revision || revision === before.revision - 1)) return before;
+      if (before.revision !== revision) conflict('Artifact changed; reload before managing it');
+      if (!['active', 'archived'].includes(before.state)) conflict('Deleting or deleted media cannot be archived or restored');
+      if (state === 'archived') { if (ref.kind === 'clip') removeArtifactPlacements(projectId, ref); else deselectSong(projectId, ref.id); }
+      const after = saveLifecycle({ ...before, state, revision: before.revision + 1, updatedAt: now() });
+      recordEvent(projectId, state === 'archived' ? 'artifact.archived' : 'artifact.restored', { artifactId: ref.id, kind: ref.kind, before: before.state, after: state, revision: after.revision }); return after;
+    });
+  }
+  function deletionContext(projectId: string, ref: ArtifactRef): DeletionContext {
+    projectId = project(projectId).id; ref = checkedArtifact(projectId, ref);
+    const value = lifecycle(projectId, ref), snapshot = store.project(projectId), blockers: ArtifactBlocker[] = [];
+    const videoDepends = (a: VideoAttempt) => ref.kind === 'song' ? a.song.id === ref.id : a.continuation?.clipId === ref.id || a.clipId === ref.id;
+    const relatedVideos = snapshot.videoAttempts.filter(videoDepends);
+    const relatedMusic = ref.kind === 'song' ? snapshot.attempts.filter(a => a.songId === ref.id) : [];
+    for (const a of [...relatedMusic, ...relatedVideos]) if (activeStates.includes(a.state)) blockers.push({ kind: 'attempt', id: a.id, state: a.state, detail: 'Dependent generation has not completed owned-work release' });
+    if (ref.kind === 'song' && songById(ref.id).analysis.state === 'pending') blockers.push({ kind: 'analysis', id: ref.id, state: 'pending', detail: 'Audio analysis is still using this song' });
+    const renders = snapshot.renders.filter(r => ref.kind === 'song' ? r.songId === ref.id : r.snapshot.clips.some(c => c.id === ref.id));
+    for (const r of renders) if (['queued', 'running', 'reconciling'].includes(r.state)) blockers.push({ kind: 'render', id: r.id, state: r.state, detail: 'Dependent preview/export has not finished' });
+    for (const r of store.artifactUses(projectId).filter(r => r.artifact.id === ref.id)) blockers.push({ kind: 'reservation', id: r.id, state: 'reserved', detail: r.detail });
+    const media = ref.kind === 'song' ? songById(ref.id) : clipById(ref.id);
+    const ownAssets = 'rawFrames' in media ? [media.assetId, ...(media.audioAssetId ? [media.audioAssetId] : []), ...media.rawFrames.map(f => f.assetId)] : [media.assetId];
+    const assetIds = [...new Set([...ownAssets, ...renders.flatMap(r => r.assetId ? [r.assetId] : [])])].sort();
+    // Conservative project-wide bind includes even newly completed dependent work.
+    // A terminal attempt may introduce copies after an earlier inventory was prepared.
+    const contextHash = createHash('sha256').update(canonical({ project: snapshot.project, ref }));
+    for (const table of ['studio_songs', 'studio_clips', 'studio_attempts', 'studio_video_attempts', 'studio_arrangements', 'studio_edit_contexts',
+      'studio_clip_drafts', 'studio_renders', 'studio_events', 'studio_artifact_lifecycle', 'studio_deletions', 'studio_artifact_uses', 'studio_assets']) {
+      contextHash.update(`\n${table}\n`);
+      for (const row of db.prepare(`SELECT * FROM ${table} WHERE project_id=? ORDER BY rowid`).all(projectId)) contextHash.update(canonical(row)).update('\n');
+    }
+    const contextDigest = contextHash.digest('hex');
+    return { lifecycle: value, digest: contextDigest, blockers, assetIds, renderIds: renders.map(r => r.id).sort() };
+  }
+  function checkedInventory(value: ManagedMediaInventory, projectId: string, ref: ArtifactRef, context: DeletionContext): ManagedMediaInventory {
+    const v = object(value, ['version', 'projectId', 'artifact', 'entries', 'affectedAssetIds', 'affectedRenderIds', 'digest']);
+    if (v.version !== 1 || v.projectId !== projectId || canonical(v.artifact) !== canonical(ref)) invalid('Purge inventory does not match its artifact');
+    digest(v.digest);
+    if (!Array.isArray(v.entries) || !Array.isArray(v.affectedAssetIds) || !Array.isArray(v.affectedRenderIds)) invalid('Purge inventory requires arrays');
+    const assetIds = v.affectedAssetIds.map(uuid), renderIds = v.affectedRenderIds.map(uuid);
+    if (canonical([...new Set(assetIds)].sort()) !== canonical(context.assetIds) || canonical([...new Set(renderIds)].sort()) !== canonical(context.renderIds)) conflict('Purge inventory does not cover exactly the registered artifact and affected renders');
+    const ids = new Set<string>(), paths = new Set<string>();
+    for (const entry of v.entries) {
+      const e = object(entry, ['id', 'path', 'role', 'sha256', 'bytes', 'identity']);
+      const id = text(e.id, 'Inventory entry ID', 1000, true), path = absolutePath(e.path); text(e.role, 'Inventory role', 1000, true);
+      if (ids.has(id) || paths.has(path)) invalid('Purge inventory entries must be unique'); ids.add(id); paths.add(path);
+      if (e.sha256 !== null) digest(e.sha256); if (e.bytes !== null) integer(e.bytes, 'Inventory byte count');
+      if (e.identity !== null) { const identity = object(e.identity, ['dev', 'ino', 'mtimeNs', 'size']); for (const key of ['dev', 'ino', 'mtimeNs', 'size']) if (typeof identity[key] !== 'string' || !/^-?\d+$/.test(identity[key] as string)) invalid('File identity values must be integer strings'); }
+    }
+    for (const id of context.assetIds) { const asset = store.rawAsset(id); if (!asset || !paths.has(asset.path)) conflict('Purge inventory omitted registered media'); }
+    return { ...v, affectedAssetIds: assetIds, affectedRenderIds: renderIds } as unknown as ManagedMediaInventory;
+  }
+  function saveDeletion(value: PurgeRecord): PurgeRecord { db.prepare('UPDATE studio_deletions SET data=? WHERE id=?').run(canonical(value), value.id); return value; }
+  function requiredDeletion(id: string): PurgeRecord { const value = store.deletion(id); if (!value) missing('Deletion operation not found'); return value; }
+
   const store: StudioStore = {
+    lifecycle, assertArtifactAvailable: assertAvailable, deletionContext,
+    archiveArtifact(projectId, ref, revision) { return lifecycleChange(projectId, ref, revision, 'archived'); },
+    restoreArtifact(projectId, ref, revision) { return lifecycleChange(projectId, ref, revision, 'active'); },
+    deletions(projectId) {
+      if (projectId !== undefined) projectId = project(projectId).id;
+      const rows = projectId === undefined ? db.prepare('SELECT data FROM studio_deletions ORDER BY rowid').all() : db.prepare('SELECT data FROM studio_deletions WHERE project_id=? ORDER BY rowid').all(projectId);
+      return (rows as JsonRow[]).map(row => decode<PurgeRecord>(row));
+    },
+    deletion(id) { const row = db.prepare('SELECT data FROM studio_deletions WHERE id=?').get(uuid(id)) as JsonRow | undefined; return row ? decode<PurgeRecord>(row) : null; },
+    deletionForKey(projectId, key) { const p = project(projectId), row = db.prepare('SELECT data FROM studio_deletions WHERE project_id=? AND idempotency_key=?').get(p.id, uuid(key)) as JsonRow | undefined; return row ? decode<PurgeRecord>(row) : null; },
+    acceptDeletion(projectId, value, input) {
+      projectId = project(projectId).id;
+      const args = object(input, ['contextDigest', 'idempotencyKey', 'inventory'], ['thumbnail', 'confirmation']);
+      let confirmation: { planId: string; digest: string } | undefined;
+      if (args.confirmation !== undefined) { const value = object(args.confirmation, ['planId', 'digest']); confirmation = { planId: uuid(value.planId), digest: digest(value.digest) }; }
+      const key = uuid(args.idempotencyKey), expected = digest(args.contextDigest), captured = canonical(args);
+      return write(() => {
+        const ref = checkedArtifact(projectId, value), old = db.prepare('SELECT data,input_json FROM studio_deletions WHERE project_id=? AND idempotency_key=?').get(projectId, key) as (JsonRow & { input_json: string }) | undefined;
+        if (old) { const existing = decode<PurgeRecord>(old); if (old.input_json !== captured || canonical(existing.artifact) !== canonical(ref)) conflict('Deletion key belongs to a different confirmed operation'); return existing; }
+        const context = deletionContext(projectId, ref);
+        if (context.digest !== expected) conflict('Artifact or its dependencies changed; review a fresh deletion confirmation');
+        if (!['active', 'archived'].includes(context.lifecycle.state)) conflict('Artifact is already deleting or deleted');
+        if (context.blockers.length) conflict(`Artifact is in use: ${context.blockers.map(b => `${b.kind} ${b.id} (${b.state})`).join('; ')}`);
+        const inventory = checkedInventory(args.inventory as ManagedMediaInventory, projectId, ref, context);
+        let thumbnailAssetId: string | null = null, retainedThumbnail: RetainedThumbnail | undefined;
+        if (args.thumbnail !== undefined) {
+          const t = object(args.thumbnail, ['assetId', 'path', 'sha256', 'bytes', 'width', 'height']);
+          const asset = registeredAsset({ assetId: t.assetId, path: t.path, sha256: t.sha256 });
+          integer(t.bytes, 'Thumbnail bytes', 1, 1_000_000); integer(t.width, 'Thumbnail width', 1, 320); integer(t.height, 'Thumbnail height', 1, 240);
+          if (inventory.entries.some(e => e.path === asset.path)) invalid('Retained thumbnail must be independent of purged media');
+          registerAsset(projectId, asset, 'image/png'); thumbnailAssetId = asset.assetId;
+          retainedThumbnail = { ...asset, bytes: t.bytes as number, width: t.width as number, height: t.height as number };
+        }
+        if (ref.kind === 'clip' && thumbnailAssetId === null) conflict('Create a separate small history thumbnail before deleting this clip');
+        const timestamp = now(), operation: PurgeRecord = { id: randomUUID(), projectId, artifact: ref, createdAt: timestamp, updatedAt: timestamp,
+          state: 'pending', inventory, completedEntryIds: [], error: null, thumbnailAssetId, ...(retainedThumbnail ? { retainedThumbnail } : {}), ...(confirmation ? { confirmation } : {}) };
+        db.prepare('INSERT INTO studio_deletions VALUES (?,?,?,?,?)').run(operation.id, projectId, key, captured, canonical(operation));
+        removeArtifactPlacements(projectId, ref); if (ref.kind === 'song') deselectSong(projectId, ref.id);
+        for (const id of context.renderIds) db.prepare('UPDATE studio_renders SET cache_eligible=0 WHERE id=?').run(id);
+        saveLifecycle({ ...context.lifecycle, state: 'deleting', revision: context.lifecycle.revision + 1, thumbnailAssetId, deletionId: operation.id, updatedAt: timestamp });
+        recordEvent(projectId, 'artifact.deletion_requested', { artifactId: ref.id, kind: ref.kind, deletionId: operation.id, fileCount: inventory.entries.length }, timestamp); return operation;
+      });
+    },
+    patchDeletion(id, patch) {
+      const value = object(patch, [], ['completedEntryIds', 'error']);
+      return write(() => {
+        const before = requiredDeletion(id); if (before.state === 'succeeded') return before;
+        if (value.completedEntryIds !== undefined && (!Array.isArray(value.completedEntryIds) || value.completedEntryIds.some(v => typeof v !== 'string' || !before.inventory.entries.some(e => e.id === v)))) invalid('Purge progress contains an unknown entry');
+        if (value.error !== undefined && value.error !== null) text(value.error, 'Purge error', 16000, true);
+        const completedEntryIds = [...new Set([...before.completedEntryIds, ...(value.completedEntryIds as string[] | undefined ?? [])])];
+        return saveDeletion({ ...before, completedEntryIds, state: value.error ? 'failed' : 'purging', error: value.error === undefined ? null : value.error as string | null, updatedAt: now() });
+      });
+    },
+    finishDeletion(id) {
+      return write(() => {
+        const before = requiredDeletion(id); if (before.state === 'succeeded') return before;
+        if (before.error || before.inventory.entries.some(e => !before.completedEntryIds.includes(e.id))) conflict('Managed media purge has not completed every file');
+        const current = lifecycle(before.projectId, before.artifact);
+        if (current.state !== 'deleting' || current.deletionId !== before.id) conflict('Deletion lifecycle does not match its operation');
+        if (deletionContext(before.projectId, before.artifact).blockers.length) conflict('Artifact still has unresolved dependent work');
+        const timestamp = now(), done = saveDeletion({ ...before, state: 'succeeded', updatedAt: timestamp });
+        saveLifecycle({ ...current, state: 'deleted', revision: current.revision + 1, updatedAt: timestamp });
+        recordEvent(before.projectId, 'artifact.deleted', { artifactId: before.artifact.id, kind: before.artifact.kind, deletionId: before.id, fileCount: before.inventory.entries.length }, timestamp); return done;
+      });
+    },
+    retargetClipContext(projectId, contextId, revision, songId) {
+      projectId = project(projectId).id; songId = uuid(songId);
+      integer(revision, 'Context revision'); return write(() => {
+        const c = getContext(projectId, contextId); if (c.revision !== revision) conflict('Clip edit changed; reload before choosing a replacement song');
+        assertAvailable(projectId, { kind: 'clip', id: c.clipId }); assertAvailable(projectId, { kind: 'song', id: songId });
+        if (c.placementId !== null) conflict('Remove this clip placement before choosing another song');
+        if (c.songId === songId) return c;
+        const after = saveContext({ ...c, songId, revision: c.revision + 1, placementIntent: null, trimIntent: null });
+        recordEvent(projectId, 'clip.retargeted', { contextId: c.id, clipId: c.clipId, beforeSongId: c.songId, afterSongId: songId, revision: after.revision }); return after;
+      });
+    },
+    reserveArtifactUse(projectId, ref, ownerId, detail, allowArchived = false) {
+      projectId = project(projectId).id;
+      text(ownerId, 'Reservation owner', 1000, true); text(detail, 'Reservation detail', 16000, true);
+      return write(() => {
+        const artifact = checkedArtifact(projectId, ref); assertAvailable(projectId, artifact, { allowArchived });
+        const old = db.prepare('SELECT data FROM studio_artifact_uses WHERE artifact_id=? AND owner_id=?').get(artifact.id, ownerId) as JsonRow | undefined;
+        if (old) return decode<ArtifactUseReservation>(old);
+        const value: ArtifactUseReservation = { id: randomUUID(), projectId, artifact, ownerId, detail, createdAt: now() };
+        db.prepare('INSERT INTO studio_artifact_uses VALUES (?,?,?,?,?)').run(value.id, projectId, artifact.id, ownerId, canonical(value)); return value;
+      });
+    },
+    releaseArtifactUse(id) { write(() => { db.prepare('DELETE FROM studio_artifact_uses WHERE id=?').run(uuid(id)); }); },
+    artifactUses(projectId) {
+      if (projectId !== undefined) projectId = project(projectId).id;
+      const rows = projectId === undefined ? db.prepare('SELECT data FROM studio_artifact_uses ORDER BY rowid').all() : db.prepare('SELECT data FROM studio_artifact_uses WHERE project_id=? ORDER BY rowid').all(projectId);
+      return (rows as JsonRow[]).map(row => decode<ArtifactUseReservation>(row));
+    },
+    rawAsset(id) {
+      const row = db.prepare('SELECT project_id,path,sha256,media_type FROM studio_assets WHERE id=?').get(uuid(id)) as { project_id: string; path: string; sha256: string; media_type: NonNullable<ReturnType<StudioStore['asset']>>['mediaType'] } | undefined;
+      return row ? { projectId: row.project_id, path: row.path, sha256: row.sha256, mediaType: row.media_type } : null;
+    },
+    assets(projectId) { const p = project(projectId); return (db.prepare('SELECT id FROM studio_assets WHERE project_id=? ORDER BY rowid').all(p.id) as { id: string }[]).map(({ id }) => ({ id, ...store.rawAsset(id)! })); },
+
     close() { if (db.open) db.close(); },
     provider() { return (db.prepare('SELECT provider FROM studio_meta WHERE singleton=1').get() as { provider: Provider }).provider; },
     setProvider(value) { const p = providerId(value); db.prepare('UPDATE studio_meta SET provider=? WHERE singleton=1').run(p); },
@@ -577,7 +778,7 @@ export function openStudioStore(path: string): StudioStore {
     listProjects() {
       return (db.prepare('SELECT data FROM studio_projects ORDER BY sequence').all() as JsonRow[]).map(row => {
         const p = decode<StudioProject>(row);
-        const songCount = (db.prepare('SELECT count(*) AS n FROM studio_songs WHERE project_id=?').get(p.id) as { n: number }).n;
+        const songCount = (db.prepare('SELECT id FROM studio_songs WHERE project_id=?').all(p.id) as { id: string }[]).filter(s => lifecycle(p.id, { kind: 'song', id: s.id }).state === 'active').length;
         const attempts = db.prepare('SELECT sequence,data FROM studio_attempts WHERE project_id=?').all(p.id) as AttemptRow[];
         const videos = (db.prepare('SELECT sequence,data FROM studio_video_attempts WHERE project_id=?').all(p.id) as AttemptRow[]).map(videoSnapshot);
         return { ...p, songCount, activeAttempts: [...attempts.map(attemptSnapshot), ...videos].filter(a => activeStates.includes(a.state)).length,
@@ -595,6 +796,9 @@ export function openStudioStore(path: string): StudioStore {
         clipDrafts: (db.prepare('SELECT data FROM studio_clip_drafts WHERE project_id=? ORDER BY rowid').all(p.id) as JsonRow[]).map(row => decode<ClipDraft>(row)),
         editContexts: (db.prepare('SELECT data FROM studio_edit_contexts WHERE project_id=? ORDER BY rowid').all(p.id) as JsonRow[]).map(row => decode<ClipEditContext>(row)),
         renders: (db.prepare('SELECT data FROM studio_renders WHERE project_id=? ORDER BY sequence').all(p.id) as JsonRow[]).map(row => decode<StudioRender>(row)),
+        artifactLifecycles: [...(db.prepare('SELECT id FROM studio_songs WHERE project_id=? ORDER BY sequence').all(p.id) as { id: string }[]).map(({ id }) => lifecycle(p.id, { kind: 'song', id })),
+          ...(db.prepare('SELECT id FROM studio_clips WHERE project_id=? ORDER BY rowid').all(p.id) as { id: string }[]).map(({ id }) => lifecycle(p.id, { kind: 'clip', id }))],
+        deletions: store.deletions(p.id),
         events: (db.prepare('SELECT sequence,data FROM studio_events WHERE project_id=? ORDER BY sequence').all(p.id) as SetupRow[]).map(row => ({ ...decode<ProjectEvent>(row), sequence: row.sequence })) };
     },
     saveDraft(id, revision, draft) {
@@ -609,6 +813,7 @@ export function openStudioStore(path: string): StudioStore {
     saveClipDraft(projectId, songId, revision, draft) {
       const input = clipDraftInput(draft);
       return write(() => {
+        assertAvailable(projectId, { kind: 'song', id: songId });
         const before = currentClipDraft(projectId, songId, revision);
         const value: Pick<ClipDraft, 'clipPrompt' | 'timingIntent' | 'continuation'> = { clipPrompt: input.clipPrompt, timingIntent: input.timingIntent };
         if (input.continuation !== undefined) {
@@ -636,6 +841,7 @@ export function openStudioStore(path: string): StudioStore {
       integer(revision, 'Project revision');
       return write(() => { const p = project(projectId), s = songById(songId);
         if (s.projectId !== p.id) missing('Song not found in this project');
+        assertAvailable(projectId, { kind: 'song', id: s.id });
         if (p.revision !== revision) conflict('Project changed; reload before selecting a song');
         let draft = p.draft;
         if (p.selectedSongId !== s.id) {
@@ -704,6 +910,7 @@ export function openStudioStore(path: string): StudioStore {
           if (previous.recovery?.parentAttemptId !== parent.id || previous.recovery.action !== action) conflict('Submission key already belongs to another recovery or generation');
           return previous;
         }
+        if ('song' in parent) { assertAvailable(parent.projectId, { kind: 'song', id: parent.song.id }); if (parent.continuation) assertAvailable(parent.projectId, { kind: 'clip', id: parent.continuation.clipId }); }
         if (parent.state !== (action === 'retry' ? 'failed' : 'cancelled')) conflict(action === 'retry' ? 'Retry requires a failed attempt with known stopped work' : 'Restart requires confirmed cancellation');
         const timestamp = now();
         // New lifecycle identity, but immutable user intent, provider pairing,
@@ -739,6 +946,8 @@ export function openStudioStore(path: string): StudioStore {
         const p = project(a.projectId); if (p.revision !== requested.projectRevision) conflict('Project changed; reload before restoring parameters');
         let draft: ClipDraft | null = null, music = p.draft, selectedSongId = p.selectedSongId;
         if ('song' in a) {
+          assertAvailable(p.id, { kind: 'song', id: a.song.id });
+          if (a.continuation) assertAvailable(p.id, { kind: 'clip', id: a.continuation.clipId });
           if (requested.clipDraftRevision === undefined) invalid('Video restore requires the original song clip draft revision');
           const before = currentClipDraft(p.id, a.song.id, requested.clipDraftRevision as number);
           selectedSongId = a.song.id;
@@ -757,7 +966,7 @@ export function openStudioStore(path: string): StudioStore {
           draft = persistClipDraft(before, { clipPrompt: a.input.clipPrompt, timingIntent, continuation: a.continuation ?? null });
         } else {
           music = { ...music, musicPrompt: a.input.musicPrompt, lyrics: a.input.lyrics };
-          if (a.songId !== null) {
+          if (a.songId !== null && lifecycle(p.id, { kind: 'song', id: a.songId }).state === 'active') {
             if (songById(a.songId).projectId !== p.id) conflict('Restored song does not belong to this project');
             selectedSongId = a.songId;
           }
@@ -808,7 +1017,7 @@ export function openStudioStore(path: string): StudioStore {
       });
     },
     setAnalysis(songId, value) {
-      return write(() => { const s = songById(songId), updated = { ...s, analysis: analysis(value, s.sampleCount) };
+      return write(() => { const s = songById(songId); assertAvailable(s.projectId, { kind: 'song', id: s.id }, { allowArchived: true }); const updated = { ...s, analysis: analysis(value, s.sampleCount) };
         if (canonical(s.analysis) !== canonical(updated.analysis)) recordEvent(s.projectId, 'analysis.updated', { songId: s.id, before: analysisSummary(s.analysis), after: analysisSummary(updated.analysis) });
         db.prepare('UPDATE studio_songs SET data=? WHERE id=?').run(canonical(updated), s.id); return updated; });
     },
@@ -819,6 +1028,7 @@ export function openStudioStore(path: string): StudioStore {
         if (song.projectId !== p.id) missing('Song not found in this project');
         const old = db.prepare('SELECT * FROM studio_video_attempts WHERE project_id=? AND idempotency_key=?').get(p.id, key) as AttemptRow | undefined;
         if (old) { if (videoSnapshot(old).recovery) conflict('Submission key belongs to a recovery action'); if (old.input_json !== inputJson) conflict('Submission key already belongs to different inputs'); return videoSnapshot(old); }
+        assertAvailable(p.id, { kind: 'song', id: song.id });
         const continuation = captured.continuation ? captureContinuation(p.id, captured.continuation, song.id) : undefined;
         let timingResolution: VideoAttempt['timingResolution'];
         if (captured.timingIntent) {
@@ -860,6 +1070,8 @@ export function openStudioStore(path: string): StudioStore {
           if (!a.clipId) conflict('Completed attempt is missing its clip reference'); return clipById(a.clipId);
         }
         if (a.cancellation || ['failed', 'reconciling', 'cancel_requested', 'cancelled'].includes(a.state)) conflict('Cancelled, failed or unreconciled work cannot be ingested as successful');
+        assertAvailable(a.projectId, { kind: 'song', id: a.song.id }, { allowArchived: true });
+        if (a.continuation) assertAvailable(a.projectId, { kind: 'clip', id: a.continuation.clipId }, { allowArchived: true });
         const song = songById(a.song.id), requestedFrames = a.input.endFrame - a.input.startFrame;
         if (song.projectId !== a.projectId || song.sha256 !== a.song.sha256 || song.assetId !== a.song.assetId) conflict('Captured soundtrack no longer matches');
         if (input.frameCount < requestedFrames) invalid('Native source does not cover requested frames');
@@ -885,6 +1097,7 @@ export function openStudioStore(path: string): StudioStore {
       const count = p.frameCount === undefined ? undefined : integer(p.frameCount, 'Placement frame count', 1);
       return write(() => { const a = currentArrangement(projectId, songId, revision), clip = clipById(clipId);
         if (clip.projectId !== a.projectId) missing('Clip not found in this project');
+        assertAvailable(projectId, { kind: 'song', id: songId }); assertAvailable(projectId, { kind: 'clip', id: clipId });
         return appendPlacement(a, clip, start, source, count); });
     },
     movePlacement(projectId, songId, revision, placementId, startFrame) {
@@ -941,7 +1154,9 @@ export function openStudioStore(path: string): StudioStore {
         if (song.projectId !== p.id) missing('Song not found in this project');
         const old = db.prepare('SELECT r.data FROM studio_render_keys k JOIN studio_renders r ON r.id=k.render_id WHERE k.project_id=? AND k.idempotency_key=?').get(p.id, key) as JsonRow | undefined;
         if (old) { const r = decode<StudioRender>(old); if (r.songId !== song.id || r.revision !== revision) conflict('Render key belongs to another snapshot'); return r; }
+        assertAvailable(projectId, { kind: 'song', id: songId });
         const a = currentArrangement(projectId, songId, revision), ids = [...new Set(a.placements.map(p => p.clipId))];
+        for (const id of ids) assertAvailable(projectId, { kind: 'clip', id });
         const snapshot = { song, arrangement: a, clips: ids.map(clipById) }, timestamp = now();
         const snapshotHash = createHash('sha256').update(canonical({ profile: RENDER_PROFILE, snapshot })).digest('hex');
         // A new key can point to the canonical current render, but the key itself
@@ -980,6 +1195,8 @@ export function openStudioStore(path: string): StudioStore {
       return write(() => { const row = renderRow(id); if (!row) missing('Render not found'); const r = decode<StudioRender>(row);
         if (row.completion_json !== null) { if (row.completion_json !== completion) conflict('Render already has different output'); return r; }
         if (r.state === 'failed' || r.state === 'reconciling') conflict('Failed or unreconciled render cannot be completed');
+        assertAvailable(r.projectId, { kind: 'song', id: r.songId }, { allowArchived: true });
+        for (const clip of r.snapshot.clips) assertAvailable(r.projectId, { kind: 'clip', id: clip.id }, { allowArchived: true });
         const song = r.snapshot.song, songFrames = (BigInt(song.sampleCount) * 24n + BigInt(song.sampleRate) - 1n) / BigInt(song.sampleRate);
         const expected = r.snapshot.arrangement.placements.reduce((end, p) => BigInt(p.endFrame) > end ? BigInt(p.endFrame) : end, songFrames);
         if (BigInt(frameCount) !== expected) invalid('Render frame count does not match its immutable timeline');
@@ -991,8 +1208,9 @@ export function openStudioStore(path: string): StudioStore {
     },
 
     asset(id) {
-      const row = db.prepare('SELECT project_id,path,sha256,media_type FROM studio_assets WHERE id=?').get(uuid(id)) as { project_id: string; path: string; sha256: string; media_type: NonNullable<ReturnType<StudioStore['asset']>>['mediaType'] } | undefined;
-      return row ? { projectId: row.project_id, path: row.path, sha256: row.sha256, mediaType: row.media_type } : null;
+      id = uuid(id); const asset = store.rawAsset(id); if (!asset) return null;
+      if (store.deletions(asset.projectId).some(d => d.inventory.affectedAssetIds.includes(id))) return null;
+      return asset;
     },
     tools() { return toolIds.map(getTool); }, tool: getTool,
     patchTool(id, patch) {

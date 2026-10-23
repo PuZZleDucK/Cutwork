@@ -1,0 +1,26 @@
+/** Filesystem ownership checks, not restrictions on creative agents. */
+import assert from 'node:assert/strict';
+import {createHash,randomUUID} from 'node:crypto';
+import {constants} from 'node:fs';
+import {lstat,open,readFile,readdir,realpath,rename,unlink} from 'node:fs/promises';
+import {isAbsolute,join,relative,resolve} from 'node:path';
+import type {ManagedMediaEntry} from '../../../../packages/core/src/contracts/lifecycle.ts';
+export const hashBytes=(b:string|Buffer)=>createHash('sha256').update(b).digest('hex');
+export function token(s:string):string{assert.ok(/^[\w-]{1,160}$/.test(s),'Invalid managed identifier');return s;}
+export const missing=(e:unknown)=>(e as NodeJS.ErrnoException).code==='ENOENT';
+export async function projectRoot(runtime:string,projectId:string):Promise<string>{assert.equal(await realpath(runtime),runtime,'Runtime path is linked');const project=join(runtime,'projects',token(projectId));assert.equal(await realpath(project),project,'Project path is linked');return project;}
+export async function managedPath(project:string,path:string):Promise<void>{
+ const rel=relative(project,path);assert.ok(isAbsolute(path)&&resolve(path)===path&&rel&&!rel.startsWith('../')&&!isAbsolute(rel),'Media path is outside managed project');
+ let current=project;const parts=rel.split('/');for(let i=0;i<parts.length;i++){current=join(current,parts[i]!);try{const s=await lstat(current);assert.ok(!s.isSymbolicLink(),'Managed media symlink refused');if(i<parts.length-1)assert.ok(s.isDirectory(),'Managed media parent is not a directory');}catch(e){if(missing(e))return;throw e;}}
+}
+const identity=(s:Awaited<ReturnType<typeof fileStat>>)=>({dev:s.dev.toString(),ino:s.ino.toString(),mtimeNs:s.mtimeNs.toString(),size:s.size.toString()});
+const fileStat=(path:string)=>lstat(path,{bigint:true});
+export async function inspectFile(project:string,path:string,signal?:AbortSignal):Promise<Omit<ManagedMediaEntry,'id'|'role'>>{
+ signal?.throwIfAborted();await managedPath(project,path);let handle;try{handle=await open(path,constants.O_RDONLY|constants.O_NOFOLLOW|constants.O_NONBLOCK);}catch(e){if(missing(e))return {path,sha256:null,bytes:null,identity:null};throw e;}
+ try{const before=await handle.stat({bigint:true});assert.ok(before.isFile(),'Managed media is not a regular file');assert.ok(before.size<=BigInt(Number.MAX_SAFE_INTEGER),'Managed media file is too large');const h=createHash('sha256');for await(const b of handle.createReadStream({autoClose:false})){signal?.throwIfAborted();h.update(b);}const after=await handle.stat({bigint:true});assert.deepEqual(identity(after),identity(before),'Media identity changed during hash');const actual=await fileStat(path);assert.deepEqual(identity(actual),identity(before),'Media path identity changed during hash');return{path,sha256:h.digest('hex'),bytes:Number(before.size),identity:identity(before)};}finally{await handle.close();}
+}
+export async function verifyEntry(project:string,entry:ManagedMediaEntry,signal?:AbortSignal):Promise<boolean>{const current=await inspectFile(project,entry.path,signal);if(!current.identity)return false;assert.deepEqual(current.identity,entry.identity,'Managed media identity changed');assert.equal(current.sha256,entry.sha256,'Managed media contents changed');assert.equal(current.bytes,entry.bytes,'Managed media size changed');return true;}
+export async function walkFiles(project:string,directory:string,signal?:AbortSignal):Promise<string[]>{await managedPath(project,directory);const out:string[]=[];async function walk(p:string){signal?.throwIfAborted();let entries;try{entries=await readdir(p,{withFileTypes:true});}catch(e){if(missing(e))return;throw e;}for(const e of entries){assert.ok(out.length<100_000,'Managed project inventory exceeds bounded scan');const path=join(p,e.name);if(e.isSymbolicLink())continue;if(e.isDirectory())await walk(path);else if(e.isFile())out.push(path);}}await walk(directory);return out.sort();}
+export async function readJson(project:string,path:string):Promise<any|null>{await managedPath(project,path);try{const s=await lstat(path);assert.ok(s.isFile()&&s.size<=32_000_000,'Managed JSON evidence is not a bounded regular file');return JSON.parse(await readFile(path,'utf8'));}catch(e){if(missing(e))return null;throw e;}}
+export async function durableJson(path:string,value:unknown,exclusive=false):Promise<void>{const temporary=exclusive?path:`${path}.pending-${randomUUID()}`;const f=await open(temporary,'wx',0o600);try{await f.writeFile(JSON.stringify(value,null,2)+'\n');await f.sync();}finally{await f.close();}if(!exclusive)await rename(temporary,path);const d=await open(join(path,'..'),'r');try{await d.sync();}finally{await d.close();}}
+export async function unlinkVerified(project:string,entry:ManagedMediaEntry,signal?:AbortSignal):Promise<void>{if(!await verifyEntry(project,entry,signal))return;signal?.throwIfAborted();await managedPath(project,entry.path);const current=await fileStat(entry.path);assert.deepEqual(identity(current),entry.identity,'Managed media identity changed before unlink');await unlink(entry.path);const parent=await open(join(entry.path,'..'),'r');try{await parent.sync();}finally{await parent.close();}}

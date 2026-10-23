@@ -11,14 +11,13 @@ The scope, PRD and technical specification are approved. The learner approved th
 
 ## Latest fast-mode verification index
 
-**Latest: slice 7 is complete and deployed.** Final checks pass **1,248 tests in
-78 files on both hosts**, typecheck and build. Real queued/running provider and
-native cancellations, exact music/H3 replays, confirmed real Debug repair and
-browser recovery/navigation passed. A real H3 host-memory OOM was retained;
-conservative owned-Comfy settings then completed the fresh/cancel/restart proof.
-All 789 original assets remain exact in the final 137-check preservation audit;
-TTS is restored and personal ComfyUI unchanged. See [slice-7-evidence.md](slice-7-evidence.md).
-Slices 8–9 and the final learner review/wrap-up remain unfinished.
+**Latest: slice 8 is complete and deployed.** Final checks pass **1,322 tests in
+85 files on both hosts**, typecheck/build, 11 actual CPU/HTTP lifecycle proof
+stages, an independent filesystem audit and real browser archive/restore/disclosure
+checks. The schema7→8 deployment preserved all 831 original registered assets and
+existing creative/native/Debug data; TTS/personal ComfyUI were unchanged. See
+[slice-8-evidence.md](slice-8-evidence.md). Slice 9 and the final learner
+review/wrap-up remain unfinished.
 
 
 The chronological notes below remain as history. Slice 1 is complete; its
@@ -338,7 +337,7 @@ The next work is the prepared real-model lane verification; no slice/G4 gate is 
   Learner check: Cancel a running clip, inspect the three recovery choices, restart it, and try Restore parameters as a new variation. Inspect a failed setup's Debug dialog, cancel once, then review and explicitly confirm a controlled repair. Check that seeds, outcomes and consequences are visible and believable.
   Commit: `Add verified job recovery and confirmed setup debugging`
 
-- [ ] **8. Archive or delete media without losing its provenance**
+- [x] **8. Archive or delete media without losing its provenance**
   Becomes usable: Clear unwanted artifacts out of the workspace, restore archived clips unplaced, and permanently delete full media while keeping the agreed thumbnail/text history and deletion event.
   Why now: Correct deletion depends on known job dependencies, arrangements, raw frames, replay snapshots and render caches. Those paths now exist, so lifecycle tests can prove what is removed rather than assuming one file is the whole artifact.
   PRD ref: `prd.md > Artifact Archive, Restore, and Delete`; `prd.md > Song Selection and Saved Arrangements`; `prd.md > Generation History`; `prd.md > Raw Frame Preservation`; `prd.md > Timeline and Music Coverage`; `prd.md > Preview, Black Gaps, and Export`.

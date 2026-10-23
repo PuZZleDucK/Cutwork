@@ -50,7 +50,7 @@ test('continuation native admission binds server-owned snapshot and both capture
  const frame={assetId:randomUUID(),index:4,sha256:'b'.repeat(64),pixelSha256:'c'.repeat(64),bytes:123};
  const attempt={id,nativeCallId,projectId,state:'running',input:{songId,startFrame:24,endFrame:72},song:{id:songId,assetId:randomUUID(),sha256:'a'.repeat(64),sampleCount:'96000',sampleRate:48000,channels:2},seeds:{h3:'123'},continuation:{contextId:randomUUID(),contextRevision:1,clipId:randomUUID(),songId,sourceOriginFrame:19,sourceStartFrame:2,sourceEndFrame:5,endFrame:24,frame}};
  const song={projectId,path:join(runtime,'projects',projectId,'song.wav'),sha256:attempt.song.sha256};
- const store={videoAttempt:()=>attempt,asset:()=>song,project:()=>{throw Error('Mutable context cannot be consulted');}} as unknown as Parameters<typeof validateStudioNativeCall>[0];
+ const store={assertArtifactAvailable:()=>{},videoAttempt:()=>attempt,asset:()=>song,project:()=>{throw Error('Mutable context cannot be consulted');}} as unknown as Parameters<typeof validateStudioNativeCall>[0];
  const firstFrame={path:join(runtime,'projects',projectId,'inputs',id,'continuation.png'),sha256:frame.sha256,pixelSha256:frame.pixelSha256};
  const request={schemaVersion:1,attemptId:nativeCallId,projectId,song:{path:song.path,sha256:song.sha256},seed:'123',prompt:'Continue',firstFrame,plan:{fps:'24/1',requestedFrames:48,nativeFrames:56,placement:{startFrame:24,endFrame:72},durationWarning:false,conditioning:{startSample:48000,availableSamples:48000,silenceSamples:64000,totalSamples:112000}}};
  const call={id:nativeCallId,attemptId:id,projectId,tool:'h3' as const,request};

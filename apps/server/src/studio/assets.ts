@@ -53,6 +53,11 @@ export async function sendStudioAsset(request: FastifyRequest, reply: FastifyRep
         return reply.code(409).send({code:'STUDIO_ASSET_CHANGED',error:'The verified export file changed. Render a new preview before downloading.'});
       }
     }
+    // Deletion may have been accepted while realpath/open/hash awaited.
+    // Previously opened response streams cannot be recalled; no new stream is
+    // started once the durable lifecycle barrier is visible.
+    const current=store.asset(assetId);
+    if(!current||current.path!==asset.path||current.sha256!==asset.sha256)return unavailable();
     reply.header('x-content-type-options', 'nosniff').header('accept-ranges', 'bytes').type(asset.mediaType);
     const range = request.headers.range;
     let start = 0, end = info.size - 1;

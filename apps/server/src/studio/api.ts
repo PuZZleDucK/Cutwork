@@ -5,10 +5,12 @@ import { StudioStoreError } from './store.ts';
 import { sendStudioAsset } from './assets.ts';
 import type { ClipDraftInput, ClipEditPatch, PlacementInput, StudioStore,RestoreAttemptInput } from './store-contract.ts';
 import type { DebugManager } from './debug.ts';
+import type { LifecycleManager } from './lifecycle-manager.ts';
+import { registerLifecycleRoutes } from './lifecycle-api.ts';
 import type { StudioRuntime } from './runtime-contract.ts';
 import type { MusicDraft, MusicInput, Provider, ToolId, VideoInput } from '../../../../packages/core/src/contracts/studio.ts';
 
-interface StudioApiOptions { store: StudioStore; runtime: StudioRuntime; dataRoot: string; webRoot: string | null; debug?: DebugManager }
+interface StudioApiOptions { store: StudioStore; runtime: StudioRuntime; dataRoot: string; webRoot: string | null; debug?: DebugManager; lifecycle?: LifecycleManager }
 const uuid = { type: 'string', pattern: '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$' };
 const revision = { type: 'integer', minimum: 0, maximum: Number.MAX_SAFE_INTEGER };
 const plain = (properties: Record<string, unknown>) => ({ type: 'object', additionalProperties: false, required: Object.keys(properties), properties });
@@ -58,7 +60,7 @@ function lossless(value: unknown, depth = 0): void {
 
 /** Registered onto the existing native API so its Host/Origin, strict JSON and
  * private unexpected-error protections remain in force. No listener starts here. */
-export async function registerStudioApi(app: FastifyInstance, { store, runtime, dataRoot, webRoot, debug }: StudioApiOptions): Promise<void> {
+export async function registerStudioApi(app: FastifyInstance, { store, runtime, dataRoot, webRoot, debug, lifecycle }: StudioApiOptions): Promise<void> {
   if (!isAbsolute(dataRoot) || (webRoot !== null && !isAbsolute(webRoot))) throw new Error('Studio paths must be absolute');
   const root = resolve(dataRoot);
   app.register(async function studioRoutes(api) {
@@ -68,6 +70,7 @@ export async function registerStudioApi(app: FastifyInstance, { store, runtime, 
       if (error instanceof StudioStoreError) return reply.code(error.statusCode).send({ code: error.code, error: error.message });
       throw error; // Delegate unexpected/storage/parser/schema failures to the parent.
     });
+    if(lifecycle)registerLifecycleRoutes(api,store,lifecycle);
     if(debug){
       const debugParams=plain({debugId:uuid});
       api.get('/api/debug',{schema:{querystring:empty}},()=>debug.list());

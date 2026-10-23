@@ -13,8 +13,9 @@ preview becomes immediate browser playback of the current saved edit plan.
   rules as export, but browser seeking/decoding is an approximate fast preview,
   not an encoded quality guarantee. No render is requested by viewing/editing.
 - Workspace tab selection is session UI state, independent of project selection.
-- Top sequence lane is visually dominant. Move-up exchanges overlapping order;
-  non-overlapping spans still pack compactly rather than creating empty tracks.
+- Top sequence lane is visually dominant. Each placement is one uninterrupted
+  block on one row, with at most one move-up control. Disjoint clips reuse rows;
+  whole-clip identity takes precedence over absolute minimum row count.
 - Original frames and provenance remain stored; remove their technical browsing
   UI, not the underlying reproducibility/quality records.
 
@@ -88,3 +89,23 @@ No production creative edits, model inference or downloads were needed for this
 refinement. Private logs/screenshots are under
 `.local-evidence/slice-9/workbench-round-two/`. Final learner review, the separate
 fresh-install journey, and the learning wrap-up remain open.
+
+
+## Follow-up: whole-clip priority rows
+
+The learner correctly rejected the overlap-segment display: four placements
+appeared as seven UI fragments and four arrows. This was presentation-only;
+source media and saved placements were never split. Remove that representation
+entirely: four placements must show exactly four whole blocks, each confined to
+one row. Preserve saved priority and timing, reuse rows where possible, and offer
+at most one move-up arrow per lower clip. Keeping whole clips can require an
+extra row in overlap chains; do not sacrifice clip identity to compress rows.
+
+- [x] Regression first: reproduced duplicate blocks from the reported geometry.
+- [x] One whole interval per placement/reservation, truthful top-row dominance,
+  no split/repeated block keys or arrows, and deterministic row reuse.
+- [x] Cover all 120 priority orders of a five-clip overlap chain; every offered
+  move-up actually raises the whole clip without changing geometry.
+- [ ] Full suite/build, disposable browser swap, safe web-only deployment and
+  live reported-project verification.
+- [ ] Learner review of the simpler sequence.

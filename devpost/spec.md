@@ -78,7 +78,7 @@ Data root: `${XDG_DATA_HOME:-$HOME/.local/share}/music-video-studio/`; tools und
 
 ## Look and Feel
 
-**Second workspace refinement, 23 October:** project selection and five-second floating notification announcements live in the navbar. Tabs precede the project name and stay selected across project switches; hazard stripes guide Music then Video. Duration/BPM precede truncated soundtrack titles. Clip cards form a 4–5-column desktop library, distinguish placed clips, and expose trim/position/audio controls without disclosures. Technical frame/provenance and repeated timing prose move out of the working UI, not out of retained records. Priority is edited in the sequence: top lane wins; lower overlapping segments can swap with the placement above. Shared Config provides actual music/video agent templates with explicit Save/default restoration and revision-conflict handling. Each new attempt captures template text/revision, preserving old queued/running/retry instructions. See `workbench-round-two.md` for verification.
+**Second workspace refinement, 23 October:** project selection and five-second floating notification announcements live in the navbar. Tabs precede the project name and stay selected across project switches; hazard stripes guide Music then Video. Duration/BPM precede truncated soundtrack titles. Clip cards form a 4–5-column desktop library, distinguish placed clips, and expose trim/position/audio controls without disclosures. Technical frame/provenance and repeated timing prose move out of the working UI, not out of retained records. Priority is edited in the sequence: top lane wins; each placed clip remains one whole block in one row, with at most one move-up control. Never split a clip across rows to reduce row count. Shared Config provides actual music/video agent templates with explicit Save/default restoration and revision-conflict handling. Each new attempt captures template text/revision, preserving old queued/running/retry instructions. See `workbench-round-two.md` for verification.
 
 **23 October workspace refinement:** use a compact project selector and explicit Music / Video / Archive / History navigation rather than a long stack of cards. Keep video direction, preview and sequence together on desktop; stack them on narrow screens. Continue From End and Place/Remove are visible per-clip actions, with separately labelled Timing & audio controls. Clicking a placed timeline clip opens its exact saved edit, including repeated uses of one clip. Section changes preserve drafts, and parameter reuse opens/focuses the appropriate editor. This changes presentation and reachability, not generation, timing, archival or agent-authority rules.
 
@@ -625,8 +625,14 @@ polling. Invalid/incomplete entry is retained for correction, not auto-coerced.
 Sequence markers support keyboard buttons and pointer selection. Pointer
 coordinates choose a nearest measured beat (or exact zero/song-end boundary);
 post-song beats extrapolate the established beat map. The end selector is the
-default. Draft highlight is separate from placed/reserved interval-graph lanes:
-stable start/end/id sorting and first available lane reuse yield minimum rows.
+default. Draft highlight is separate from placed/reserved rows. Sort placements
+by descending saved priority; put each whole interval immediately below its
+lowest overlapping predecessor, reusing rows for disjoint clips. Reservations
+follow placed clips without priority controls. Never split UI blocks at overlap
+boundaries. Each lower clip has one move-up target: the highest-priority
+overlapping placement in the row immediately above. The existing pairwise
+priority swap lifts the whole clip; source bounds and timings do not change.
+Whole-clip identity and truthful dominance take precedence over minimum rows.
 Coverage still uses only included placements. No timeline edit implicitly
 starts generation.
 

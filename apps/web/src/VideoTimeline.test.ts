@@ -90,7 +90,7 @@ test('priority controls swap the exact adjacent overlapping placements, not draf
  const move=nodes.find(n=>n.props['data-priority-placement-id']==='first'&&n.props['data-priority-above-id']==='overlap');
  expect(move?.type).toBe('button');
  expect(move?.props['aria-label']).toBe('Move Alpha shot above Beta shot');
- expect(move?.props.title).toContain('through all their overlaps');
+ expect(move?.props.title).toContain('Move this whole clip above Beta shot');
  expect(move?.props.disabled).toBe(false);
  (move?.props.onClick as ()=>void)();
  expect(onSwapPriority).toHaveBeenCalledExactlyOnceWith('first','overlap');
@@ -112,8 +112,33 @@ test('busy or missing priority callback cannot change overlap priority',()=>{
 
 test('timeline rows show saved dominance rather than earliest-start order',()=>{
  const props=fixture(),nodes=elements(VideoTimeline(props));
- const pieces=nodes.filter(n=>n.props['data-segment-start']!==undefined);
- const overlap=pieces.filter(n=>n.props['data-segment-start']===24);
- expect(overlap.map(n=>[n.props['data-segment-placement'],n.props['data-segment-lane']])).toEqual([['overlap',0],['first',1]]);
- expect(pieces.find(n=>n.props['data-segment-placement']==='later')?.props['data-segment-lane']).toBe(0);
+ const pieces=nodes.filter(n=>n.props['data-placement-id']!==undefined);
+ expect(pieces).toHaveLength(props.arrangement.placements.length);
+ expect(pieces.find(n=>n.props['data-placement-id']==='overlap')?.props['data-placement-lane']).toBe(0);
+ expect(pieces.find(n=>n.props['data-placement-id']==='first')?.props['data-placement-lane']).toBe(1);
+ expect(pieces.find(n=>n.props['data-placement-id']==='later')?.props['data-placement-lane']).toBe(0);
+ for(const placement of props.arrangement.placements){
+  const shown=pieces.filter(n=>n.props['data-placement-id']===placement.id);
+  expect(shown).toHaveLength(1);
+  expect(shown[0]!.props['data-placement-start']).toBe(placement.startFrame);
+  expect(shown[0]!.props['data-placement-end']).toBe(placement.endFrame);
+  expect(nodes.filter(n=>n.props['data-priority-placement-id']===placement.id).length).toBeLessThanOrEqual(1);
+ }
+});
+
+
+test('the reported four-clip overlap renders exactly four complete blocks and two move-up arrows',()=>{
+ const props=fixture();props.studio.snapshot!.reservations=[];
+ const geometry=[[0,108,5],[108,216,3],[178,219,2],[200,254,4]];
+ props.arrangement.placements=geometry.map(([startFrame,endFrame,priority],i)=>({id:`use-${i}`,clipId:i%2?'alpha':'beta',startFrame:startFrame!,endFrame:endFrame!,priority:priority!,sourceStartFrame:0}));
+ const nodes=elements(VideoTimeline({...props,onSwapPriority:vi.fn()}));
+ const blocks=nodes.filter(n=>n.props['data-placement-id']!==undefined);
+ expect(blocks).toHaveLength(4);
+ expect(new Set(blocks.map(n=>n.props['data-placement-id'])).size).toBe(4);
+ expect(nodes.filter(n=>n.props['data-priority-placement-id']!==undefined)).toHaveLength(2);
+ for(const p of props.arrangement.placements){
+  const block=blocks.find(n=>n.props['data-placement-id']===p.id)!;
+  expect(block.props['data-placement-start']).toBe(p.startFrame);
+  expect(block.props['data-placement-end']).toBe(p.endFrame);
+ }
 });

@@ -56,7 +56,7 @@ Source: `scope.md > The Core Loop` and `What "Working" Looks Like`.
 
 ## Screens and Layout
 
-**Second workspace refinement, 23 October:** project selection and five-second floating notification announcements live in the navbar. Tabs precede the project name and stay selected across project switches; hazard stripes guide Music then Video. Duration/BPM precede truncated soundtrack titles. Clip cards form a 4–5-column desktop library, distinguish placed clips, and expose trim/position/audio controls without disclosures. Technical frame/provenance and repeated timing prose move out of the working UI, not out of retained records. Priority is edited in the sequence: top lane wins; lower overlapping segments can swap with the placement above. Shared Config provides actual music/video agent templates with explicit Save/default restoration and revision-conflict handling. Each new attempt captures template instructions, preserving old queued/running/retry instructions. See `workbench-round-two.md` for verification.
+**Second workspace refinement, 23 October:** project selection and five-second floating notification announcements live in the navbar. Tabs precede the project name and stay selected across project switches; hazard stripes guide Music then Video. Duration/BPM precede truncated soundtrack titles. Clip cards form a 4–5-column desktop library, distinguish placed clips, and expose trim/position/audio controls without disclosures. Technical frame/provenance and repeated timing prose move out of the working UI, not out of retained records. Priority is edited in the sequence: top lane wins; each placed clip remains one whole block in one row, with at most one move-up control. Never split a clip across rows to reduce row count. Shared Config provides actual music/video agent templates with explicit Save/default restoration and revision-conflict handling. Each new attempt captures template instructions, preserving old queued/running/retry instructions. See `workbench-round-two.md` for verification.
 
 The learner described one main studio workspace with Projects and Config navigation, rather than a separate full-screen wizard for every generation step.
 
@@ -748,8 +748,11 @@ or beat marker changes the end by default, with an explicit option to change
 the start. Existing exact containing-frame conventions still apply. An inverted
 selection is explained, not silently swapped. The proposed next shot appears as
 a distinct sequence highlight, excluded from coverage until successfully made.
-Placed and reserved intervals reuse the first available lane; simultaneous
-overlap, not clip count, determines the minimum number of rows.
+Placed and reserved intervals each appear once, spanning their full interval in
+one fixed row. Reuse rows for disjoint clips while keeping higher-priority
+overlaps above lower ones. Whole-clip identity takes precedence over minimum
+row count: never split a clip across rows. One move-up control per lower clip
+changes its saved priority, not its timing or source media.
 
 Confirmed acceptance clears the clip description for the next shot, but not
 project style. Failed/ambiguous submissions retain their inputs. One combined

@@ -35,3 +35,11 @@
 .prompt-template-settings{border-top:1px solid var(--border);padding:18px 0}.prompt-template-settings h2{font-size:23px}.prompt-template-settings p{font-size:12px;color:var(--muted)}.prompt-template-field textarea{min-height:240px;font:12px/1.5 var(--mono);padding:10px}.prompt-template-field{margin:15px 0}.prompt-template-settings .row-actions{gap:8px}
 .live-preview{min-width:0}.live-preview-picture{width:100%;max-height:235px;overflow:hidden}.live-preview-transport{display:flex;flex-wrap:wrap;align-items:center;gap:5px;padding-top:6px}.live-preview-transport input{padding:0;margin:0;accent-color:var(--cyan);height:20px;min-width:0}.live-preview-seek{flex:1;min-width:80px!important}.live-preview-time{font:9px var(--mono);color:var(--muted);white-space:nowrap}.live-preview-volume{width:64px}.live-preview-mute{font-size:10px}.video-preview .screen-and-controls{display:block}.video-preview .render-controls{padding-top:8px;flex-direction:row;align-items:center}.video-preview .render-status{width:auto;font-size:10px}.video-preview .render-status p{max-width:250px;overflow-wrap:anywhere}.live-preview:has(.live-preview-picture:focus-visible){outline:2px solid var(--cyan)}
 .clip-edit .trim-grid label{grid-template-columns:41px minmax(0,1fr)}.clip-edit .trim-grid label>span{white-space:nowrap;letter-spacing:0;text-transform:none}.clip-edit .move-grid label>span{letter-spacing:0;text-transform:none}
+
+/* Cutwork: a native vector mark and unmistakable action controls. */
+.brand-mark{display:block;width:38px;height:38px;object-fit:contain;flex-shrink:0}
+.button.destructive-text{border-color:#895d51;color:#efb6a3;background:#342a27}
+.button.destructive-text:hover:not(:disabled){background:#49312b;border-color:#c2866e;color:#ffdccb}
+.live-preview-mute.button{padding:5px 8px;min-height:28px}
+.live-preview-mute[aria-pressed=true]{border-color:var(--cyan);background:#29423f;color:#d9f1e9}
+@media(max-width:740px){.brand-mark{width:32px;height:32px}}

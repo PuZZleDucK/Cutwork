@@ -11,6 +11,12 @@ Approved by the learner on 20 October 2026 ("looking good"), after the requireme
 
 Source: `scope.md > The Unique Kernel`, `The Core Loop`, and `What "Working" Looks Like`.
 
+
+**Product identity, 24 October:** the learner selected **Cutwork**. Use the
+original hazard-striped clapperboard SVG in the navbar and favicon. Actions,
+including delete/remove/range-preset/mute, have button styling rather than
+underlined link styling. Preserve existing runtime paths and stored identities.
+
 ## Changes to the Approved Scope
 
 The initial scope was approved on 19 October 2026. The following interview additions and refinements were approved with this PRD on 20 October 2026 and have been reconciled into `scope.md` and `scope.html`. This section retains the change rationale so the expanded boundary remains visible rather than appearing to have been part of the original minimal sketch.

@@ -70,12 +70,13 @@ The real LAN browser reload shows the existing selected project, saved prompts,
 style, timing and clips intact, with bundled Kirsty headings and all five tools
 ready. No new production generation or creative edit was made for this check.
 
-## Fresh-runtime installation in progress
+## Fresh-runtime installation — tool setup complete, creative journey pending
 
 A separate source and empty managed runtime on Dundee pass actual bootstrap and
 repeat-install/idempotency checks. Host Python and existing production/TTS
 service identities are unchanged. Browser **Install all** was submitted once;
-installation survives refresh and continues downloading isolated dependencies.
+installation survived refresh and has now completed the isolated dependencies,
+model downloads and tool readiness checks.
 One clearly named first-use proof project has a saved music prompt but no
 generation has been requested yet.
 
@@ -84,5 +85,12 @@ service manager and the account's existing provider sign-in, but no existing
 generator environments or model cache. It is not a clean OS or new-account
 authentication test. That separate source snapshot predates the service-path
 correction and is not evidence for a fixed fresh persistent-service install.
-The remaining tool setup and song/clips/edit/continuation/export journey are
-still pending; no completed newcomer-path claim is made.
+A fresh read on 24 October confirms all five setup steps are ready. Local
+Melbourne completion/check times on 23 October: agent 19:44, YuE2 20:40, ComfyUI
+21:00, H3 22:48, audio analysis 22:52. The H3 log records all six model/notice files
+verified; both generator dependency/import and model-checksum checks pass.
+ComfyUI registration/cancellation and CPU media/analysis checks also pass.
+No song has yet been generated in this separate proof project. The
+song/clips/edit/continuation/export journey remains pending; tool readiness is
+not a completed newcomer creative-path claim. The current status receipt is
+`.local-evidence/slice-9/cutwork-branding/fresh-install-overview.json`.

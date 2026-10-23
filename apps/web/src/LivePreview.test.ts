@@ -22,3 +22,8 @@ test('song-only sequence is immediately playable over black frames without any r
  const html=renderToStaticMarkup(createElement(LivePreview,{song,arrangement:{...arrangement,placements:[]},clips:[]}));
  expect(html).toContain('Play live preview');expect(html).toContain('Uncovered sequence');expect(html).not.toContain('<video');
 });
+
+test('preview mute is a styled toggle button with explicit pressed state',()=>{
+ const html=renderToStaticMarkup(createElement(LivePreview,{song,arrangement,clips:[clip('a')]}));
+ expect(html).toMatch(/<button[^>]*class="button secondary small live-preview-mute"[^>]*aria-pressed="false"[^>]*>Mute<\/button>/);
+});

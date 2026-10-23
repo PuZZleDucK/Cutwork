@@ -25,7 +25,7 @@ export function PromptTemplateEditor({value,busy,dirty,error,status,onChange,onS
    <div className="row-actions">
     <button className="button primary" disabled={busy||!dirty||validation.length>0}>Save templates</button>
     <button className="button secondary" type="button" disabled={busy} onClick={onDefaults} title="Load the original templates into these fields. Save to apply them.">Use defaults</button>
-    <button className="text-button" type="button" disabled={busy} onClick={onReload}>{dirty?'Reload saved templates (discard edits)':'Reload saved templates'}</button>
+    <button className="button secondary small" type="button" disabled={busy} onClick={onReload}>{dirty?'Reload saved templates (discard edits)':'Reload saved templates'}</button>
    </div>
   </form>
  </section>;

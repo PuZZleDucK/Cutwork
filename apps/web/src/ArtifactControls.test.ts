@@ -54,3 +54,9 @@ test('cancelled disclosure restores only its connected enabled trigger without s
  expect(restoreDeletionTriggerFocus({...trigger,isConnected:false})).toBe(false);
  expect(restoreDeletionTriggerFocus(null)).toBe(false);expect(focus).not.toHaveBeenCalled();
 });
+
+test('permanent deletion is a distinct styled button alongside the archive action',()=>{
+ const html=renderToStaticMarkup(createElement(ArtifactControls,{studio:studio('active'),refValue:ref,title:'The clip'}));
+ expect(html).toMatch(/<button[^>]*class="button secondary small destructive-text"[^>]*>Delete permanently…<\/button>/);
+ expect(html).toContain('>Archive</button>');
+});

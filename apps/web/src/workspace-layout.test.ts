@@ -52,3 +52,10 @@ test('the navbar filters routine advisories and successful actions but retains g
  expect(header).not.toContain('Clip order updated.');expect(header).not.toContain('Models share one GPU lane.');expect(header).not.toContain('Each native generation is bounded to');
  expect(header).toContain('notice-count">2</span>');
 });
+
+test('Cutwork branding appears in the navbar and footer without renaming saved projects',()=>{
+ const html=fixture();
+ expect(html).toContain('aria-label="Cutwork studio home"');expect(html).toContain('src="/cutwork-mark.svg"');
+ expect(html).toContain('CUTWORK');expect(html).toContain('CUTWORK / LOCAL CREATIVE WORKBENCH');
+ expect(html).not.toContain('ASSEMBLY');expect(html).toContain('Workshop');expect(html).toContain('Keep this idea');
+});

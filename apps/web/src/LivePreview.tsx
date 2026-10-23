@@ -84,7 +84,7 @@ export function LivePreview({song,arrangement,clips,active=true}:LivePreviewProp
    <button type="button" className="button secondary small" onClick={toggle} disabled={!active||plan.durationSeconds===0} aria-label={playing?'Pause live preview':'Play live preview'}>{playing?'Pause':'Play'}</button>
    <input className="live-preview-seek" aria-label="Seek live preview" aria-valuetext={`${formatPreviewTime(point.timeSeconds)} of ${formatPreviewTime(plan.durationSeconds)}`} type="range" min="0" max={plan.durationSeconds} step={1/PREVIEW_FPS} value={point.timeSeconds} onChange={event=>seek(Number(event.target.value))}/>
    <output className="live-preview-time" aria-label="Live preview position" title="Minutes:seconds:frames at 24 fps">{formatPreviewTime(point.timeSeconds)} / {formatPreviewTime(plan.durationSeconds)}</output>
-   <button type="button" className="text-button live-preview-mute" onClick={()=>setMuted(!muted)} aria-label={muted?'Unmute live preview':'Mute live preview'} aria-pressed={muted}>{muted?'Unmute':'Mute'}</button>
+   <button type="button" className="button secondary small live-preview-mute" onClick={()=>setMuted(!muted)} aria-label={muted?'Unmute live preview':'Mute live preview'} aria-pressed={muted}>{muted?'Unmute':'Mute'}</button>
    <input className="live-preview-volume" aria-label="Live preview volume" type="range" min="0" max="1" step="0.05" value={volume} onChange={event=>setVolume(Number(event.target.value))}/>
   </div>
   {failure&&<p className="warning small-copy" role="status">{failure}</p>}

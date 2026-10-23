@@ -11,6 +11,12 @@ Markdown is canonical; `spec.html` is the offline visual companion. The learner 
 
 **Reading key:** **Agreed/Accepted** records the learner's choices. **Accepted P9** records the approved host/tool dependency-installation split. **Gate** means evidence still required before claiming the integration works. Accepted design is not a feasibility certificate.
 
+
+**Product identity, 24 October:** the learner selected **Cutwork**. Use the
+original hazard-striped clapperboard SVG in the navbar and favicon. Actions,
+including delete/remove/range-preset/mute, have button styling rather than
+underlined link styling. Preserve existing runtime paths and stored identities.
+
 ## How This Works, In Plain Language
 
 The browser is the studio's control surface, not the machine doing the work. Dundee, the target Ubuntu GPU server, remembers projects and edits, installs and monitors the tools, runs the selected frontier-agent terminal program, and owns every generation even when you close the browser.

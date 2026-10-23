@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <title>Cutwork hazard-striped clapperboard</title>
+  <!-- Original project-authored vector mark. MIT, Cutwork contributors. -->
+  <defs>
+    <pattern id="hazard" width="16" height="16" patternUnits="userSpaceOnUse" patternTransform="rotate(-35)">
+      <rect width="16" height="16" fill="#efbd62"/>
+      <rect width="8" height="16" fill="#1b2225"/>
+    </pattern>
+  </defs>
+  <rect x="7" y="27" width="50" height="31" rx="3" fill="#222b2e" stroke="#efbd62" stroke-width="2.5"/>
+  <path d="M8 36h48" stroke="#efbd62" stroke-width="2"/>
+  <rect x="8" y="27" width="48" height="9" fill="url(#hazard)"/>
+  <rect x="7" y="15" width="50" height="10" rx="1.5" transform="rotate(-14 7 25)" fill="url(#hazard)" stroke="#efbd62" stroke-width="2"/>
+  <path d="M14 43h19m6 0h10M14 50h35" stroke="#e9e7db" stroke-width="2.5" stroke-linecap="square"/>
+  <circle cx="10" cy="29" r="3" fill="#efbd62"/>
+  <circle cx="10" cy="29" r="1.2" fill="#1b2225"/>
+</svg>

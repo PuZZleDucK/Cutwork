@@ -145,7 +145,7 @@ occurrence from both the inbox and count. Review cannot undo dismissal.
   resolving failures leaves an empty/disabled inbox; dismissed LAN warning is
   absent after reload. Exact 5,000ms duration retains fake-timer coverage.
 - [x] Application success-action check, safe deployment and production proof.
-- [ ] Learner review of notification behaviour.
+- [x] Learner accepted notification refinement with “great stuff” (24 October).
 
 Private evidence: `.local-evidence/slice-9/notification-dismissal/`. No model
 download or new generation is required. Previous notification tests incorrectly

@@ -1,19 +1,23 @@
-# Assembly — AI music-video studio
+# Cutwork — AI music-video studio
 
 A text-first, agent-mediated music-video workbench: describe a song, generate
 song-conditioned clips, arrange them on a beat/frame timeline, and export an MP4.
 The browser works across a **trusted LAN**; one Ubuntu/NVIDIA server runs the tools.
-Assembly is the provisional project name.
+**Cutwork** is the project name. Its original hazard-striped clapperboard mark is
+editable SVG at `apps/web/public/cutwork-mark.svg`, included under the project MIT
+licence. Existing runtime directories and browser-storage keys are intentionally
+unchanged so renaming the app does not disturb projects or saved drafts.
 
-The creative loop, precise edits, continuation, recovery and media lifecycle are
-implemented. The latest completed checkpoint is [slice 8](devpost/slice-8-evidence.md)
-(`0b99abd`): **1,322 tests**, typecheck/build on both development and deployment
-hosts, real CPU/HTTP lifecycle checks, and a preservation audit of **831 existing
-assets**. Prior slices provide actual provider, YuE2 and H3 generation evidence.
-Newcomer packaging and final review are the current slice; **a clean Ubuntu install
-and final human watch/listen are not yet proven**. See the
-[criterion-by-criterion evidence map](devpost/prd-traceability.md) rather than
-interpreting a test count as complete product acceptance.
+The creative loop, precise edits, live preview, continuation, recovery and media
+lifecycle are implemented. Current verification is indexed in
+[the build checklist](devpost/checklist.md), with
+[recent workspace refinements](devpost/workbench-round-two.md) and
+[installation evidence](devpost/slice-9-readiness.md).
+Fresh managed-runtime tool installation and model checksum checks have passed on
+Dundee. The end-to-end creative journey in that fresh runtime, final learner
+review and learning wrap-up remain open. **A clean Ubuntu installation is not
+claimed.** See the [criterion-by-criterion evidence map](devpost/prd-traceability.md)
+rather than interpreting a test count as complete product acceptance.
 
 ## Before you run it
 

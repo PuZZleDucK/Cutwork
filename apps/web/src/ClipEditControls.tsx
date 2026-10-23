@@ -33,7 +33,7 @@ export function ClipEditControls({studio,song,arrangement,clip,context,onContinu
   </div>
   {stale&&<p className="warning" role="alert">Changed elsewhere. Load the latest edit before applying.</p>}
   {dirty&&<p className="small-copy muted" role="status">Apply or discard timing edits first.</p>}
-  {(dirty||stale)&&<button type="button" className="text-button" disabled={studio.busy} onClick={()=>reset(context)}>{stale?'Load latest edit':'Discard timing edits'}</button>}
+  {(dirty||stale)&&<button type="button" className="button secondary small" disabled={studio.busy} onClick={()=>reset(context)}>{stale?'Load latest edit':'Discard timing edits'}</button>}
   <div className="edit-context-body" aria-label={`Timing and audio for ${clip.title}`}>
   <fieldset disabled={disabled||dirty==='move'} className="source-trim"><legend title="Trim source footage without moving retained frames. Apply saves changes; switching songs or projects discards unapplied edits.">Trim</legend>
    <div className="trim-grid">{(['start','end'] as const).map(endpoint=>{const value=trim[endpoint],shown=trimEditDisplay(song,base,value,endpoint);return <div key={endpoint}><h4>{endpoint==='start'?'In':'Out'}</h4>{(['sourceFrames','beats','seconds'] as const).map(unit=>{

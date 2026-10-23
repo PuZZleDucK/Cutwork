@@ -24,7 +24,7 @@ export function DebugControl({tool,studio,onOpenChange}:{tool:ToolStatus;studio:
  return <div className="debug-control">
   {['error','missing'].includes(tool.state)&&<button type="button" className="button secondary small" disabled={busy||studio.busy||tool.active} onClick={()=>void prepare()}>Debug with agent…</button>}
   {error&&!record&&<p className="error-copy" role="alert">{error}</p>}
-  {!!records.length&&<details className="debug-history"><summary>Setup repair record ({records.length})</summary>{records.slice(0,10).map(r=><button type="button" key={r.id} className="text-button" onClick={()=>{setError(null);setRecord(r);}}>{r.state.replaceAll('_',' ')} · {new Date(r.createdAt).toLocaleString()}</button>)}</details>}
+  {!!records.length&&<details className="debug-history"><summary>Setup repair record ({records.length})</summary>{records.slice(0,10).map(r=><button type="button" key={r.id} className="button secondary small" onClick={()=>{setError(null);setRecord(r);}}>{r.state.replaceAll('_',' ')} · {new Date(r.createdAt).toLocaleString()}</button>)}</details>}
   {record&&<dialog className="debug-dialog" ref={dialog} aria-labelledby={`debug-title-${tool.id}`} onCancel={e=>{e.preventDefault();if(!busy)void close();}}><div className="debug-heading"><div><span className="eyebrow">SHARED TOOL REPAIR / {record.state.toUpperCase()}</span><h2 id={`debug-title-${tool.id}`}>Debug {tool.label}</h2></div><button className="icon-button" disabled={busy} aria-label="Close Debug dialog" onClick={()=>void close()}>×</button></div>
    <DebugDisclosure record={record}/>
    {error&&<p className="error-copy" role="alert">{error} Check the recorded status before taking further action; a lost response does not prove no launch occurred.</p>}

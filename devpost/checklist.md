@@ -11,13 +11,17 @@ The scope, PRD and technical specification are approved. The learner approved th
 
 ## Latest fast-mode verification index
 
-**Latest: slice 8 is complete and deployed.** Final checks pass **1,322 tests in
-85 files on both hosts**, typecheck/build, 11 actual CPU/HTTP lifecycle proof
-stages, an independent filesystem audit and real browser archive/restore/disclosure
-checks. The schema7→8 deployment preserved all 831 original registered assets and
-existing creative/native/Debug data; TTS/personal ComfyUI were unchanged. See
-[slice-8-evidence.md](slice-8-evidence.md). Slice 9 and the final learner
-review/wrap-up remain unfinished.
+**Latest: the slice 9 packaging checkpoint is deployed; slice 9 is not complete.**
+The corrected source passes **1,332 tests in 88 files** on Dundee, typecheck/build
+and 30 Python bootstrap cases. Actual persistent-service installation exposed and
+repaired a working-directory quoting error missed by mocks. All **55/55** final
+preservation checks pass for **831 registered assets**, exact schema-8
+creative/native/Debug data and unchanged TTS/personal ComfyUI identities.
+Fresh-runtime bootstrap and repeat installation pass; the separate browser
+Install-all dependency/model setup and creative journey remain in progress.
+See [slice-9-readiness.md](slice-9-readiness.md) for the failed-run history and
+evidence boundaries. Slice 8 remains complete; final learner review/wrap-up is
+unfinished.
 
 
 The chronological notes below remain as history. Slice 1 is complete; its
@@ -382,6 +386,8 @@ Reflection: Not offered yet; any personal response belongs in the ignored learne
 Activity mode: Proposed focused planning/verification investigation suitable for an experienced developer; not yet performed.
 
 ## Revisions
+
+- **23 October — actual service-path repair and preservation:** real systemd rejected argument-style quotes around `WorkingDirectory`; a red regression and actual parser check now cover the corrected path syntax. The frozen repair passes the full 1,332-test suite, typecheck/build and 30 Python cases. Normal persistent service installation succeeds, and the final 55/55 audit preserves every original asset/creative/native/Debug record and unrelated service identity. The first failed activation and a separately reviewed asdf PATH observation mismatch remain in the evidence. Fresh-runtime tool installation continues separately; slice 9 and final acceptance stay unchecked.
 
 - **23 October — slice 9 packaging checkpoint (not slice completion):** learner chose MIT for application code. Historical Kirsty v1.0 redistribution was verified against the original Linux-package author licence after the learner correctly pointed out the older distribution; retain unchanged font bytes and notices, not current-release assumptions. Bootstrap, XDG paths, persistent service checks, notices and the 160-criterion evidence map are implemented. Full local suite passes 1,332 tests in 88 files plus typecheck/build; bootstrap bridge includes 29 Python cases. Real browser checks repaired medium-width tooltip clipping and verified narrow keyboard timing/dialog behavior and bundled Kirsty. Fresh-runtime installation is being exercised separately; no fresh-OS, production upgrade, human-listening or final-review completion is claimed.
 

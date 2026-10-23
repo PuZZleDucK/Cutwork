@@ -129,4 +129,8 @@ class Bootstrap(unittest.TestCase):
   script=self.home/'diagnostic.py';script.write_text("import sys;print('x'*20000+'TYPECHECK_STDOUT');print('COMPILER_STDERR',file=sys.stderr);sys.exit(1)")
   with self.assertRaises(RuntimeError)as caught:m.command(['/usr/bin/python3',str(script)])
   self.assertIn('TYPECHECK_STDOUT',str(caught.exception));self.assertIn('COMPILER_STDERR',str(caught.exception));self.assertLess(len(str(caught.exception)),17000)
+ def test_working_directory_uses_systemd_path_not_exec_argument_quoting(self):
+  c={**self.c,'source':self.home/'checkout with spaces % and quotes'}
+  line=next(v for v in m.service_text(c).splitlines()if v.startswith('WorkingDirectory='))
+  self.assertEqual(line,'WorkingDirectory='+str(c['source']).replace('%','%%'))
 if __name__=='__main__':unittest.main()

@@ -18,13 +18,13 @@
 - [x] Audit all 160 PRD criteria against exact test/live evidence and explicit gaps (`prd-traceability.md`).
 - [ ] Exercise current browser keyboard, dialogs, responsive layout and reduced-motion behavior where supported.
 - [ ] Exercise fresh managed runtime setup and newcomer creative journey; disclose reused host prerequisites/cache/auth.
-- [ ] Run full checks and preserve existing production rows/assets during deployment.
+- [x] Run full checks and preserve existing production rows/assets during this deployment; repeat after any further code changes.
 - [ ] Final learner exploration and perceptual watch/listen; do not infer approval from agent tests.
 - [ ] Show the prepared app map and complete the learning wrap-up with the learner.
 
 ## Evidence boundaries
 
-The initial private preflight was taken while slice 8 was unfinished. Its partial test/proof counts are historical, superseded by `slice-8-evidence.md`. Do not repeat them as current failures. Production remains the preserved slice-8 source until an explicitly verified deployment. No clean-OS installation, universal memory guarantee, seamless visual joins, mastered audio, or unrestricted model/output licensing is claimed.
+The initial private preflight was taken while slice 8 was unfinished. Its partial test/proof counts are historical, superseded by `slice-8-evidence.md`. Do not repeat them as current failures. Production now runs the verified slice-9 packaging checkpoint with the service-path correction described below. No clean-OS installation, universal memory guarantee, seamless visual joins, mastered audio, or unrestricted model/output licensing is claimed.
 
 ## Current UI findings
 
@@ -37,3 +37,52 @@ The initial private preflight was taken while slice 8 was unfinished. Its partia
 Default bootstrap is read-only; explicit installation uses pinned Node and native SQLite verification, isolated-tool setup stays in the UI, and persistent service installation never silently stops another service. Server/installer now agree on XDG data-root precedence. Tests-first review reproduced and repaired stale loaded-unit reuse after a failed reload, omitted build dependencies under production environments, nested Debug-state and failed-purge idle guards, and lost stdout diagnostics. The final focused Python bridge runs 29 actual fixture cases; the bounded independent review verified the preceding 28 plus notices/font/UI tests before the final diagnostic addition. These are not real systemd installation results.
 
 `app-map.html` is prepared and visually checked, but the learner has not yet toured it or completed the wrap-up. No publication or final acceptance is implied.
+
+## Actual service installation and recovery
+
+The first real persistent-service activation failed: systemd treated the quoted
+`WorkingDirectory=` value as a non-absolute path. The mocked service tests had
+missed the difference between that directive and `ExecStart=` argument quoting.
+Retain the failed candidate and activation logs; they are not a successful run.
+
+A regression first reproduced the defect. The correction emits the absolute
+working-directory path without argument quotes, retaining systemd percent-sign
+escaping. All **30 Python bootstrap cases** pass, actual systemd verification
+passes, and the corrected frozen source passes **1,332 tests in 88 files**,
+typecheck and build on Dundee. The normal installer successfully creates and
+starts the enabled, persistent (not transient) user service.
+
+The deployment observer then found that the account's existing asdf Python shim
+adds exactly two Python directories to PATH. This was an observer expectation
+mismatch after successful startup, not a second service failure. The original
+expectation is retained; an exact reviewed delta records those two existing
+directories with every other unit/environment field unchanged.
+
+The final **55/55 read-only preservation checks** pass: all **831 registered
+assets**, schema version 8 and every schema object, creative/history/edit/draft
+row, native queue and Debug record are unchanged. Only ordinary startup tool
+readiness changed. TTS and personal ComfyUI process identities are unchanged.
+The repair test process inherited the production data-root environment; default
+tests use temporary fixtures, and this preservation audit verifies no production
+mutation. Do not describe that process environment as an isolated runtime.
+
+The real LAN browser reload shows the existing selected project, saved prompts,
+style, timing and clips intact, with bundled Kirsty headings and all five tools
+ready. No new production generation or creative edit was made for this check.
+
+## Fresh-runtime installation in progress
+
+A separate source and empty managed runtime on Dundee pass actual bootstrap and
+repeat-install/idempotency checks. Host Python and existing production/TTS
+service identities are unchanged. Browser **Install all** was submitted once;
+installation survives refresh and continues downloading isolated dependencies.
+One clearly named first-use proof project has a saved music prompt but no
+generation has been requested yet.
+
+This reuses Ubuntu, the NVIDIA driver, system APT/FFmpeg prerequisites, the user
+service manager and the account's existing provider sign-in, but no existing
+generator environments or model cache. It is not a clean OS or new-account
+authentication test. That separate source snapshot predates the service-path
+correction and is not evidence for a fixed fresh persistent-service install.
+The remaining tool setup and song/clips/edit/continuation/export journey are
+still pending; no completed newcomer-path claim is made.

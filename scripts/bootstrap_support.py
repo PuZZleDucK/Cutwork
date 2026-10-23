@@ -195,7 +195,7 @@ def quoted(value,exec_arg=False):
 def service_text(c):
  # Preserve normal account config paths, not authentication secrets in unit text.
  values={k:c['env'][k]for k in ['STUDIO_DATA_ROOT','STUDIO_PORT','STUDIO_HOST','PATH','STUDIO_GPU_UUID','STUDIO_NATIVE_LIMIT_SECONDS','STUDIO_ALLOWED_HOSTS','XDG_DATA_HOME','XDG_CONFIG_HOME','CODEX_HOME','CLAUDE_CONFIG_DIR']if k in c['env']}
- return '\n'.join(['# Assembly managed user service v1','[Unit]','Description=Assembly trusted-LAN music video studio','After=network-online.target','Wants=network-online.target','','[Service]','Type=exec','WorkingDirectory='+quoted(c['source']),*[f'Environment={quoted(k+"="+v)}'for k,v in values.items()],f'ExecStart={quoted(c["node"],True)} {quoted(c["source"]/"apps/server/src/main.ts",True)}','KillMode=control-group','TimeoutStopSec=120s','Restart=no','UMask=0077','','[Install]','WantedBy=default.target',''])
+ return '\n'.join(['# Assembly managed user service v1','[Unit]','Description=Assembly trusted-LAN music video studio','After=network-online.target','Wants=network-online.target','','[Service]','Type=exec','WorkingDirectory='+str(c['source']).replace('%','%%'),*[f'Environment={quoted(k+"="+v)}'for k,v in values.items()],f'ExecStart={quoted(c["node"],True)} {quoted(c["source"]/"apps/server/src/main.ts",True)}','KillMode=control-group','TimeoutStopSec=120s','Restart=no','UMask=0077','','[Install]','WantedBy=default.target',''])
 
 def verify_loaded_service(c,run):
  loaded=unit_state(run)

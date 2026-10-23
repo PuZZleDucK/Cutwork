@@ -11,6 +11,14 @@ The scope, PRD and technical specification are approved. The learner approved th
 
 ## Latest fast-mode verification index
 
+**Priority clarification deployed:** one whole sequence block per placement,
+never split across rows, with at most one move-up arrow. The reported four-clip
+project now shows exactly four blocks (previously seven fragments). **1,411
+tests**, typecheck/build and browser swaps pass; web-only deployment preserves
+all databases, **832 assets** and service identities without a restart. See
+the whole-clip follow-up in [workbench-round-two.md](workbench-round-two.md).
+Learner retry remains open.
+
 **Latest: the second requested workspace refinement is deployed; slice 9 is not complete.**
 Project selection and five-second floating notices are in the navbar; tabs persist
 across project switches. Config exposes captured music/video agent templates.

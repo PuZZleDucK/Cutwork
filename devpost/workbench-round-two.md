@@ -106,6 +106,19 @@ extra row in overlap chains; do not sacrifice clip identity to compress rows.
   no split/repeated block keys or arrows, and deterministic row reuse.
 - [x] Cover all 120 priority orders of a five-clip overlap chain; every offered
   move-up actually raises the whole clip without changing geometry.
-- [ ] Full suite/build, disposable browser swap, safe web-only deployment and
+- [x] Full suite/build, disposable browser swap, safe web-only deployment and
   live reported-project verification.
 - [ ] Learner review of the simpler sequence.
+
+Follow-up evidence (deployed checkpoint `c5752d0`): **1,411 tests in 100
+files**, typecheck and build pass. The disposable browser swapped two whole
+clips in both directions while retaining both full intervals and one arrow.
+The live reported project previously displayed seven fragments/four arrows; it
+now displays **four whole blocks, four unique placement IDs and two arrows**,
+each lower clip receiving just one. All saved start/end bounds remain exact.
+The web-only publication restarted no service, downloaded/generated no media,
+and preserved all database schemas/rows, all **832 assets**, native/Debug data
+and application/TTS/personal-Comfy process identities. Nine HTTP-served files
+match the reviewed build; the reported project's complete API snapshot is
+unchanged. Private before/after screenshots and audit receipts are under
+`.local-evidence/slice-9/whole-clip-priority/`.

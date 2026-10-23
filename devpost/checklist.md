@@ -11,6 +11,20 @@ The scope, PRD and technical specification are approved. The learner approved th
 
 ## Latest fast-mode verification index
 
+**Cutwork branding deployed:** final name, original hazard-striped clapperboard
+mark/favicon, and button styling for formerly link-like actions. **1,424 tests
+in 101 files**, typecheck/build and actual browser checks pass. Web-only deployment
+preserves databases, **832 assets** and service identities. See
+[cutwork-branding.md](cutwork-branding.md).
+
+**The model-download/install test has finished:** a fresh read on 24 October
+shows all five tools ready. H3 checksum/import checks completed at 22:48 and
+audio analysis at 22:52 on 23 October, Melbourne time. Do not keep waiting for or
+restart those downloads. The fresh-runtime song/clips/edit/continuation/export
+journey, final learner review and learning wrap-up are still pending. See
+[slice-9-readiness.md](slice-9-readiness.md). This reuses host prerequisites and
+provider sign-in, not a clean-OS/new-account certification.
+
 **Notification fix deployed:** dismissed occurrences no longer return on panel
 close/reopen or polling; counts include only undismissed notices. The inbox is
 failures-only except for the first-use LAN security notice, whose dismissal is

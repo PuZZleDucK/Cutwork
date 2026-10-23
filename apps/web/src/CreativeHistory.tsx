@@ -42,7 +42,7 @@ const asset = (id: string) => `/api/assets/${encodeURIComponent(id)}`;
 const json = (value: unknown) => JSON.stringify(value, null, 2);
 const labels: Record<string, string> = {
   'project.created': 'Project created', 'project.selected': 'Project opened', 'draft.saved': 'Music inputs saved', 'style.changed': 'Visual style changed',
-  'clip_draft.saved': 'Clip inputs saved', 'song.selected': 'Soundtrack selected', 'placement.added': 'Clip placed', 'placement.moved': 'Clip moved', 'placement.removed': 'Clip removed from sequence',
+  'clip_draft.saved': 'Clip inputs saved', 'clip.trimmed':'Source trim changed', 'clip.moved':'Clip position changed', 'clip.audio_changed':'Soundtrack source changed', 'placement.priority_swapped':'Visual priority swapped', 'song.selected': 'Soundtrack selected', 'placement.added': 'Clip placed', 'placement.moved': 'Clip moved', 'placement.removed': 'Clip removed from sequence',
   'analysis.updated': 'Audio analysis updated', 'render.reused': 'Existing render reused', 'render.cache_invalidated': 'Render cache invalidated',
   'music.requested': 'Music requested', 'music.succeeded': 'Music generated', 'music.failed': 'Music generation failed',
   'video.requested': 'Video requested', 'video.succeeded': 'Video generated', 'video.failed': 'Video generation failed',

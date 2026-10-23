@@ -3,7 +3,7 @@ import fastifyStatic from '@fastify/static';
 import { isAbsolute, resolve } from 'node:path';
 import { StudioStoreError } from './store.ts';
 import { sendStudioAsset } from './assets.ts';
-import type { PlacementInput, StudioStore } from './store-contract.ts';
+import type { ClipEditPatch, PlacementInput, StudioStore } from './store-contract.ts';
 import type { StudioRuntime } from './runtime-contract.ts';
 import type { ClipDraft, MusicDraft, MusicInput, Provider, ToolId, VideoInput } from '../../../../packages/core/src/contracts/studio.ts';
 
@@ -17,12 +17,20 @@ const musicInput = plain({ musicPrompt: draft.properties.musicPrompt, lyrics: dr
 const projectParams = plain({ id: uuid });
 interface SongParams { id: string; songId: string }
 interface PlacementParams extends SongParams { placementId: string }
+interface ContextParams { id: string; contextId: string }
+const contextParams = plain({ id: uuid, contextId: uuid });
 const songParams = plain({ id: uuid, songId: uuid });
 const placementParams = plain({ id: uuid, songId: uuid, placementId: uuid });
 const timingValue = { oneOf: [
   plain({ unit: { type: 'string', enum: ['frames', 'beats', 'seconds'] }, value: { type: 'string', minLength: 1, maxLength: 1000 } }),
   plain({ unit: { const: 'rational' }, value: plain({ numerator: { type: 'string', pattern: '^(0|[1-9][0-9]*)$', maxLength: 1000 }, denominator: { type: 'string', pattern: '^[1-9][0-9]*$', maxLength: 1000 } }) }),
 ] };
+const clipEdit = { type: 'object', additionalProperties: false, minProperties: 1, properties: {
+  sourceStartFrame: revision, sourceEndFrame: { ...revision, minimum: 1 }, startFrame: revision,
+  audioSource: { type: 'string', enum: ['song', 'clip'] },
+  placementIntent: { anyOf: [{ type: 'null' }, timingValue] },
+  trimIntent: { anyOf: [{ type: 'null' }, plain({ start: timingValue, end: timingValue })] },
+} };
 // Drafts intentionally permit unfinished text and invalid intervals, unlike requests.
 const draftTimingText = { type: 'string', maxLength: 1000 };
 const draftTimingValue = { oneOf: [
@@ -99,6 +107,15 @@ export async function registerStudioApi(app: FastifyInstance, { store, runtime, 
     api.delete<{ Params: PlacementParams; Body: { revision: number } }>('/api/projects/:id/songs/:songId/placements/:placementId',
       { schema: { params: placementParams, body: plain({ revision }), querystring: empty } }, request =>
         store.removePlacement(request.params.id, request.params.songId, request.body.revision, request.params.placementId));
+    api.put<{ Params: ContextParams; Body: { revision: number; arrangementRevision: number; edit: ClipEditPatch } }>('/api/projects/:id/edit-contexts/:contextId',
+      { schema: { params: contextParams, body: plain({ revision, arrangementRevision: revision, edit: clipEdit }), querystring: empty } }, request =>
+        store.editClipContext(request.params.id, request.params.contextId, request.body.revision, request.body.arrangementRevision, request.body.edit));
+    api.post<{ Params: ContextParams; Body: { revision: number; arrangementRevision: number; placed: boolean } }>('/api/projects/:id/edit-contexts/:contextId/placement',
+      { schema: { params: contextParams, body: plain({ revision, arrangementRevision: revision, placed: { type: 'boolean' } }), querystring: empty } }, request =>
+        store.setContextPlacement(request.params.id, request.params.contextId, request.body.revision, request.body.arrangementRevision, request.body.placed));
+    api.post<{ Params: SongParams; Body: { revision: number; firstPlacementId: string; secondPlacementId: string } }>('/api/projects/:id/songs/:songId/dominance',
+      { schema: { params: songParams, body: plain({ revision, firstPlacementId: uuid, secondPlacementId: uuid }), querystring: empty } }, request =>
+        store.swapPlacementPriority(request.params.id, request.params.songId, request.body.revision, request.body.firstPlacementId, request.body.secondPlacementId));
     api.post<{ Params: SongParams; Body: { revision: number; idempotencyKey: string } }>('/api/projects/:id/songs/:songId/renders',
       { schema: { params: songParams, body: plain({ revision, idempotencyKey: uuid }), querystring: empty } }, async (request, reply) =>
         reply.code(202).send(await runtime.render(request.params.id, request.params.songId, request.body.revision, request.body.idempotencyKey)));

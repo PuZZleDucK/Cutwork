@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { createReadStream, createWriteStream } from 'node:fs';
-import { mkdir, readFile, realpath, rename, stat, writeFile } from 'node:fs/promises';
+import { mkdir, open, readFile, realpath, rename, stat, writeFile } from 'node:fs/promises';
 import { isAbsolute, join, relative, resolve } from 'node:path';
 import { Readable, Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
@@ -33,6 +33,8 @@ function validate(plan: RenderPlan) {
   assert.ok(integer(p.startFrame) && integer(p.endFrame, 1) && p.endFrame > p.startFrame, 'Placement must be a positive zero-based half-open frame interval');
   assert.ok(integer(p.sourceStartFrame), 'Invalid source frame offset');
   assert.ok(integer(p.priority) && !priorities.has(p.priority), 'Visual priority must be unique'); priorities.add(p.priority);
+  assert.ok(p.audioSource === undefined || p.audioSource === 'song' || p.audioSource === 'clip', 'Invalid placement audio source');
+  if (p.audioSource === 'clip') assert.ok(p.audio && isAbsolute(p.audio.path) && digest(p.audio.sha256), 'Enabled clip audio requires a captured source path/hash');
   assert.ok(Array.isArray(p.frames) && p.sourceStartFrame + p.endFrame - p.startFrame <= p.frames.length, 'Placement overruns retained source frames');
   for (const frame of p.frames) assert.ok(isAbsolute(frame.path) && digest(frame.sha256), 'Invalid retained frame path/hash');
  }
@@ -42,7 +44,7 @@ export function compileRenderPlan(plan: RenderPlan): CompiledRender {
  validate(plan);
  let frameCount = Number((BigInt(plan.song.sampleCount) + 1999n) / 2000n);
  for (const p of plan.placements) frameCount = Math.max(frameCount, p.endFrame);
- assert.ok(integer(frameCount, 1) && Number.isSafeInteger(frameCount * 2000), 'Output duration exceeds exact sample grid');
+ assert.ok(integer(frameCount, 1) && Number.isSafeInteger(frameCount * 2000 * 8), 'Output duration exceeds exact sample/byte grid');
  const boundaries = [...new Set([0, frameCount, ...plan.placements.flatMap(p => [p.startFrame, p.endFrame])])].sort((a,b) => a-b);
  const spans: CompiledRender['spans'] = [];
  for (let i=1; i<boundaries.length; i++) {
@@ -53,7 +55,23 @@ export function compileRenderPlan(plan: RenderPlan): CompiledRender {
   if (prior && prior.placementId === next.placementId && (prior.sourceStartFrame === null || prior.sourceStartFrame+prior.endFrame-prior.startFrame === next.sourceStartFrame)) prior.endFrame=endFrame;
   else spans.push(next);
  }
- return {frameCount,sampleCount:String(BigInt(frameCount)*2000n),spans};
+ const audioSpans:CompiledRender['audioSpans']=[],placements=new Map(plan.placements.map(p=>[p.id,p])),songEnd=BigInt(plan.song.sampleCount);
+ const audioSpan=(start:bigint,end:bigint,source:'song'|'clip'|'silence',placementId:string|null,offset:bigint|null)=>{
+  if(start===end)return;
+  const prior=audioSpans.at(-1);
+  if(prior&&prior.source===source&&prior.placementId===placementId&&prior.endSample===String(start)&&
+   (offset===null?prior.sourceStartSample===null:prior.sourceStartSample!==null&&BigInt(prior.sourceStartSample)+BigInt(prior.endSample)-BigInt(prior.startSample)===offset))prior.endSample=String(end);
+  else audioSpans.push({startSample:String(start),endSample:String(end),source,placementId,sourceStartSample:offset===null?null:String(offset)});
+ };
+ for(const span of spans){
+  const start=BigInt(span.startFrame)*2000n,end=BigInt(span.endFrame)*2000n,p=span.placementId?placements.get(span.placementId):undefined;
+  if(p?.audioSource==='clip')audioSpan(start,end,'clip',p.id,BigInt(span.sourceStartFrame!)*2000n);
+  else {
+   if(start<songEnd)audioSpan(start,end<songEnd?end:songEnd,'song',null,start);
+   if(end>songEnd)audioSpan(start>songEnd?start:songEnd,end,'silence',null,null);
+  }
+ }
+ return {frameCount,sampleCount:String(BigInt(frameCount)*2000n),spans,audioSpans};
 }
 /** Includes renderer profile/version and every immutable media hash; consumers may reuse only an independently validated, current-revision record. */
 export function renderPlanHash(plan: RenderPlan): string { validate(plan); return sha(canonical({profile:PROFILE,plan})); }
@@ -118,6 +136,7 @@ export async function runStudioRender(options:RenderOptions):Promise<RenderResul
  assert.equal(await realpath(runtime),runtime,'Runtime may not contain symlink aliases');assert.equal(await realpath(project),project,'Project directory must be managed without symlink aliases');await mkdir(parent,{recursive:true,mode:0o700});assert.equal(await realpath(parent),parent,'Render directory must be managed');await mkdir(directory,{mode:0o700});
  const ffmpeg=options.ffmpeg??'/usr/bin/ffmpeg',ffprobe=options.ffprobe??'/usr/bin/ffprobe';assert.ok(isAbsolute(ffmpeg)&&isAbsolute(ffprobe),'Absolute media executables required');
  const receiptPath=join(directory,'receipt.json'),partial=join(directory,'output.partial.mp4'),outputPath=join(directory,'output.mp4'),audio=join(directory,'captured-song.wav');
+ const scratchPaths:string[]=[],soundtrack=join(directory,'soundtrack.f32le');
  const startedAt=new Date().toISOString();let result:RenderResult|undefined,primaryError:Error|undefined;
  const evidence:Record<string,unknown>={schemaVersion:1,state:'running',renderId,projectId:plan.projectId,songId:plan.songId,revision:plan.revision,planHash,profile:PROFILE,startedAt,compiled};
  try {
@@ -130,7 +149,68 @@ export async function runStudioRender(options:RenderOptions):Promise<RenderResul
   assert.equal(songProbe.streams.length,1,'Expected one original audio stream');const source=songProbe.streams[0]!;
   assert.equal(source.codec_type,'audio');assert.ok(/^pcm_(s16le|s24le|s32le|f32le)$/.test(String(source.codec_name)),'Expected original PCM WAV');assert.equal(source.sample_rate,'48000');assert.equal(source.channels,2);assert.equal(songProbe.format.format_name,'wav');exactSamples(source,BigInt(plan.song.sampleCount));
   evidence.sourceAudio=source;
-  const validated=new Set<string>();const placementMap=new Map(plan.placements.map(p=>[p.id,p]));const black=blackPng();
+  const placementMap=new Map(plan.placements.map(p=>[p.id,p]));
+  type WorkingAudio={path:string;samples:bigint};
+  async function decodeAudio(input:string,output:string,expectedSamples:bigint):Promise<WorkingAudio>{
+   scratchPaths.push(output);
+   await command(ffmpeg,['-v','error','-xerror','-nostdin','-n','-threads','1','-filter_threads','1','-i',input,'-map','0:a:0','-af',PROFILE.resampleFilter,
+    '-ar','48000','-ac','2','-c:a','pcm_f32le','-f','f32le',output],{signal});
+   const bytes=(await stat(output)).size;assert.ok(Number.isSafeInteger(bytes)&&bytes%8===0,'Invalid decoded PCM byte count');
+   const samples=BigInt(bytes/8);assert.equal(samples,expectedSamples,'Decoded audio sample count differs from authoritative source duration');
+   return{path:output,samples};
+  }
+  const songPcm=await decodeAudio(audio,join(directory,'song.f32le'),BigInt(plan.song.sampleCount));
+  const clipPcm=new Map<string,WorkingAudio>(),clipSources:Record<string,unknown>[]=[];
+  for(const span of compiled.audioSpans){
+   if(span.source!=='clip')continue;
+   const ref=placementMap.get(span.placementId!)!.audio!;
+   const key=ref.path+'\0'+ref.sha256;if(clipPcm.has(key))continue;
+   await managedFile(project,ref.path);
+   const captured=join(directory,`clip-${clipSources.length}.flac`),pcm=join(directory,`clip-${clipSources.length}.f32le`);scratchPaths.push(captured);
+   const capturedHash=createHash('sha256');
+   await pipeline(createReadStream(ref.path),new Transform({transform(bytes:Buffer,_encoding,done){capturedHash.update(bytes);done(null,bytes);}}),createWriteStream(captured,{flags:'wx',mode:0o600}),{signal});
+   assert.equal(capturedHash.digest('hex'),ref.sha256,'Captured clip audio hash mismatch');
+   const probed=parseProbe((await command(ffprobe,['-v','error','-show_streams','-show_format','-of','json',captured],{signal})).stdout);
+   assert.equal(probed.streams.length,1,'Expected one native clip audio stream');const native=probed.streams[0]!;
+   assert.equal(native.codec_type,'audio');assert.equal(native.codec_name,'flac');assert.equal(probed.format.format_name,'flac');assert.equal(native.channels,2,'Native clip audio must be stereo');
+   const rate=Number(native.sample_rate);assert.ok(integer(rate,1)&&rate<=384000,'Invalid native audio sample rate');
+   const [n,d]=rational(native.time_base);assert.ok(integer(native.duration_ts,1),'Invalid native audio duration');
+   const numerator=BigInt(native.duration_ts as number)*n*BigInt(rate);assert.equal(numerator%d,0n,'Native audio duration is not an integral sample count');
+   const nativeSamples=numerator/d,workingSamples=(nativeSamples*48000n+BigInt(rate)-1n)/BigInt(rate);
+   assert.ok(nativeSamples>0n&&workingSamples*8n<=BigInt(Number.MAX_SAFE_INTEGER),'Native clip audio duration exceeds supported exact byte range');
+   assert.equal(Number(native.start_pts??0),0,'Native clip audio must begin at source time zero');
+   const working=await decodeAudio(captured,pcm,workingSamples);clipPcm.set(key,working);
+   clipSources.push({...ref,nativeSampleCount:String(nativeSamples),nativeSampleRate:rate,channels:2,codec:'flac',workingSampleCount:String(working.samples),resampleFilter:PROFILE.resampleFilter});
+  }
+  // Exact hard switching in bounded PCM chunks. No FFmpeg mixing, fades,
+  // gain/normalization, hidden-source fallback or accumulated duration rounding.
+  scratchPaths.push(soundtrack);const assembled=await open(soundtrack,'wx',0o600),soundtrackHash=createHash('sha256'),audioSpans:Record<string,unknown>[]=[];
+  const buffer=Buffer.alloc(1024*1024);let written=0;
+  async function append(bytes:Buffer){
+   signal.throwIfAborted();let offset=0;
+   while(offset<bytes.length){const {bytesWritten}=await assembled.write(bytes,offset,bytes.length-offset,null);assert.ok(bytesWritten>0,'PCM write made no progress');offset+=bytesWritten;}
+   soundtrackHash.update(bytes);written+=bytes.length;
+  }
+  try{
+   for(const span of compiled.audioSpans){
+    signal.throwIfAborted();assert.equal(BigInt(written/8),BigInt(span.startSample),'Audio spans must be contiguous');
+    const count=BigInt(span.endSample)-BigInt(span.startSample),offset=BigInt(span.sourceStartSample??0);
+    const ref=span.source==='clip'?placementMap.get(span.placementId!)!.audio!:null;
+    const input=span.source==='song'?songPcm:ref?clipPcm.get(ref.path+'\0'+ref.sha256)!:null;
+    const available=input&&input.samples>offset?input.samples-offset:0n,copied=available<count?available:count;
+    if(input&&copied>0n){
+     const file=await open(input.path,'r');try{
+      let position=Number(offset*8n),remaining=Number(copied*8n);
+      while(remaining){signal.throwIfAborted();const {bytesRead}=await file.read(buffer,0,Math.min(buffer.length,remaining),position);assert.ok(bytesRead>0,'Decoded PCM ended unexpectedly');await append(buffer.subarray(0,bytesRead));position+=bytesRead;remaining-=bytesRead;}
+     }finally{await file.close();}
+    }
+    let silence=Number((count-copied)*8n);buffer.fill(0);while(silence){const bytes=Math.min(buffer.length,silence);await append(buffer.subarray(0,bytes));silence-=bytes;}
+    audioSpans.push({...span,availableSamples:String(copied),paddingSamples:String(count-copied)});
+   }
+  }finally{await assembled.close();}
+  assert.equal(BigInt(written),BigInt(compiled.sampleCount)*8n,'Assembled PCM length differs from video grid');
+  evidence.soundtrack={format:'f32le',sampleRate:48000,channels:2,sampleCount:compiled.sampleCount,sha256:soundtrackHash.digest('hex'),spans:audioSpans,clipSources};
+  const validated=new Set<string>();const black=blackPng();
   async function frameBytes(frame:RenderFrame) {
    signal.throwIfAborted();await managedFile(project,frame.path);assert.ok((await stat(frame.path)).size<=32_000_000,'PNG exceeds bounded frame reader');
    const bytes=await readFile(frame.path,{signal});assert.equal(sha(bytes),frame.sha256,'Retained PNG hash mismatch');validatePng(bytes);validated.add(`${frame.path}\0${frame.sha256}`);return bytes;
@@ -141,7 +221,7 @@ export async function runStudioRender(options:RenderOptions):Promise<RenderResul
     yield p ? await frameBytes(p.frames[span.sourceStartFrame!+frame-span.startFrame]!) : black;
    }
   }
-  const args=['-v','error','-nostdin','-n','-threads','1','-filter_threads','1','-f','image2pipe','-framerate','24','-c:v','png','-i','pipe:0','-i',audio,
+  const args=['-v','error','-nostdin','-n','-threads','1','-filter_threads','1','-f','image2pipe','-framerate','24','-c:v','png','-i','pipe:0','-f','f32le','-ar','48000','-ac','2','-i',soundtrack,
    '-map','0:v:0','-map','1:a:0','-vf','format=yuv420p','-af',`apad=whole_len=${compiled.sampleCount},atrim=end_sample=${compiled.sampleCount},asetpts=PTS-STARTPTS`,
    '-c:v','libx264','-threads','1','-preset',PROFILE.preset,'-crf',String(PROFILE.crf),'-pix_fmt','yuv420p','-r','24','-fps_mode','cfr','-c:a','aac','-b:a','192k','-ar','48000','-ac','2','-movflags','+faststart','-movie_timescale',String(PROFILE.movieTimescale),'-progress','pipe:1','-nostats',partial];
   evidence.command={executable:ffmpeg,args};let pending='';
@@ -159,7 +239,7 @@ export async function runStudioRender(options:RenderOptions):Promise<RenderResul
  } finally {
   evidence.finishedAt=new Date().toISOString();
   // These are this exclusive render's known scratch derivatives, never original media.
-  await finalizeRenderFiles({audioPath:audio,partialPath:partial,outputPath,receiptPath,receipt:evidence,...(primaryError?{primaryError}:{})});
+  await finalizeRenderFiles({audioPath:audio,scratchPaths,partialPath:partial,outputPath,receiptPath,receipt:evidence,...(primaryError?{primaryError}:{})});
  }
  assert.ok(result);return result;
 }

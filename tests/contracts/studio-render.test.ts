@@ -1,12 +1,13 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { createHash, randomUUID } from 'node:crypto';
-import { mkdtemp, mkdir, readFile, rename, rm, stat, symlink, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, readdir, rename, rm, stat, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { deflateSync } from 'node:zlib';
 import { execFileSync } from 'node:child_process';
 import { compileRenderPlan, renderPlanHash, runStudioRender } from '../../apps/server/src/studio/render.ts';
 import type { RenderFrame, RenderPlan } from '../../apps/server/src/studio/render-contract.ts';
+import { RENDER_PROFILE } from '../../apps/server/src/studio/render-contract.ts';
 const roots: string[] = [];
 afterEach(async () => { for (const root of roots.splice(0)) await rm(root, {recursive:true,force:true}); });
 const hash = (b: Buffer | string) => createHash('sha256').update(b).digest('hex');
@@ -36,10 +37,10 @@ function meanRGB(b:Buffer,frame:number) { const at=frame*640*480*3+(200*640+300)
 describe('revision-bound renderer plan',()=>{
  it('partitions half-open spans with newer priority, exact offsets and black gaps',async()=>{
   const {plan,frames}=await fixture();const a=placement(frames,1,5,0,1),b=placement(frames,2,4,2,2);plan.placements=[a,b];
-  expect(compileRenderPlan(plan)).toEqual({frameCount:5,sampleCount:'10000',spans:[{startFrame:0,endFrame:1,placementId:null,sourceStartFrame:null},{startFrame:1,endFrame:2,placementId:a.id,sourceStartFrame:0},{startFrame:2,endFrame:4,placementId:b.id,sourceStartFrame:2},{startFrame:4,endFrame:5,placementId:a.id,sourceStartFrame:3}]});
+  expect(compileRenderPlan(plan)).toEqual({frameCount:5,sampleCount:'10000',audioSpans:[{startSample:'0',endSample:'6500',source:'song',placementId:null,sourceStartSample:'0'},{startSample:'6500',endSample:'10000',source:'silence',placementId:null,sourceStartSample:null}],spans:[{startFrame:0,endFrame:1,placementId:null,sourceStartFrame:null},{startFrame:1,endFrame:2,placementId:a.id,sourceStartFrame:0},{startFrame:2,endFrame:4,placementId:b.id,sourceStartFrame:2},{startFrame:4,endFrame:5,placementId:a.id,sourceStartFrame:3}]});
  });
  it('rounds only the final partial music frame upward and emits an all-black plan without placements',async()=>{
-  const {plan}=await fixture();expect(compileRenderPlan(plan)).toEqual({frameCount:4,sampleCount:'8000',spans:[{startFrame:0,endFrame:4,placementId:null,sourceStartFrame:null}]});
+  const {plan}=await fixture();expect(compileRenderPlan(plan)).toEqual({frameCount:4,sampleCount:'8000',audioSpans:[{startSample:'0',endSample:'6500',source:'song',placementId:null,sourceStartSample:'0'},{startSample:'6500',endSample:'8000',source:'silence',placementId:null,sourceStartSample:null}],spans:[{startFrame:0,endFrame:4,placementId:null,sourceStartFrame:null}]});
  });
  it('rejects fractional/negative times, tied priority and source overrun instead of silently correcting',async()=>{
   const {plan,frames}=await fixture();for(const p of [placement(frames,-1,2,0,1),placement(frames,0,2.5,0,1),placement(frames,0,5,0,1),placement(frames,1,1,0,1)])expect(()=>compileRenderPlan({...plan,placements:[p]})).toThrow();
@@ -91,4 +92,97 @@ describe('real local CPU FFmpeg render, synthetic source fixtures only',()=>{
  it('honours pre-abort without creating a render and never follows a source outside the project',async()=>{
   const {runtime,plan}=await fixture();const ctl=new AbortController();ctl.abort();await expect(runStudioRender({runtime,renderId:randomUUID(),plan,signal:ctl.signal})).rejects.toThrow();await expect(runStudioRender({runtime,renderId:randomUUID(),plan:{...plan,song:{...plan.song,path:'/etc/passwd'}}})).rejects.toThrow(/project/i);
  });
+});
+
+/** Authoritative local FLAC fixture, not H3/model evidence. */
+async function clipAudio(runtime:string,plan:RenderPlan,name:string,samples=7000,rate=32000) {
+ const directory=join(runtime,'projects',plan.projectId,'media'),path=join(directory,`${name}.flac`),input=join(directory,`${name}.wav`);
+ const bytes=wav(samples);bytes.writeUInt32LE(rate,24);bytes.writeUInt32LE(rate*4,28);
+ for(let i=0;i<samples;i++)for(let channel=0;channel<2;channel++) {
+  const frame=Math.floor(i*24/rate),frequency=(name==='a'?230:1100)+frame*137+channel*83;
+  bytes.writeInt16LE(Math.round((name==='a'?7000:14000)*Math.sin(i*2*Math.PI*frequency/rate)),44+i*4+channel*2);
+ }
+ await writeFile(input,bytes);
+ execFileSync('/usr/bin/ffmpeg',['-v','error','-threads','1','-i',input,'-c:a','flac',path],{timeout:10000});
+ const pcm=execFileSync('/usr/bin/ffmpeg',['-v','error','-threads','1','-i',path,'-af','aresample=48000:async=0','-ar','48000','-ac','2','-c:a','pcm_f32le','-f','f32le','pipe:1'],{maxBuffer:2_000_000,timeout:10000});
+ return {audio:{path,sha256:hash(await readFile(path))},pcm};
+}
+function pcmFrom(path:string) {return execFileSync('/usr/bin/ffmpeg',['-v','error','-threads','1','-i',path,'-ar','48000','-ac','2','-c:a','pcm_f32le','-f','f32le','pipe:1'],{maxBuffer:2_000_000,timeout:10000});}
+function audioPackets(path:string) {return JSON.parse(execFileSync('/usr/bin/ffprobe',['-v','error','-select_streams','a:0','-show_packets','-show_data_hash','sha256','-show_entries','packet=data_hash','-of','json',path],{timeout:10000}).toString()).packets;}
+async function expectSoundtrack(runtime:string,output:string,pcm:Buffer) {
+ const raw=join(runtime,`${randomUUID()}.f32le`),reference=join(runtime,`${randomUUID()}.m4a`);await writeFile(raw,pcm);
+ execFileSync('/usr/bin/ffmpeg',['-v','error','-threads','1','-f','f32le','-ar','48000','-ac','2','-i',raw,'-af',`apad=whole_len=${pcm.length/8},atrim=end_sample=${pcm.length/8},asetpts=PTS-STARTPTS`,'-c:a','aac','-b:a','192k','-ar','48000','-ac','2','-movie_timescale','48000',reference],{timeout:10000});
+ expect(audioPackets(output)).toEqual(audioPackets(reference));
+}
+describe('hard dominant-clip soundtrack switching',()=>{
+ it('compiles exact sample spans with song gaps, source trim offsets and no hidden-audio fallback',async()=>{
+  const {runtime,plan,frames}=await fixture(6500),a=await clipAudio(runtime,plan,'a');
+  const behind={...placement(frames,0,4,0,1),audioSource:'clip' as const,audio:a.audio},front={...placement(frames,1,3,1,2),audioSource:'song' as const};plan.placements=[behind,front];
+  expect(compileRenderPlan(plan)).toHaveProperty('audioSpans',[
+   {startSample:'0',endSample:'2000',source:'clip',placementId:behind.id,sourceStartSample:'0'},
+   {startSample:'2000',endSample:'6000',source:'song',placementId:null,sourceStartSample:'2000'},
+   {startSample:'6000',endSample:'8000',source:'clip',placementId:behind.id,sourceStartSample:'6000'},
+  ]);
+  expect(renderPlanHash(plan)).not.toBe(renderPlanHash({...plan,placements:[{...behind,audioSource:'song'},front]}));
+  expect(RENDER_PROFILE.version).toBe(2);expect(renderPlanHash(plan)).not.toBe(renderPlanHash({...plan,placements:[{...behind,audio:{...a.audio,sha256:'1'.repeat(64)}},front]}));
+ });
+ it('replaces rather than mixes the song, follows trim/move offsets and keeps exact post-song/short-source silence',async()=>{
+  const {runtime,plan,frames}=await fixture(6500),a=await clipAudio(runtime,plan,'a',5001);
+  const p={...placement(frames,1,4,1,1),audioSource:'clip' as const,audio:a.audio};plan.placements=[p];
+  const result=await runStudioRender({runtime,renderId:randomUUID(),plan}),expected=Buffer.alloc(8000*8),song=pcmFrom(plan.song.path);
+  song.copy(expected,0,0,2000*8);a.pcm.copy(expected,2000*8,2000*8,8000*8);
+  await expectSoundtrack(runtime,result.outputPath,expected);
+  const receipt=JSON.parse(await readFile(result.receiptPath,'utf8'));expect(receipt.soundtrack).toMatchObject({sampleCount:'8000',sha256:hash(expected),format:'f32le',sampleRate:48000,channels:2});
+  expect(receipt.soundtrack.spans.at(-1).paddingSamples).toBe(String(8000-a.pcm.length/8));
+  const video=decodeVideo(result.outputPath);for(const [i,color] of [[0,[0,0,0]],[1,[20,210,20]],[2,[20,20,210]],[3,[210,210,20]]] as const)for(let c=0;c<3;c++)expect(Math.abs(meanRGB(video,i)[c]!-color[c]!)).toBeLessThan(8);
+  expect((await readdir(join(result.outputPath,'..'))).sort()).toEqual(['output.mp4','plan.json','receipt.json']);
+ },30000);
+ it('overlap priority swaps select only the visible audio source and never change the saved options',async()=>{
+  const {runtime,plan,frames}=await fixture(6500),a=await clipAudio(runtime,plan,'a'),b=await clipAudio(runtime,plan,'b');
+  const behind={...placement(frames,0,4,0,1),audioSource:'clip' as const,audio:a.audio},front={...placement(frames,1,3,1,2),audioSource:'clip' as const,audio:b.audio};plan.placements=[behind,front];
+  const original=structuredClone(plan),one=await runStudioRender({runtime,renderId:randomUUID(),plan}),expected=Buffer.alloc(8000*8);
+  a.pcm.copy(expected,0,0,2000*8);b.pcm.copy(expected,2000*8,2000*8,6000*8);a.pcm.copy(expected,6000*8,6000*8,8000*8);await expectSoundtrack(runtime,one.outputPath,expected);
+  plan.placements=[{...behind,priority:3},front];const two=await runStudioRender({runtime,renderId:randomUUID(),plan});await expectSoundtrack(runtime,two.outputPath,a.pcm.subarray(0,8000*8));
+  expect(plan.placements.map(p=>p.audioSource)).toEqual(['clip','clip']);expect(original.placements.map(p=>p.priority)).toEqual([1,2]);expect(two.planHash).not.toBe(one.planHash);
+ },30000);
+ it('disabled dominant audio uses the selected song then silence; hidden source is not read or used',async()=>{
+  const {runtime,plan,frames}=await fixture(4501),a=await clipAudio(runtime,plan,'a');
+  plan.songId=randomUUID(); // Same-project different-song arrangement, not the clip's original song.
+  plan.placements=[{...placement(frames,0,4,0,1),audioSource:'clip' as const,audio:{...a.audio,sha256:'0'.repeat(64)}},{...placement(frames,0,4,0,2),audioSource:'song' as const}];
+  const result=await runStudioRender({runtime,renderId:randomUUID(),plan}),expected=Buffer.alloc(8000*8);pcmFrom(plan.song.path).copy(expected);await expectSoundtrack(runtime,result.outputPath,expected);
+  const receipt=JSON.parse(await readFile(result.receiptPath,'utf8'));expect(receipt.soundtrack.clipSources).toEqual([]);
+ },30000);
+ it('rejects enabled audio with a missing reference or changed hash instead of silently substituting the song',async()=>{
+  const {runtime,plan,frames}=await fixture(),a=await clipAudio(runtime,plan,'a');
+  const p={...placement(frames,0,4,0,1),audioSource:'clip' as const};
+  await expect(runStudioRender({runtime,renderId:randomUUID(),plan:{...plan,placements:[p]}})).rejects.toThrow(/audio/i);
+  const id=randomUUID();await expect(runStudioRender({runtime,renderId:id,plan:{...plan,placements:[{...p,audio:{...a.audio,sha256:'0'.repeat(64)}}]}})).rejects.toThrow(/hash/i);
+  await expect(stat(join(runtime,'projects',plan.projectId,'renders',id,'output.mp4'))).rejects.toMatchObject({code:'ENOENT'});
+ },30000);
+ it('honours wholly post-song clip audio, exact one-sample song tail and silence before/after short source',async()=>{
+  const {runtime,plan,frames}=await fixture(2001),a=await clipAudio(runtime,plan,'a',3333);
+  plan.placements=[{...placement(frames,3,6,1,1),audioSource:'clip' as const,audio:a.audio}];
+  const originalAudio=await readFile(a.audio.path),result=await runStudioRender({runtime,renderId:randomUUID(),plan}),expected=Buffer.alloc(12000*8);
+  pcmFrom(plan.song.path).copy(expected);a.pcm.copy(expected,6000*8,2000*8,8000*8);
+  await expectSoundtrack(runtime,result.outputPath,expected);
+  const receipt=JSON.parse(await readFile(result.receiptPath,'utf8'));expect(receipt.compiled.audioSpans).toEqual([
+   {startSample:'0',endSample:'2001',source:'song',placementId:null,sourceStartSample:'0'},
+   {startSample:'2001',endSample:'6000',source:'silence',placementId:null,sourceStartSample:null},
+   {startSample:'6000',endSample:'12000',source:'clip',placementId:plan.placements[0]!.id,sourceStartSample:'2000'},
+  ]);
+  expect(receipt.soundtrack.sha256).toBe(hash(expected));expect(receipt.soundtrack.clipSources[0]).toMatchObject({nativeSampleCount:'3333',nativeSampleRate:32000,workingSampleCount:String(a.pcm.length/8)});
+  expect(await readFile(a.audio.path)).toEqual(originalAudio);
+ },30000);
+ it('uses silence when an enabled source trim begins beyond all its audio, never the song underneath',async()=>{
+  const {runtime,plan,frames}=await fixture(8000),a=await clipAudio(runtime,plan,'a',500);
+  plan.placements=[{...placement(frames,0,2,2,1),audioSource:'clip' as const,audio:a.audio}];
+  const result=await runStudioRender({runtime,renderId:randomUUID(),plan}),expected=Buffer.alloc(8000*8),song=pcmFrom(plan.song.path);
+  song.copy(expected,4000*8,4000*8);await expectSoundtrack(runtime,result.outputPath,expected);
+  const receipt=JSON.parse(await readFile(result.receiptPath,'utf8'));expect(receipt.soundtrack.spans[0]).toMatchObject({availableSamples:'0',paddingSamples:'4000',sourceStartSample:'4000'});
+ },30000);
+ it('rejects a hash-valid non-FLAC source and an out-of-project source instead of normalizing or falling back',async()=>{
+  const {runtime,plan,frames}=await fixture();const p={...placement(frames,0,4,0,1),audioSource:'clip' as const};
+  await expect(runStudioRender({runtime,renderId:randomUUID(),plan:{...plan,placements:[{...p,audio:{path:plan.song.path,sha256:plan.song.sha256}}]}})).rejects.toThrow(/flac/i);
+  await expect(runStudioRender({runtime,renderId:randomUUID(),plan:{...plan,placements:[{...p,audio:{path:'/etc/passwd',sha256:'0'.repeat(64)}}]}})).rejects.toThrow(/project/i);
+ },30000);
 });

@@ -1,13 +1,13 @@
 import Database from 'better-sqlite3';
 import { decimal as exactDecimal } from '../../../../packages/core/src/time/decimal.ts';
-import { resolveTiming, type TimingValue } from '../../../../packages/core/src/time/linked-timing.ts';
+import { parseTimingValue, resolveTiming, timingValueFromSeconds, type TimingValue } from '../../../../packages/core/src/time/linked-timing.ts';
 import { songCoverage } from '../../../../packages/core/src/time/studio-timing.ts';
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { isAbsolute, normalize } from 'node:path';
 import { providerModels } from '../providers/launch.ts';
 import { RENDER_PROFILE } from './render-contract.ts';
-import type { AttemptPatch, RegisteredAssetInput, SongInput, StudioStore, VideoOutputInput } from './store-contract.ts';
-import type { ClipDraft, MusicAttempt, MusicDraft, MusicInput, Provider, SetupJob, SongAnalysis, StudioProject, StudioSong,
+import type { AttemptPatch, ClipEditPatch, ClipEditResult, RegisteredAssetInput, SongInput, StudioStore, VideoOutputInput } from './store-contract.ts';
+import type { ClipDraft, ClipEditContext, MusicAttempt, MusicDraft, MusicInput, Provider, SetupJob, SongAnalysis, StudioProject, StudioSong,
   ToolId, ToolStatus, VideoInput, VideoAttempt, StudioClip, SongArrangement, StudioRender, ProjectEvent, ProjectEventKind } from '../../../../packages/core/src/contracts/studio.ts';
 
 export class StudioStoreError extends Error {
@@ -259,7 +259,7 @@ export function openStudioStore(path: string): StudioStore {
       db.exec(`CREATE TABLE IF NOT EXISTS studio_meta (singleton INTEGER PRIMARY KEY CHECK(singleton=1), version INTEGER NOT NULL,
         provider TEXT NOT NULL, selected_project TEXT); INSERT OR IGNORE INTO studio_meta VALUES (1,1,'codex',NULL);`);
       const meta = db.prepare('SELECT version FROM studio_meta WHERE singleton=1').get() as { version: number };
-      if (![1, 2, 3, 4].includes(meta.version)) conflict('Unsupported studio schema version');
+      if (![1, 2, 3, 4, 5].includes(meta.version)) conflict('Unsupported studio schema version');
       db.exec(`
         CREATE TABLE IF NOT EXISTS studio_projects (sequence INTEGER PRIMARY KEY AUTOINCREMENT, id TEXT NOT NULL UNIQUE, data TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS studio_attempts (sequence INTEGER PRIMARY KEY AUTOINCREMENT, id TEXT NOT NULL UNIQUE,
@@ -327,7 +327,29 @@ export function openStudioStore(path: string): StudioStore {
             canonical({ projectId: row.project_id, songId: row.id, revision: 0, clipPrompt: '', timingIntent: null }));
         }
       }
-      db.exec('UPDATE studio_meta SET version=4 WHERE singleton=1');
+      db.exec(`CREATE TABLE IF NOT EXISTS studio_edit_contexts (id TEXT PRIMARY KEY,
+        project_id TEXT NOT NULL REFERENCES studio_projects(id), song_id TEXT NOT NULL REFERENCES studio_songs(id),
+        clip_id TEXT NOT NULL REFERENCES studio_clips(id), placement_id TEXT UNIQUE, data TEXT NOT NULL);
+        CREATE INDEX IF NOT EXISTS studio_edit_contexts_project ON studio_edit_contexts(project_id);`);
+      if (meta.version < 5) {
+        // Derive current contexts only; never rewrite historical arrangements,
+        // render snapshots, generation inputs, native evidence or edit events.
+        for (const row of db.prepare('SELECT data FROM studio_arrangements ORDER BY rowid').all() as JsonRow[]) {
+          const a = decode<SongArrangement>(row);
+          for (const p of a.placements) insertContext({ id: p.id, projectId: a.projectId, songId: a.songId, clipId: p.clipId,
+            revision: 0, placementId: p.id, sourceOriginFrame: p.startFrame - p.sourceStartFrame,
+            sourceStartFrame: p.sourceStartFrame, sourceEndFrame: p.sourceStartFrame + p.endFrame - p.startFrame,
+            audioSource: p.audioSource ?? 'song', placementIntent: null, trimIntent: null }, true);
+        }
+        for (const row of db.prepare('SELECT data FROM studio_clips c WHERE NOT EXISTS (SELECT 1 FROM studio_edit_contexts e WHERE e.clip_id=c.id) ORDER BY rowid').all() as JsonRow[]) {
+          const clip = decode<StudioClip>(row), attempt = videoRow(clip.attemptId);
+          if (!attempt) conflict('Clip is missing its original generation request');
+          insertContext({ id: randomUUID(), projectId: clip.projectId, songId: clip.songId, clipId: clip.id,
+            revision: 0, placementId: null, sourceOriginFrame: videoSnapshot(attempt).input.startFrame,
+            sourceStartFrame: 0, sourceEndFrame: clip.requestedFrames, audioSource: 'song', placementIntent: null, trimIntent: null });
+        }
+      }
+      db.exec('UPDATE studio_meta SET version=5 WHERE singleton=1');
       for (const id of toolIds) {
         const t: ToolStatus = { id, label: labels[id], state: 'missing', installed: false, detail: 'Not checked', log: '', checkedAt: null, jobId: null, active: false, queued: 0 };
         db.prepare('INSERT OR IGNORE INTO studio_tools VALUES (?,?)').run(id, canonical(t));
@@ -392,12 +414,87 @@ export function openStudioStore(path: string): StudioStore {
   function saveArrangement(a: SongArrangement): SongArrangement {
     db.prepare('UPDATE studio_arrangements SET data=? WHERE song_id=?').run(canonical(a), a.songId); return a;
   }
+  function insertContext(c: ClipEditContext, ignore = false): void {
+    db.prepare(`INSERT ${ignore ? 'OR IGNORE' : ''} INTO studio_edit_contexts VALUES (?,?,?,?,?,?)`)
+      .run(c.id, c.projectId, c.songId, c.clipId, c.placementId, canonical(c));
+  }
+  function saveContext(c: ClipEditContext): ClipEditContext {
+    db.prepare('UPDATE studio_edit_contexts SET placement_id=?,data=? WHERE id=?').run(c.placementId, canonical(c), c.id); return c;
+  }
+  function getContext(projectId: string, contextId: string): ClipEditContext {
+    const p = project(projectId), row = db.prepare('SELECT data FROM studio_edit_contexts WHERE id=? AND project_id=?').get(uuid(contextId), p.id) as JsonRow | undefined;
+    if (!row) missing('Edit context not found in this project'); return decode(row);
+  }
+  function editState(projectId: string, contextId: string, revision: number, arrangementRevision: number): ClipEditResult {
+    integer(revision, 'Edit context revision'); const context = getContext(projectId, contextId);
+    if (context.revision !== revision) conflict('Clip edit changed; reload before editing');
+    const a = currentArrangement(projectId, context.songId, arrangementRevision);
+    if (context.placementId !== null && !a.placements.some(p => p.id === context.placementId && p.clipId === context.clipId)) conflict('Clip edit placement is missing');
+    return { context, arrangement: a };
+  }
+  const exactFrameTime = (frame: number): TimingValue => {
+    integer(frame, 'Timeline frame');
+    try { return timingValueFromSeconds({ numerator: BigInt(frame), denominator: 24n }); }
+    catch { return invalid('Timeline frame is outside the supported exact timing range'); }
+  };
+  function editedContext(projectId: string, contextId: string, revision: number, arrangementRevision: number, value: ClipEditPatch): ClipEditResult {
+    const edit = object(value, [], ['sourceStartFrame', 'sourceEndFrame', 'trimIntent', 'startFrame', 'placementIntent', 'audioSource']);
+    const trimming = ['sourceStartFrame', 'sourceEndFrame', 'trimIntent'].some(k => Object.hasOwn(edit, k));
+    const moving = ['startFrame', 'placementIntent'].some(k => Object.hasOwn(edit, k));
+    const audio = Object.hasOwn(edit, 'audioSource');
+    if (Number(trimming) + Number(moving) + Number(audio) !== 1) invalid('Choose one trim, move or audio action');
+    const { context: before, arrangement: a } = editState(projectId, contextId, revision, arrangementRevision), clip = clipById(before.clipId), song = songById(before.songId);
+    if (clip.projectId !== before.projectId || song.projectId !== before.projectId) conflict('Edit context media does not match its project');
+    const c: ClipEditContext = { ...before };
+    if (trimming) {
+      let start = edit.sourceStartFrame === undefined ? c.sourceStartFrame : integer(edit.sourceStartFrame, 'First source frame');
+      let end = edit.sourceEndFrame === undefined ? c.sourceEndFrame : integer(edit.sourceEndFrame, 'Exclusive source end', 1);
+      if (edit.trimIntent !== undefined && edit.trimIntent !== null) {
+        const intent = clipDraftInput({ clipPrompt: '', timingIntent: edit.trimIntent }).timingIntent!;
+        const timing = resolveTiming(song, intent); if (!timing.valid) invalid(timing.error);
+        const resolvedStart = timing.startFrame - c.sourceOriginFrame, resolvedEnd = timing.endFrame - c.sourceOriginFrame;
+        if ((edit.sourceStartFrame !== undefined && start !== resolvedStart) || (edit.sourceEndFrame !== undefined && end !== resolvedEnd)) invalid('Source bounds do not match the exact trim intent');
+        start = resolvedStart; end = resolvedEnd; c.trimIntent = intent;
+      } else {
+        if (edit.sourceStartFrame === undefined && edit.sourceEndFrame === undefined) invalid('Trim requires source bounds or timing intent');
+        c.trimIntent = { start: exactFrameTime(c.sourceOriginFrame + start), end: exactFrameTime(c.sourceOriginFrame + end) };
+      }
+      if (start !== c.sourceStartFrame) c.placementIntent = null;
+      c.sourceStartFrame = start; c.sourceEndFrame = end;
+    } else if (moving) {
+      const start = integer(edit.startFrame, 'Retained timeline start');
+      if (edit.placementIntent !== undefined && edit.placementIntent !== null) {
+        const intent = clipDraftInput({ clipPrompt: '', timingIntent: { start: edit.placementIntent, end: edit.placementIntent } }).timingIntent!.start;
+        try { const time = parseTimingValue(song, intent); if (time.numerator * 24n / time.denominator !== BigInt(start)) invalid('Move frame does not match exact timing intent'); }
+        catch (error) { if (error instanceof StudioStoreError) throw error; invalid(error instanceof Error ? error.message : 'Invalid move timing'); }
+        c.placementIntent = intent;
+      } else c.placementIntent = exactFrameTime(start);
+      c.sourceOriginFrame = integer(start - c.sourceStartFrame, 'Source origin', Number.MIN_SAFE_INTEGER); c.trimIntent = null;
+    } else {
+      if (edit.audioSource !== 'song' && edit.audioSource !== 'clip') invalid('Audio source must be song or clip');
+      if (edit.audioSource === 'clip' && !clip.audioAssetId) invalid('This clip has no registered audio');
+      c.audioSource = edit.audioSource;
+    }
+    integer(c.sourceStartFrame, 'First source frame'); integer(c.sourceEndFrame, 'Exclusive source end', 1, clip.nativeFrames);
+    if (c.sourceStartFrame >= c.sourceEndFrame) invalid('Retain at least one source frame');
+    const startFrame = integer(c.sourceOriginFrame + c.sourceStartFrame, 'Retained start'), endFrame = integer(c.sourceOriginFrame + c.sourceEndFrame, 'Retained end', 1, Number.MAX_SAFE_INTEGER - 1);
+    if (canonical(c) === canonical(before)) return { context: before, arrangement: a };
+    c.revision = integer(c.revision + 1, 'Edit context revision'); saveContext(c);
+    let updated = a;
+    if (c.placementId !== null) updated = saveArrangement({ ...a, revision: integer(a.revision + 1, 'Arrangement revision'), placements: a.placements.map(p => p.id !== c.placementId ? p : {
+      ...p, startFrame, endFrame, sourceStartFrame: c.sourceStartFrame, ...(audio ? { audioSource: c.audioSource } : {}),
+    }) });
+    recordEvent(c.projectId, trimming ? 'clip.trimmed' : moving ? 'clip.moved' : 'clip.audio_changed', { songId: c.songId, contextId: c.id, before, after: c, arrangementRevision: updated.revision });
+    return { context: c, arrangement: updated };
+  }
   function appendPlacement(a: SongArrangement, clip: StudioClip, startFrame: number, sourceStartFrame = 0, frameCount = clip.requestedFrames): SongArrangement {
     integer(startFrame, 'Placement start'); integer(sourceStartFrame, 'Source start'); integer(frameCount, 'Placement frame count', 1);
     if (sourceStartFrame + frameCount > clip.nativeFrames) invalid('Placement exceeds preserved source frames');
-    const endFrame = integer(startFrame + frameCount, 'Placement end');
+    const endFrame = integer(startFrame + frameCount, 'Placement end', 1, Number.MAX_SAFE_INTEGER - 1);
     const priority = integer(a.placements.reduce((max, p) => Math.max(max, p.priority), 0) + 1, 'Placement priority', 1);
     const placement = { id: randomUUID(), clipId: clip.id, startFrame, endFrame, sourceStartFrame, priority };
+    insertContext({ id: placement.id, projectId: a.projectId, songId: a.songId, clipId: clip.id, revision: 0, placementId: placement.id,
+      sourceOriginFrame: startFrame - sourceStartFrame, sourceStartFrame, sourceEndFrame: sourceStartFrame + frameCount, audioSource: 'song', placementIntent: null, trimIntent: null });
     recordEvent(a.projectId, 'placement.added', { songId: a.songId, placement, revision: a.revision + 1 });
     return saveArrangement({ ...a, revision: a.revision + 1, placements: [...a.placements, placement] });
   }
@@ -446,6 +543,7 @@ export function openStudioStore(path: string): StudioStore {
         arrangements: (db.prepare('SELECT data FROM studio_arrangements WHERE project_id=? ORDER BY rowid').all(p.id) as JsonRow[]).map(row => decode<SongArrangement>(row)),
         reservations: videos.filter(a => activeStates.includes(a.state)).map(a => ({ attemptId: a.id, songId: a.song.id, startFrame: a.input.startFrame, endFrame: a.input.endFrame })),
         clipDrafts: (db.prepare('SELECT data FROM studio_clip_drafts WHERE project_id=? ORDER BY rowid').all(p.id) as JsonRow[]).map(row => decode<ClipDraft>(row)),
+        editContexts: (db.prepare('SELECT data FROM studio_edit_contexts WHERE project_id=? ORDER BY rowid').all(p.id) as JsonRow[]).map(row => decode<ClipEditContext>(row)),
         renders: (db.prepare('SELECT data FROM studio_renders WHERE project_id=? ORDER BY sequence').all(p.id) as JsonRow[]).map(row => decode<StudioRender>(row)),
         events: (db.prepare('SELECT sequence,data FROM studio_events WHERE project_id=? ORDER BY sequence').all(p.id) as SetupRow[]).map(row => ({ ...decode<ProjectEvent>(row), sequence: row.sequence })) };
     },
@@ -635,7 +733,8 @@ export function openStudioStore(path: string): StudioStore {
       const id = uuid(placementId), start = integer(startFrame, 'Placement start');
       return write(() => { const a = currentArrangement(projectId, songId, revision), placement = a.placements.find(p => p.id === id);
         if (!placement) missing('Placement not found in this arrangement');
-        const endFrame = integer(start + placement.endFrame - placement.startFrame, 'Placement end');
+        const endFrame = integer(start + placement.endFrame - placement.startFrame, 'Placement end', 1, Number.MAX_SAFE_INTEGER - 1);
+        if (start !== placement.startFrame) { const c = getContext(projectId, placement.id); saveContext({ ...c, revision: c.revision + 1, sourceOriginFrame: start - c.sourceStartFrame, placementIntent: exactFrameTime(start), trimIntent: null }); }
         if (start !== placement.startFrame) recordEvent(a.projectId, 'placement.moved', { songId: a.songId, before: placement, after: { ...placement, startFrame: start, endFrame }, revision: a.revision + 1 });
         return saveArrangement({ ...a, revision: a.revision + 1, placements: a.placements.map(p => p.id === id ? { ...p, startFrame: start, endFrame } : p) }); });
     },
@@ -643,8 +742,39 @@ export function openStudioStore(path: string): StudioStore {
       const id = uuid(placementId);
       return write(() => { const a = currentArrangement(projectId, songId, revision);
         const placement = a.placements.find(p => p.id === id); if (!placement) missing('Placement not found in this arrangement');
+        const c = getContext(projectId, placement.id); saveContext({ ...c, revision: c.revision + 1, placementId: null });
         recordEvent(a.projectId, 'placement.removed', { songId: a.songId, placement, revision: a.revision + 1 });
         return saveArrangement({ ...a, revision: a.revision + 1, placements: a.placements.filter(p => p.id !== id) }); });
+    },
+    editClipContext(projectId, contextId, revision, arrangementRevision, edit) {
+      return write(() => editedContext(projectId, contextId, revision, arrangementRevision, edit));
+    },
+    setContextPlacement(projectId, contextId, revision, arrangementRevision, placed) {
+      if (typeof placed !== 'boolean') invalid('Placement state must be boolean');
+      return write(() => {
+        const { context: c, arrangement: a } = editState(projectId, contextId, revision, arrangementRevision);
+        if (placed === (c.placementId !== null)) return { context: c, arrangement: a };
+        const updated: ClipEditContext = { ...c, revision: integer(c.revision + 1, 'Edit context revision'), placementId: placed ? c.id : null };
+        const placements = placed ? [...a.placements, { id: c.id, clipId: c.clipId, startFrame: integer(c.sourceOriginFrame + c.sourceStartFrame, 'Retained start'),
+          endFrame: integer(c.sourceOriginFrame + c.sourceEndFrame, 'Retained end', 1, Number.MAX_SAFE_INTEGER - 1), sourceStartFrame: c.sourceStartFrame,
+          priority: integer(a.placements.reduce((max, p) => Math.max(max, p.priority), 0) + 1, 'Placement priority', 1), audioSource: c.audioSource }]
+          : a.placements.filter(p => p.id !== c.placementId);
+        saveContext(updated); const arrangement = saveArrangement({ ...a, revision: integer(a.revision + 1, 'Arrangement revision'), placements });
+        recordEvent(c.projectId, placed ? 'placement.added' : 'placement.removed', { songId: c.songId, contextId: c.id,
+          placement: placed ? placements.at(-1)! : a.placements.find(p => p.id === c.placementId)!, revision: arrangement.revision });
+        return { context: updated, arrangement };
+      });
+    },
+    swapPlacementPriority(projectId, songId, revision, firstPlacementId, secondPlacementId) {
+      const first = uuid(firstPlacementId), second = uuid(secondPlacementId); if (first === second) invalid('Choose two different overlapping placements');
+      return write(() => {
+        const a = currentArrangement(projectId, songId, revision), one = a.placements.find(p => p.id === first), two = a.placements.find(p => p.id === second);
+        if (!one || !two) missing('Placement not found in this arrangement');
+        if (Math.max(one.startFrame, two.startFrame) >= Math.min(one.endFrame, two.endFrame)) invalid('Only overlapping placements can swap dominance');
+        const updated = saveArrangement({ ...a, revision: integer(a.revision + 1, 'Arrangement revision'), placements: a.placements.map(p => p.id === first ? { ...p, priority: two.priority } : p.id === second ? { ...p, priority: one.priority } : p) });
+        recordEvent(a.projectId, 'placement.priority_swapped', { songId: a.songId, firstPlacementId: first, secondPlacementId: second,
+          before: [one.priority, two.priority], after: [two.priority, one.priority], revision: updated.revision }); return updated;
+      });
     },
     enqueueRender(projectId, songId, revision, idempotencyKey) {
       const key = uuid(idempotencyKey); integer(revision, 'Arrangement revision');

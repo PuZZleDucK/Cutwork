@@ -454,3 +454,33 @@ test('ComfyUI status mirrors the actual H3 native lane without counting pre-agen
  f.queue.cancelAttempt(two.attemptId);expect(tools().comfyui?.queued).toBe(0);
  f.queue.prepareLaunch(lease,{fixtureCommand:true});f.queue.acknowledgeLaunch(lease,{fixtureOwner:true});f.queue.finish(lease,'succeeded',{fixture:true},{fixtureReleased:true});expect(tools().comfyui).toMatchObject({active:false,queued:0});
 });
+
+function fixtureClipWithAudio(f:Awaited<ReturnType<typeof fixture>>,projectId:string,songId:string){
+ const attempt=f.store.submitVideo(projectId,randomUUID(),{songId,clipPrompt:'Synthetic audio binding',style:'',startFrame:0,endFrame:4});
+ const asset=(extension:string)=>({assetId:randomUUID(),path:join(f.root,'projects',projectId,'media',`${randomUUID()}.${extension}`),sha256:'b'.repeat(64)});
+ const audio={...asset('flac'),sampleRate:32000,channels:2,sampleCount:'6400'};
+ const clip=f.store.finishVideo(attempt.id,{title:'Synthetic clip',video:asset('mp4'),audio,frameCount:4,width:640,height:480,fps:'24/1',frames:Array.from({length:4},(_,index)=>({...asset('png'),index,pixelSha256:'c'.repeat(64),bytes:100}))},{});
+ return{clip,audio};
+}
+test('render binds enabled audio from the captured clip and keeps queued choice despite later edits',async()=>{
+ const f=await fixture(),p=f.store.createProject('Captured clip audio'),song=fixtureSong(f,p.id),{clip,audio}=fixtureClipWithAudio(f,p.id,song.id);
+ const context=f.store.project(p.id).editContexts.find(c=>c.clipId===clip.id)!;
+ const enabled=f.store.editClipContext(p.id,context.id,context.revision,1,{audioSource:'clip'});
+ const captured=await f.runtime.render(p.id,song.id,enabled.arrangement.revision,randomUUID());
+ f.store.editClipContext(p.id,context.id,enabled.context.revision,enabled.arrangement.revision,{audioSource:'song'});
+ await f.runtime.start();await vi.waitFor(()=>expect(f.store.render(captured.id)?.state).toBe('succeeded'));
+ expect(f.render.mock.calls[0]![0].plan.placements[0]).toMatchObject({clipId:clip.id,audioSource:'clip',audio:{path:audio.path,sha256:audio.sha256},sourceStartFrame:0});
+ const current=f.store.arrangement(p.id,song.id);const next=await f.runtime.render(p.id,song.id,current.revision,randomUUID());
+ await vi.waitFor(()=>expect(f.store.render(next.id)?.state).toBe('succeeded'));
+ expect(f.render.mock.calls[1]![0].plan.placements[0]?.audioSource).toBe('song');expect(f.render.mock.calls[1]![0].plan.placements[0]?.audio).toBeUndefined();
+});
+test.each(['wrong project','wrong media type','missing'] as const)('render refuses %s registered enabled clip audio rather than passing an unrelated source',async defect=>{
+ const f=await fixture(),p=f.store.createProject('Bad audio binding'),song=fixtureSong(f,p.id),{clip}=fixtureClipWithAudio(f,p.id,song.id),context=f.store.project(p.id).editContexts.find(c=>c.clipId===clip.id)!;
+ const enabled=f.store.editClipContext(p.id,context.id,context.revision,1,{audioSource:'clip'}),original=f.store.asset.bind(f.store);
+ vi.spyOn(f.store,'asset').mockImplementation(id=>{
+  const asset=original(id);if(id!==clip.audioAssetId)return asset;
+  return defect==='missing'?null:defect==='wrong project'?{...asset!,projectId:randomUUID()}:{...asset!,mediaType:'video/mp4'};
+ });
+ const render=await f.runtime.render(p.id,song.id,enabled.arrangement.revision,randomUUID());await f.runtime.start();
+ await vi.waitFor(()=>expect(f.store.render(render.id)?.state).toBe('failed'));expect(f.render).not.toHaveBeenCalled();expect(f.store.render(render.id)?.error).toMatch(/audio/i);
+});

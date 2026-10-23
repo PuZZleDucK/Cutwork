@@ -81,7 +81,7 @@ test('draft shape, bounded text, project membership and revision validation reje
   expect([s.project(p.id), s.project(other.id)]).toEqual(before);
 });
 
-test.each([2, 3])('schema %i to 4 adds empty drafts without modifying existing creative rows or fabricating history', version => {
+test.each([2, 3])('schema %i to current adds empty drafts without modifying existing creative rows or fabricating history', version => {
   const { s, p, audio, path } = fixture(); s.saveDraft(p.id, 1, { musicPrompt: 'Saved music', lyrics: 'Saved lyrics', style: 'Saved style' });
   const a = s.submitVideo(p.id, randomUUID(), { songId: audio.id, clipPrompt: 'Captured', style: 'Old style', startFrame: 0, endFrame: 1 });
   const asset = (ext: string) => ({ assetId: randomUUID(), path: `/managed/projects/${p.id}/${randomUUID()}.${ext}`, sha256: 'b'.repeat(64) });
@@ -91,7 +91,7 @@ test.each([2, 3])('schema %i to 4 adds empty drafts without modifying existing c
   const original = Object.fromEntries(tables.map(t => [t, before.prepare(`SELECT * FROM ${t}`).all()])), meta = before.prepare('SELECT provider,selected_project FROM studio_meta').get();
   before.exec(`DROP TABLE IF EXISTS studio_clip_drafts; ${version === 2 ? 'DROP TABLE studio_events;' : ''} UPDATE studio_meta SET version=${version}`); before.close();
   const reopened = open(path), check = new Database(path, { readonly: true });
-  expect(check.prepare('SELECT version FROM studio_meta').get()).toEqual({ version: 4 }); expect(check.prepare('SELECT provider,selected_project FROM studio_meta').get()).toEqual(meta);
+  expect(check.prepare('SELECT version FROM studio_meta').get()).toEqual({ version: 5 }); expect(check.prepare('SELECT provider,selected_project FROM studio_meta').get()).toEqual(meta);
   for (const t of tables) expect(check.prepare(`SELECT * FROM ${t}`).all(), t).toEqual(original[t]); check.close();
   expect(reopened.project(p.id).clipDrafts).toEqual([{ projectId: p.id, songId: audio.id, revision: 0, clipPrompt: '', timingIntent: null }]);
   expect(reopened.project(p.id).events.filter(e => e.kind === 'clip_draft.saved')).toEqual([]);

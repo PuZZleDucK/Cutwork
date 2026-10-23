@@ -176,7 +176,13 @@ export function createStudioRuntime(options: RuntimeOptions): StudioRuntime & { 
     song: { path: songAsset.path, sha256: songAsset.sha256, sampleCount: snapshot.song.sampleCount, sampleRate: 48000, channels: 2 },
     placements: snapshot.arrangement.placements.map(p => {
      const clip = snapshot.clips.find(c => c.id === p.clipId); if (!clip) throw new Error('Captured render clip is missing');
-     return { ...p, frames: clip.rawFrames.map(f => { const asset = store.asset(f.assetId);
+     let audio: {path:string;sha256:string} | undefined;
+     if (p.audioSource === 'clip') {
+      const asset = clip.audioAssetId ? store.asset(clip.audioAssetId) : null;
+      if (clip.projectId !== job.projectId || !asset || asset.projectId !== job.projectId || asset.mediaType !== 'audio/flac') throw new Error('Captured render clip audio is unavailable or belongs to a different project/type');
+      audio = { path: asset.path, sha256: asset.sha256 };
+     }
+     return { ...p, ...(audio ? { audio } : {}), frames: clip.rawFrames.map(f => { const asset = store.asset(f.assetId);
       if (!asset || asset.projectId !== job.projectId || asset.sha256 !== f.sha256) throw new Error('Captured render frame asset is unavailable or changed');
       return { path: asset.path, sha256: asset.sha256 }; }) };
     }) };

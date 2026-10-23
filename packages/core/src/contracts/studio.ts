@@ -1,5 +1,5 @@
 import type { Provider } from './generation.ts';
-import type { ClipTimingIntent } from '../time/linked-timing.ts';
+import type { ClipTimingIntent, TimingValue } from '../time/linked-timing.ts';
 export type { Provider };
 export type ToolId = 'agent' | 'yue2' | 'comfyui' | 'h3' | 'analysis';
 export type ToolState = 'missing' | 'checking' | 'queued' | 'installing' | 'ready' | 'error' | 'reconciling';
@@ -46,7 +46,7 @@ export interface StudioSong {
 export interface ProjectSnapshot {
   project: StudioProject; songs: StudioSong[]; attempts: MusicAttempt[]; videoAttempts: VideoAttempt[];
   clips: StudioClip[]; arrangements: SongArrangement[]; reservations: VideoReservation[]; renders: StudioRender[]; events: ProjectEvent[];
-  clipDrafts: ClipDraft[];
+  clipDrafts: ClipDraft[]; editContexts: ClipEditContext[];
 }
 export interface StudioOverview {
   projects: ProjectSummary[]; selectedProjectId: string | null;
@@ -79,6 +79,14 @@ export interface StudioClip {
 }
 export interface ClipPlacement {
   id: string; clipId: string; startFrame: number; endFrame: number; sourceStartFrame: number; priority: number;
+  /** Absent on historical rows/snapshots means the original song. */
+  audioSource?: 'song' | 'clip';
+}
+/** Stable editable use of immutable source media, retained even while unplaced. */
+export interface ClipEditContext {
+  id: string; projectId: string; songId: string; clipId: string; revision: number; placementId: string | null;
+  sourceOriginFrame: number; sourceStartFrame: number; sourceEndFrame: number; audioSource: 'song' | 'clip';
+  placementIntent: TimingValue | null; trimIntent: ClipTimingIntent | null;
 }
 export interface SongArrangement { projectId: string; songId: string; revision: number; placements: ClipPlacement[] }
 export interface VideoReservation { attemptId: string; songId: string; startFrame: number; endFrame: number }
@@ -92,7 +100,8 @@ export interface StudioRender {
 
 /** New committed operations only; migrations never invent unrecorded historical edits. */
 export type ProjectEventKind = 'project.created' | 'project.selected' | 'draft.saved' | 'style.changed' | 'song.selected'
-  | 'placement.added' | 'placement.moved' | 'placement.removed' | 'analysis.updated' | 'render.reused' | 'render.cache_invalidated' | 'clip_draft.saved';
+  | 'placement.added' | 'placement.moved' | 'placement.removed' | 'analysis.updated' | 'render.reused' | 'render.cache_invalidated' | 'clip_draft.saved'
+  | 'clip.trimmed' | 'clip.moved' | 'clip.audio_changed' | 'placement.priority_swapped';
 export interface ProjectEvent {
   id: string; projectId: string; sequence: number; createdAt: string; kind: ProjectEventKind; data: Record<string, unknown>;
 }

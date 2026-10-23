@@ -27,4 +27,9 @@ describe('CPU render finalization keeps primary process uncertainty',()=>{
  it('does not remove a successful validated output',async()=>{
   const f=fixture([]);await finalizeRenderFiles({...files,receipt:{state:'succeeded'}},f.io);expect(f.calls).toEqual([files.audioPath,files.partialPath,files.receiptPath]);expect(f.receipts[0]?.state).toBe('succeeded');
  });
+ it('removes every owned captured clip/PCM scratch file and retains the original failure if one removal fails',async()=>{
+  const scratchPaths=['/render/clip.flac','/render/clip.f32le','/render/soundtrack.f32le'],f=fixture([scratchPaths[0]!]);
+  await expect(finalizeRenderFiles({...files,scratchPaths,receipt:{state:'failed'},primaryError:new Error('Native audio hash mismatch')},f.io)).rejects.toThrow(/Native audio hash mismatch.*EACCES/);
+  expect(f.calls).toEqual([files.audioPath,...scratchPaths,files.partialPath,files.outputPath,files.receiptPath]);
+ });
 });

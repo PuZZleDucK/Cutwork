@@ -1,4 +1,4 @@
-import type { ClipDraft, MusicAttempt, MusicDraft, MusicInput, ProjectSnapshot, ProjectSummary, Provider, SetupJob,
+import type { ClipDraft, ClipEditContext, MusicAttempt, MusicDraft, MusicInput, ProjectSnapshot, ProjectSummary, Provider, SetupJob,
   SongAnalysis, StudioProject, StudioSong, ToolId, ToolStatus, VideoAttempt, VideoInput, StudioClip, SongArrangement, StudioRender } from '../../../../packages/core/src/contracts/studio.ts';
 export type AttemptPatch = Partial<Pick<MusicAttempt, 'state' | 'stage' | 'error' | 'details'>>;
 export type SongInput = Omit<StudioSong, 'id' | 'projectId' | 'attemptId' | 'createdAt'> & { assetPath: string };
@@ -10,6 +10,11 @@ export interface VideoOutputInput {
   frameCount: number; width: number; height: number; fps: '24/1';
 }
 export interface PlacementInput { clipId: string; startFrame: number; sourceStartFrame?: number; frameCount?: number }
+export interface ClipEditPatch {
+  sourceStartFrame?: number; sourceEndFrame?: number; trimIntent?: ClipEditContext['trimIntent'];
+  startFrame?: number; placementIntent?: ClipEditContext['placementIntent']; audioSource?: 'song' | 'clip';
+}
+export interface ClipEditResult { context: ClipEditContext; arrangement: SongArrangement }
 export interface RenderOutputInput extends RegisteredAssetInput { frameCount: number; planHash: string; receiptPath: string }
 export interface StudioStore {
   close(): void;
@@ -39,6 +44,9 @@ export interface StudioStore {
   addPlacement(projectId: string, songId: string, revision: number, input: PlacementInput): SongArrangement;
   movePlacement(projectId: string, songId: string, revision: number, placementId: string, startFrame: number): SongArrangement;
   removePlacement(projectId: string, songId: string, revision: number, placementId: string): SongArrangement;
+  editClipContext(projectId: string, contextId: string, revision: number, arrangementRevision: number, edit: ClipEditPatch): ClipEditResult;
+  setContextPlacement(projectId: string, contextId: string, revision: number, arrangementRevision: number, placed: boolean): ClipEditResult;
+  swapPlacementPriority(projectId: string, songId: string, revision: number, firstPlacementId: string, secondPlacementId: string): SongArrangement;
   enqueueRender(projectId: string, songId: string, revision: number, idempotencyKey: string): StudioRender;
   /** Invalidate cache eligibility only; the immutable successful record remains history. */
   invalidateRenderCache(id: string): void;

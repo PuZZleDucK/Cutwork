@@ -254,6 +254,24 @@ Example: `12.3456789` seconds remains that exact input and selects containing ti
 
 Store an edit context's `sourceOriginFrame` (an included placement references that context): the timeline boundary where source frame 1 would start. Retaining source `[a,b]` yields timeline `[origin+a−1, origin+b)`. Thus 1–80 changed to 6–75 retains 70 frames at their original times, leaving five frames empty at the start and end unless covered elsewhere. Moving changes origin; trimming does not. Validate integer source bounds within `1…N`, `a ≤ b`; equality retains one frame. Explain invalid input without silently correcting it.
 
+**Slice 5 implementation detail:** the saved source origin may be negative after
+moving a trimmed range to time zero; the retained start and end must still be
+nonnegative valid timeline boundaries. Moving floors the requested start once,
+then adds the unchanged retained frame count—never independently rounds the new
+end. For example, moving a 70-frame trim to `12.3456789` seconds yields `[296,366)`.
+The trim editor's beat/second values are absolute positions on its selected song;
+its source-frame values remain one-based/inclusive. Exact saved trim intent and
+move intent are separate, revision-checked records. An explicit move clears
+obsolete absolute trim intent, while history retains the previous edit.
+
+Schema 5 adds stable per-use edit contexts without rewriting existing creative
+rows, historical render snapshots, prompts or native assets. Removing a use keeps
+its context and re-placing it reuses that identity; unplaced edits do not alter the
+arrangement or invalidate its preview. Priority swaps exchange only the two
+chosen overlapping uses' priorities. Audio choice belongs to each use, not the
+shared source clip. The renderer's versioned profile invalidates new cache reuse
+when its sound assembly changes, without mutating old render records.
+
 The historical initial origin and originating song remain immutable. Warn for clip audio if the current origin differs, or if placed against another song whose audio did not condition it; trimming alone does not warn. Returning to original alignment clears only that warning, not a claim about generated audio fidelity.
 
 Continue From End snapshots the clicked edit-context ID/revision, song, source PNG frame `b`, trim and origin, and starts at `origin+b`, the next frame boundary with no blank frame. Calculate its end by adding the adaptive count in the same beat map from that exact possibly off-beat instant, then realise the new interval once. Later edits to the predecessor do not alter this submitted request.

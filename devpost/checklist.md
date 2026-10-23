@@ -40,6 +40,13 @@ Draft navigation and lost-response retries were exercised in the browser;
 existing live inputs survived reload unchanged. See
 [slice-4-continuity.md](slice-4-continuity.md) for boundaries and evidence.
 
+Slice 5 is deployed with **1,054/1,054 tests per host**, three independent
+copied-real-media edit exports, browser editing/conflict/export checks and
+**46/46** schema/media/service-preservation checks. All 554 registered assets
+are unchanged. See [slice-5-evidence.md](slice-5-evidence.md). The final learner
+review still includes perceptual listening; exact sample/packet and headless
+playback verification is not described as human listening.
+
 ## Working Agreement
 
 - The build order is approved. Write tests and record their assertions, fixtures and live-test boundaries before implementation; the learner's fast-mode standing approval removes routine waiting for sign-off. A missing import or unavailable GPU is not meaningful behavioural test evidence.
@@ -283,7 +290,7 @@ The next work is the prepared real-model lane verification; no slice/G4 gate is 
   Learner check: Start work in one project, switch to another and change provider, then return. Generate/select an older and newer song and check that nothing moved, disappeared, or silently changed providers. Inspect both projects' histories and working folders.
   Commit: `Preserve project song and provider context across ongoing work`
 
-- [ ] **5. Edit exact timing, coverage, overlap and soundtrack choices**
+- [x] **5. Edit exact timing, coverage, overlap and soundtrack choices**
   Becomes usable: Edit timing in beats, seconds or frames; trim and move clips precisely; choose which overlapping clip is visible; and opt into only that dominant clip's audio.
   Why now: Builds precise control on top of stable arrangements and a real renderer. Each edit can be checked against both timeline state and the exported media, rather than trusting calculations alone.
   PRD ref: `prd.md > Linked Timing Units`; `prd.md > Frame-Based Trimming and Locked Frame Rate`; `prd.md > Default Clip Timing`; `prd.md > Timeline and Music Coverage`; `prd.md > Clip Audio`; `prd.md > Preview, Black Gaps, and Export`.
@@ -358,6 +365,13 @@ Reflection: Not offered yet; any personal response belongs in the ignored learne
 Activity mode: Proposed focused planning/verification investigation suitable for an experienced developer; not yet performed.
 
 ## Revisions
+
+- 23 October 2026 slice 5: made the existing spec precise about signed source
+  origins, move-floor-once/constant length, absolute song trim units, stable
+  per-use contexts and the explicit Apply save boundary. No scope change.
+  Technical audio/video equality and inspected frames are verified; perceptual
+  watch/listen judgment stays in the final learner checkpoint under fast mode.
+
 
 - 23 October 2026 integrated learner feedback: bring generation-only linked timing from slice 5 into the slice-3 feedback pass, add selectable beat ranges and proposed-shot highlighting, compact overlap lanes, clear accepted clip descriptions, combine creative history including style edits, reorder navbar analysis and set preview playback to 50%. Exact timing/coverage/export semantics are unchanged; remaining trim/dominance/continuation controls stay in their planned slices. See [slice-3-feedback.md](slice-3-feedback.md).
 

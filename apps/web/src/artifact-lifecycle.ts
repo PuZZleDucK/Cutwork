@@ -2,6 +2,7 @@ import type {ArtifactRef,ArtifactLifecycle,ArtifactDeletePlan} from '../../../pa
 import type {ProjectSnapshot,StudioAttempt,StudioRender} from '../../../packages/core/src/contracts/studio.ts';
 import {ApiError} from './api.ts';
 import {readSession,writeSession,clearMatchingSession} from './clip-session.ts';
+import {createRequestId} from './studio-state.ts';
 export function artifactLifecycle(snapshot:ProjectSnapshot,ref:ArtifactRef):ArtifactLifecycle|undefined {
  return snapshot.artifactLifecycles?.find(row=>row.projectId===snapshot.project.id&&row.kind===ref.kind&&row.id===ref.id);
 }
@@ -34,7 +35,7 @@ export function readDeletionSubmission(projectId:string,ref:ArtifactRef):Deletio
 }
 /** Called only on explicit confirmation. An ambiguous request cannot be replaced
  * by a new disclosure/key; the server checks the old key before expiry guards. */
-export function beginDeletionSubmission(plan:ArtifactDeletePlan,key:()=>string=()=>crypto.randomUUID()):DeletionSubmission {
+export function beginDeletionSubmission(plan:ArtifactDeletePlan,key:()=>string=createRequestId):DeletionSubmission {
  const pending=readDeletionSubmission(plan.projectId,plan.ref);if(pending)return pending;
  const result={plan,key:key()};writeSession(journalKey(plan.projectId,plan.ref),JSON.stringify(result));return result;
 }

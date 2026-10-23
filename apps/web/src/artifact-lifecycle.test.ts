@@ -34,6 +34,16 @@ test('retry never promises unavailable source song or original continuation medi
 });
 const plan={id:'plan',projectId:p,ref:clip,title:'The shot',digest:'a'.repeat(64),expiresAt:'2026-10-24T00:00:00Z',fileCount:9,bytes:1234,retains:['Text history'],limitations:['External copies cannot be recalled'],blockers:[]} as ArtifactDeletePlan;
 function storage(){const values=new Map<string,string>();vi.stubGlobal('sessionStorage',{getItem:(k:string)=>values.get(k)??null,setItem:(k:string,v:string)=>values.set(k,v),removeItem:(k:string)=>values.delete(k)});return values;}
+test('real deletion confirmation works on LAN HTTP without crypto.randomUUID and retains its key',()=>{
+ storage();
+ const getRandomValues=vi.fn((bytes:Uint8Array)=>{bytes.fill(255);return bytes;});
+ vi.stubGlobal('crypto',{getRandomValues});
+ const submission=beginDeletionSubmission(plan);
+ expect(submission.key).toBe('ffffffff-ffff-4fff-bfff-ffffffffffff');
+ expect(readDeletionSubmission(p,clip)).toEqual(submission);
+ expect(beginDeletionSubmission({...plan,id:'replacement'})).toEqual(submission);
+ expect(getRandomValues).toHaveBeenCalledTimes(1);
+});
 test('confirmation journal keeps exact plan/key through ambiguous failures and refuses replacement until authoritative acceptance',()=>{
  storage();expect(readDeletionSubmission(p,clip)).toBeNull();const first=beginDeletionSubmission(plan,()=> '11111111-1111-4111-8111-111111111111');
  expect(readDeletionSubmission(p,clip)).toEqual(first);expect(beginDeletionSubmission({...plan,id:'new-plan'},()=> '22222222-2222-4222-8222-222222222222')).toEqual(first);

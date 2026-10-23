@@ -1,3 +1,4 @@
+import {fixtureH3Guides} from '../helpers/h3-guides.ts';
 import { afterEach, expect, test } from 'vitest';
 import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -21,6 +22,7 @@ async function fixture() {
     if (c.args.join(' ') === 'auth status') return {code:0,stdout:'{"loggedIn":true,"email":"private@example.test"}',stderr:''};
     return {code:0,stdout:'fixture check passed\n',stderr:''};
   };
+  await fixtureH3Guides(runtime,source);
   return {runtime,source,calls,execute};
 }
 async function models(f: Awaited<ReturnType<typeof fixture>>, tool: 'h3'|'yue2') {
@@ -87,7 +89,7 @@ test.each(['yue2','comfyui','h3','analysis'] as const)('installs %s with existin
   const f=await fixture(); if(tool==='yue2'||tool==='h3')await models(f,tool);
   const lines:string[]=[]; await createSetupAdapter(f).install(tool,'codex',s=>lines.push(s));
   const installers=f.calls.filter(c=>c.args.includes('--install'));
-  const expected=tool==='yue2'?['prepare-yue2.sh','prepare-yue2-models.py']:tool==='comfyui'?['prepare-comfyui.sh']:tool==='h3'?['prepare-h3-models.py']:['prepare-analysis.sh'];
+  const expected=tool==='yue2'?['prepare-yue2.sh','prepare-yue2-models.py']:tool==='comfyui'?['prepare-comfyui.sh']:tool==='h3'?['prepare-h3-models.py','prepare-h3-models.py']:['prepare-analysis.sh'];
   expect(installers.map(c=>c.args.find(a=>a.includes('/scripts/'))?.split('/').pop())).toEqual(expected);
   expect(lines.length).toBeGreaterThan(0);expect(f.calls.every(c=>c.timeoutMs>0&&c.timeoutMs<=14_400_000)).toBe(true);
   expect(f.calls.map(c=>c.executable).some(x=>x==='sudo'||x==='apt'||x==='pip')).toBe(false);
@@ -188,4 +190,10 @@ test('forced abort reports uncertain descendants rather than equating killed con
 });
 test('probe propagates unresolved descendant cleanup for maintenance-lease retention',async()=>{
  const f=await fixture();const a=createSetupAdapter({...f,execute:async()=>{throw new Error('owned descendant cleanup unconfirmed');}});await expect(a.probe('comfyui','codex')).rejects.toThrow(/cleanup unconfirmed/);
+});
+
+test('H3 setup verifies upstream guide files as well as existing weights',async()=>{
+ const f=await fixture();await models(f,'h3');
+ const guides=await fixtureH3Guides(f.runtime,f.source);await writeFile(join(guides.directory,guides.files[0]!.path),'changed');
+ const status=await createSetupAdapter(f).probe('h3','codex');expect(status.ready).toBe(false);expect(status.detail).toContain('Retry H3 setup');
 });

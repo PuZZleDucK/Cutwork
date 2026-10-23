@@ -1,28 +1,52 @@
-# H3 video guidance — revision 2
+# H3 video guidance — revision 3
 
 Combine the user's persistent visual style with the individual clip brief.
 Use the captured song and interval, not whichever song or timeline gap is now
 selected. The agent owns the creative interpretation; the supplied graph/helper
 are adaptable tools rather than a required agent response format.
 
-## Native prompting reference
+## Native prompting and directing
 
-For the text-led base model, the official
-[base prompting guide](https://huggingface.co/MiniMaxAI/MiniMax-H3/blob/42ed227ee7df40d41602854ae760620d6eb651fe/docs/VIDEO_PROMPT_WRITING_GUIDE_base_en.md)
-organizes prompt text into `integrated_multimodal_description`,
-`overall_soundscape`, and `non_diegetic_music`. Use `[Shot 1]` to establish the
-scene, visible action and camera movement. Later shots may have increasing cut
-timestamps. Describe camera movement concretely, with speed/range where useful.
-For dialogue, consult the guide's speaker and language-markup rules; do not
-invent special tokens or rewrite user-provided speech. Image-reference tasks
-have additional alignment instructions and require real supplied images.
+The task includes the **complete pinned official base guide**, with its source
+URL and SHA256, rather than requiring you to find it yourself. It covers T2VA,
+I2VA, FL2VA and L2VA. Follow the explicitly selected mode for the actual inputs:
 
-For this project's short music-led clips, a single coherent shot is a useful
-starting point. Preserve the requested music rather than gratuitously adding a
-competing score. Prompt prose does not supply audio: the workflow's actual
-captured WAV is the conditioning source. Nor does a prompt guarantee exact beat
-events. If an analysed beat map is supplied, express event times relative to
-the captured clip start; do not invent beat measurements from a style label.
+- **T2VA** without a captured image: start with the three base-guide fields.
+- **I2VA** with the captured continuation PNG: use the supplied official
+  `<Picture 1>` alignment header, then the three fields. Inspect the actual
+  image and develop its existing scene forward.
+- The current helper exposes only a first frame, not a last-frame or arbitrary
+  full-reference input. Audio through `MiniMaxH3AddGuide` does not turn this into
+  Ref2VA. Do not describe nonexistent image/video references.
+
+For later reference workflows, the separately installed official full-reference
+guide is `references/h3/MiniMax-H3/<pinned revision>/docs/VIDEO_PROMPT_WRITING_GUIDE_ref_en.md`
+under STUDIO_DATA_ROOT. Ref2VA uses **six** sections: `subject_definitions`,
+`summary`, `retention_analysis`, `detailed_description`, `overall_soundscape`,
+`non_diegetic_music`. It is not the three-field base format with extra tags.
+FL2VA/L2VA and Ref2VA guidance describes model capabilities, not implemented
+Cutwork UI features. Upstream references retain their own licence, not MIT.
+
+Translate the style and brief into a small amount of observable action: a clear
+opening composition, an intermediate change/reaction, and a resolved final
+state. Concrete action and physical continuity are more useful than a pile of
+quality adjectives. Give camera motion a direction, extent and speed when it
+helps. One coherent shot is a useful short-clip default, not a ban on cuts.
+Use the guide's shot, dialogue, language and sound syntax where relevant; retain
+exact user dialogue/text and explicit creative choices. No arbitrary word cap.
+
+Use a few **retained** beat anchors for meaningful gestures, not a dense list of
+commands on every beat. Times are local to the captured interval, not song time.
+For example, a hand can approach a switch, press on a measured beat, and reveal
+a light settling before the last retained frame. With a continuation, preserve
+what the supplied image actually shows rather than restarting the establishing
+shot. Timing instructions are best-effort model direction, not proof of sync.
+
+The soundtrack is actual captured WAV conditioning. Prompt prose cannot replace
+it. Describe compatible ambience/action sounds without gratuitously adding a
+competing score. Distinguish diegetic sounds from audience-only music using the
+official fields. Normal research, tools and creative interpretation stay available;
+this guide does not constrain the agent's final response format.
 
 ## Timing and original media
 
@@ -31,11 +55,14 @@ output for placement and conditioning, not a separate agent-written rounding
 rule. The current native graph takes 17k+5 frames. For example, a 48-frame
 placement uses 56 generated frames. The WAV covers all 56 native frames with
 real song samples where available and silence only after the song ends. Keep
-the complete generated batch; initial placement still ends at frame 48.
+the complete generated batch; initial placement still ends at frame 48. The task separates retained beat
+anchors from native-tail-only anchors. Finish essential gestures and the intended
+ending by the **last retained frame**, not on a beat that exists only in the
+extra tail. Use the tail to sustain the resolved state; do not discard those
+originals or shorten the audio-conditioning interval.
 
 The project has no blanket four-second minimum or automatic 15-second cap.
-Long-duration warnings are advisory; hardware can still fail. The successful
-short proof does not establish longer clips, continuation or post-song quality.
+Long-duration warnings are advisory; hardware can still fail. A successful short clip does not establish quality at arbitrary lengths.
 
 The reviewed graph connects song conditioning to the guider, not in place of
 the joint AV latent. It branches the same decoded IMAGE batch to PNG and video
@@ -82,6 +109,7 @@ Measured baseline: 640×480, 24 fps, 56 frames, 20 steps, `res_multistep` with
 `simple`, w6a8 diffusion / NVFP4 text encoder / INT8 video VAE / FP32 audio VAE.
 The RTX 4060 Ti run used CPU offloading, emulated NVFP4 and process swap. It is
 not a VRAM-only recipe or an 8 GB compatibility claim. The helper now accepts the
-narrow original-frame continuation input; combined image-plus-audio inference
-and silent post-song quality require their own real proof. The standalone helper
+narrow original-frame continuation input; the recorded fresh-install run also exercised image-plus-audio continuation and
+post-song output. These examples do not guarantee seamless joins or quality for
+every brief. The standalone helper
 is not itself the durable scheduler or job-cancellation API.

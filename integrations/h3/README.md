@@ -47,6 +47,28 @@ systemd unit's `Result=success` with a finished operation.
 
 ## Workflow and original-frame branch
 
+### Prompt references (24 October update)
+
+The application's H3 setup now also installs `prompt-guides.json`: the complete
+official base guide, full-reference guide and upstream licence, **56,930 bytes**
+at revision `42ed227ee7df40d41602854ae760620d6eb651fe`. These are runtime downloads
+under `references/h3/MiniMax-H3/<revision>/`, not MIT-licensed bundled app text.
+Their manifest/ownership is separate from `models.json`, so adding guidance does
+not invalidate or download existing weights. For an existing manual installation:
+
+```sh
+./scripts/prepare-h3-models.py --prompt-guides --install
+```
+
+New studio video tasks inline and hash the complete base guide, with explicit
+T2VA/I2VA mode selection and separate retained/tail beat anchors. The full-reference
+guide is available for research/future integrations; arbitrary reference and
+last-frame workflows are not currently exposed by the studio. Existing task
+captures and exact native retries retain their recorded guidance and prompts.
+See [the change and verification record](../../devpost/h3-prompt-improvements.md).
+
+### Native graph
+
 `workflow.py` builds the API graph for the pinned ComfyUI revision. It accepts
 the **native** frame count supplied by the existing TypeScript timing planner;
 it does not duplicate beat/placement arithmetic. The first real request is

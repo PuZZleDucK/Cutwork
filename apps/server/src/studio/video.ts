@@ -1,3 +1,4 @@
+import {readH3PromptGuides,videoDirectionContext} from './h3-prompt-guidance.ts';
 import {DEFAULT_AGENT_TEMPLATES,renderAgentTemplate} from '../../../../packages/core/src/contracts/prompt-templates.ts';
 import assert from 'node:assert/strict';
 import {captureExecutionSource,captureReplayFile,fileHash,verifyExecutionSource,type ExecutionSource,type ReplayFile} from './execution-snapshot.ts';
@@ -84,6 +85,8 @@ export async function prepareVideoTask(o:VideoOptions,deps:Pick<VideoTaskDepende
  launch.executable=join(runtime,`tools/provider-cli/codex-${codex.version}_claude-${claude.version}/node_modules/.bin`,attempt.provider);
  const paths:TaskPlan['paths']={planPath:planPath(o),nativeRequest:join(project,'inputs/native-calls',attempt.nativeCallId,'request.json'),nativeReceipt:join(project,'runs',attempt.nativeCallId,'receipt.json'),agentRequest:join(launch.runDirectory,'video-request.json'),validation:join(project,'validation',attempt.id)};
  const guidance=await Promise.all(['README.md','video.md'].map(async name=>{const sourcePath=`integrations/knowledge/${name}`,text=await readFile(join(source,sourcePath),'utf8');return{name,sourcePath,text,sha256:hash(text)};}));
+ const upstreamGuides=await readH3PromptGuides(runtime,source);
+ guidance.push(upstreamGuides[0]!); // Complete base guide covers both supported T2VA and I2VA.
  const sourceHashes=Object.fromEntries(await Promise.all(['generate.py','workflow.py','media.py'].map(async name=>[name,await sha(join(source,'integrations/h3',name))])));
  const models=await json(join(source,'integrations/h3/models.json')),recipe=await json(join(source,'integrations/comfyui/recipe.json'));
  assert.ok(Array.isArray(models.models));const verifiedModels=models.models.flatMap(m=>{const model=record(m);assert.ok(Array.isArray(model.files));return model.files.map(f=>{const file=record(f);return{path:join(runtime,'models/h3',String(model.repository).split('/')[1]!,String(model.revision),String(file.path)),sha256:String(file.sha256),bytes:Number(file.bytes)};});});
@@ -102,14 +105,14 @@ export async function prepareVideoTask(o:VideoOptions,deps:Pick<VideoTaskDepende
  }
  const nativeTemplate={schemaVersion:1,attemptId:attempt.nativeCallId,projectId:attempt.projectId,song,plan:nativePlan,seed:attempt.seeds.h3,...(firstFrame?{firstFrame}:{})};
  const storedSong=store.project(attempt.projectId).songs.find(s=>s.id===attempt.song.id);assert.ok(storedSong,'Captured song is missing');
- const beats=storedSong.analysis.sampleIndices.map((s,i)=>({beat:i+1,sample:s,relativeSamples:(BigInt(s)-BigInt(nativePlan.conditioning.startSample)).toString()})).filter(b=>BigInt(b.relativeSamples)>=0n&&BigInt(b.relativeSamples)<BigInt(nativePlan.conditioning.totalSamples));
+ const direction=videoDirectionContext({requestedFrames:nativePlan.requestedFrames,nativeFrames:nativePlan.nativeFrames,startSample:nativePlan.conditioning.startSample,sampleIndices:storedSong.analysis.sampleIndices,hasFirstFrame:!!firstFrame});
  const command=[join(runtime,`tools/runtime/node-v${record(pins.node).version}-linux-x64/bin/node`),join(source,'scripts/native-call.ts'),origin,attempt.projectId,attempt.id,'h3',paths.agentRequest].map(quote).join(' ');
  launch.stdin=renderAgentTemplate(attempt.promptTemplate?.template??DEFAULT_AGENT_TEMPLATES.video,[
   `Project ${attempt.projectId}; parent attempt ${attempt.id}; native H3 call ${attempt.nativeCallId}; captured song ${attempt.song.id}.`,
   `Persistent VISUAL style:\n${attempt.input.style}\n\nIndividual clip brief:\n${attempt.input.clipPrompt}`,
   `Requested interval is [${attempt.input.startFrame}, ${attempt.input.endFrame}) at exactly 24 fps (${nativePlan.requestedFrames} frames). Native generation is ${nativePlan.nativeFrames} frames, beginning at the same start. Preserve all original frames; initial placement includes only the ${nativePlan.requestedFrames} requested frames. Do not stretch or retime. Durations over 15 seconds are advisory warnings, not a cap.`,
   ...(firstFrame?[`Continue from the selected last retained original PNG: ${firstFrame.path}; source frame ${attempt.continuation!.frame.index+1}, SHA256 ${firstFrame.sha256}. Inspect this supplied image with your normal tools and preserve its visual continuity. It is the first-frame input, not a replacement for the captured song audio. Do not use an MP4 extraction or the discarded untrimmed ending. The user may edit prepared times; the immutable interval below is authoritative. No seamless-motion guarantee or automatic chain is requested.`]:[]),
-  `Captured beat anchors inside the native interval: ${JSON.stringify(beats)}. Exact relative event time is relativeSamples / 48000 seconds. These are analysis estimates, not guaranteed visual alignment; do not invent beat data.`,
+  direction,
   `Create ${paths.agentRequest} using these immutable native inputs, adding your translated tool prompt in the native "prompt" field:\n${JSON.stringify(nativeTemplate,null,2)}\nThe helper conditions every native frame with the matching original song samples and pads only beyond the actual song. Do not replace the song, borrow the current UI selection, generate a new song or use the two-second proof convenience builder.`,
   `Use the existing helper through the running queue:\n${command}\nIt captures the actual tool request and owns only its own Comfy service. Wait for client state succeeded and inspect ${paths.nativeReceipt}. Never bypass a held lease or stop another application. If failed or uncertain, retain the evidence and explain.`,
   `Source ${source}; STUDIO_DATA_ROOT ${runtime}; workspace ${launch.cwd}; run directory ${launch.runDirectory}. Exact assigned H3 seed is the decimal string ${attempt.seeds.h3}; never round it through a JavaScript Number or allocate a replacement.`,
@@ -117,7 +120,8 @@ export async function prepareVideoTask(o:VideoOptions,deps:Pick<VideoTaskDepende
  ].join('\n\n'));
 
   // Historical queued requests predate editable templates. Keep their original
-  // prompt wording and order rather than applying a later global configuration.
+  // instruction order rather than applying a later editable template. Already
+  // captured tasks are replayed from their immutable plan, never rebuilt here.
   if (!attempt.promptTemplate) {
  launch.stdin=[
   'Create one fresh video clip for this captured music-video task. Perform the actual tool work; no automatic variations or silent expensive retries.',
@@ -126,7 +130,7 @@ export async function prepareVideoTask(o:VideoOptions,deps:Pick<VideoTaskDepende
   `Persistent VISUAL style:\n${attempt.input.style}\n\nIndividual clip brief:\n${attempt.input.clipPrompt}`,
   `Requested interval is [${attempt.input.startFrame}, ${attempt.input.endFrame}) at exactly 24 fps (${nativePlan.requestedFrames} frames). Native generation is ${nativePlan.nativeFrames} frames, beginning at the same start. Preserve all original frames; initial placement includes only the ${nativePlan.requestedFrames} requested frames. Do not stretch or retime. Durations over 15 seconds are advisory warnings, not a cap.`,
   ...(firstFrame?[`Continue from the selected last retained original PNG: ${firstFrame.path}; source frame ${attempt.continuation!.frame.index+1}, SHA256 ${firstFrame.sha256}. Inspect this supplied image with your normal tools and preserve its visual continuity. It is the first-frame input, not a replacement for the captured song audio. Do not use an MP4 extraction or the discarded untrimmed ending. The user may edit prepared times; the immutable interval below is authoritative. No seamless-motion guarantee or automatic chain is requested.`]:[]),
-  `Captured beat anchors inside the native interval: ${JSON.stringify(beats)}. Exact relative event time is relativeSamples / 48000 seconds. These are analysis estimates, not guaranteed visual alignment; do not invent beat data.`,
+  direction,
   `Create ${paths.agentRequest} using these immutable native inputs, adding your translated tool prompt in the native "prompt" field:\n${JSON.stringify(nativeTemplate,null,2)}\nThe helper conditions every native frame with the matching original song samples and pads only beyond the actual song. Do not replace the song, borrow the current UI selection, generate a new song or use the two-second proof convenience builder.`,
   `Use the existing helper through the running queue:\n${command}\nIt captures the actual tool request and owns only its own Comfy service. Wait for client state succeeded and inspect ${paths.nativeReceipt}. Never bypass a held lease or stop another application. If failed or uncertain, retain the evidence and explain.`,
   `Source ${source}; STUDIO_DATA_ROOT ${runtime}; workspace ${launch.cwd}; run directory ${launch.runDirectory}. Exact assigned H3 seed is the decimal string ${attempt.seeds.h3}; never round it through a JavaScript Number or allocate a replacement.`,

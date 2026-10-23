@@ -46,8 +46,11 @@ def require_unlinked(path):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--install', action='store_true')
+    parser.add_argument('--prompt-guides', action='store_true', help='Install small pinned prompting references separately; never touches weights')
     args = parser.parse_args()
-    manifest_path = Path(__file__).resolve().parents[1] / 'integrations/h3/models.json'
+    collection = 'references/h3' if args.prompt_guides else 'models/h3'
+    manifest_name = 'prompt-guides.json' if args.prompt_guides else 'models.json'
+    manifest_path = Path(__file__).resolve().parents[1] / 'integrations/h3' / manifest_name
     manifest = json.loads(manifest_path.read_text())
     manifest_hash = digest(manifest_path)
     root = Path(os.environ.get('STUDIO_DATA_ROOT',
@@ -63,7 +66,7 @@ def main():
         if (not re.fullmatch(r'[0-9a-f]{40}', model['revision'])
                 or model['repository'] not in {'Comfy-Org/MiniMax-H3', 'MiniMaxAI/MiniMax-H3'}):
             raise ValueError('Unexpected model identity')
-        directory = root / 'models/h3' / model['repository'].split('/')[1] / model['revision']
+        directory = root / collection / model['repository'].split('/')[1] / model['revision']
         seen = set()
         for entry in model['files']:
             path = PurePosixPath(entry['path'])
@@ -74,7 +77,7 @@ def main():
             seen.add(entry['path'])
         targets.append((model, directory))
     total = sum(f['bytes'] for m, _ in targets for f in m['files'])
-    print(f'Plan: {total:,} pinned bytes under {root / "models/h3"}', flush=True)
+    print(f'Plan: {total:,} pinned bytes under {root / collection}', flush=True)
     print('No host Python, agent configuration, inference, authentication or service changes.', flush=True)
     if not args.install:
         print('Plan only. Pass --install to download/verify the allowlisted public files.')
@@ -82,7 +85,7 @@ def main():
     if shutil.which('curl') is None:
         raise RuntimeError('curl is required')
     os.umask(0o077)
-    for path in (root / 'setup-jobs', root / 'models/.h3-install.lock'):
+    for path in (root / 'setup-jobs', root / ('references/h3/.h3-install.lock' if args.prompt_guides else 'models/.h3-install.lock')):
         require_unlinked(path)
     for model, directory in targets:
         require_unlinked(directory / '.studio-model-manifest')
@@ -91,11 +94,11 @@ def main():
             require_unlinked(target)
             require_unlinked(target.with_name(target.name + '.part'))
     (root / 'setup-jobs').mkdir(parents=True, exist_ok=True)
-    (root / 'models').mkdir(parents=True, exist_ok=True)
-    with (root / 'models/.h3-install.lock').open('a') as lock:
+    (root / collection).mkdir(parents=True, exist_ok=True)
+    with (root / ('references/h3/.h3-install.lock' if args.prompt_guides else 'models/.h3-install.lock')).open('a') as lock:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        job = Path(tempfile.mkdtemp(prefix='h3-models.', dir=root / 'setup-jobs'))
-        shutil.copyfile(manifest_path, job / 'models.json')
+        job = Path(tempfile.mkdtemp(prefix='h3-prompt-guides.' if args.prompt_guides else 'h3-models.', dir=root / 'setup-jobs'))
+        shutil.copyfile(manifest_path, job / manifest_name)
         receipt = {'schemaVersion': 1, 'manifestSha256': manifest_hash,
                    'installerSha256': digest(Path(__file__)), 'pid': os.getpid(),
                    'startedUnix': time.time(), 'state': 'running', 'verifiedFiles': []}
@@ -133,8 +136,8 @@ def main():
                             part.replace(evidence)
                             size = 0
                         remaining += entry['bytes'] - size
-            if shutil.disk_usage(root).free < remaining + 2 * 1024**3:
-                raise RuntimeError('Insufficient free space: model bytes plus 2 GiB reserve required')
+            if shutil.disk_usage(root).free < remaining + (1024**2 if args.prompt_guides else 2 * 1024**3):
+                raise RuntimeError('Insufficient free space: pinned bytes plus download reserve required')
             for model, directory in targets:
                 for entry in model['files']:
                     target = directory / entry['path']

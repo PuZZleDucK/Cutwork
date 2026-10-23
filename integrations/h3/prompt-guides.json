@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "scope": "Upstream prompting documentation, downloaded separately from weights; not MIT-licensed application content",
+  "models": [
+    {
+      "role": "prompt-guides",
+      "repository": "MiniMaxAI/MiniMax-H3",
+      "revision": "42ed227ee7df40d41602854ae760620d6eb651fe",
+      "license": "minimax-h3-community-license-agreement",
+      "files": [
+        {
+          "path": "docs/VIDEO_PROMPT_WRITING_GUIDE_base_en.md",
+          "bytes": 15773,
+          "sha256": "2cfebc096a6e08370f288d468d90b60f7f9bcb938f94bf090816e910e48e75fc"
+        },
+        {
+          "path": "docs/VIDEO_PROMPT_WRITING_GUIDE_ref_en.md",
+          "bytes": 23553,
+          "sha256": "1e574f356716ad55612247ffb7bbccbcdb484ad96599d63c7dca1af186b1fab7"
+        },
+        {
+          "path": "LICENSE",
+          "bytes": 17604,
+          "sha256": "59b99642b95ea21630e311198ddbfffbfe05aadba0c2f5d884cbdf4efcc90f44"
+        }
+      ]
+    }
+  ]
+}

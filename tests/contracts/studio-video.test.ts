@@ -1,4 +1,5 @@
 /** Explicit fake files/executors; never invokes providers, GPU models or services. */
+import {fixtureH3Guides} from '../helpers/h3-guides.ts';
 import { afterEach, expect, test, vi } from 'vitest';
 import { createHash, randomUUID } from 'node:crypto';
 import { mkdtemp, mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
@@ -37,6 +38,7 @@ async function fixture(startFrame=0,endFrame=48,sampleCount='96000'){
  await save(join(source,'integrations/comfyui/recipe.json'),{source:{revision:'fixture-revision'}});
  await save(join(source,'integrations/h3/models.json'),{models:[{repository:'Fixture/H3',revision:'pinned',files:['diffusion_models/model.safetensors','text_encoders/text.safetensors','vae/video.safetensors','vae/audio.safetensors'].map(path=>({path,sha256:'a'.repeat(64),bytes:123}))}]});
  let call:GpuCall|null=null,held=false;const cancel=vi.fn();const queue={get:()=>call,heldLease:()=>held?{callId:attempt.nativeCallId}:null,cancelAttempt:cancel} as unknown as GpuQueue;
+ await fixtureH3Guides(runtime,source);
  const options={runtime,source,origin,attempt,store,queue};
  return {...options,options,songPath,current,finishVideo,cancel,setCall:(v:GpuCall|null)=>{call=v;},setHeld:(v:boolean)=>{held=v;}};
 }
@@ -73,7 +75,7 @@ test('video capture preserves visual brief, song identity, maximal seed, and 48 
  expect(plan.nativePlan).toMatchObject({fps:'24/1',requestedFrames:48,nativeFrames:56,placement:{startFrame:0,endFrame:48},conditioning:{availableSamples:96000,silenceSamples:16000,totalSamples:112000}});
  expect(plan.launch.stdin).toContain(f.attempt.input.style);expect(plan.launch.stdin).toContain(f.attempt.input.clipPrompt);expect(plan.launch.stdin).toContain('normal capabilities');expect(plan.launch.stdin).toContain('native-call.ts');
  expect(plan.launch.stdin).not.toContain('500-token');expect(plan.launch.argv).toContain('--dangerously-bypass-approvals-and-sandbox');expect(plan.launch.executable).toContain('codex-0.163.0_claude-2.1.306');
- expect(plan.guidance.map((v:{name:string})=>v.name)).toEqual(['README.md','video.md']);expect(plan.guidance[1].text).toBe('Fixture video guidance unchanged.');
+ expect(plan.guidance.map((v:{name:string})=>v.name)).toEqual(['README.md','video.md','VIDEO_PROMPT_WRITING_GUIDE_base_en.md']);expect(plan.guidance[1].text).toBe('Fixture video guidance unchanged.');
  await expect(stat(plan.launch.runDirectory)).rejects.toMatchObject({code:'ENOENT'});await expect(prepareVideoTask(f.options)).rejects.toThrow();
 });
 test.each([[0,1,'96000',5,0],[100,148,'96000',56,112000],[0,361,'96000',362,628000]] as const)('native counts and overshoot silence for %s..%s are explicit, not a duration cap',async(start,end,samples,native,silence)=>{
@@ -172,3 +174,18 @@ test.each(['snapshot','native copy','request image','graph image','fingerprint i
  await runVideoTask(f.options,f.dependencies);expect(f.current.state).toBe('failed');expect(f.finishVideo).not.toHaveBeenCalled();
 });
 test('ordinary attempt rejects an unrequested native image input',async()=>{const f=await nativeFixture();f.graph['5']!.inputs.first_frame=['19',0];await save(join(f.run,'workflow-api.json'),f.graph);await save(join(f.run,'history.json'),f.history);await runVideoTask(f.options,f.dependencies);expect(f.current.state).toBe('failed');expect(f.finishVideo).not.toHaveBeenCalled();});
+
+test('new video capture includes complete verified upstream text and T2VA routing even with a custom template',async()=>{
+ const f=await fixture();f.attempt.promptTemplate={revision:3,template:'MY TEMPLATE\n{{task_context}}'};
+ const p=await prepareVideoTask(f.options),plan=JSON.parse(await readFile(p.planPath,'utf8'));
+ const official=plan.guidance.find((g:{name:string})=>g.name==='VIDEO_PROMPT_WRITING_GUIDE_base_en.md');
+ expect(official).toBeDefined();expect(plan.launch.stdin).toContain(official.text);expect(plan.launch.stdin).toContain('Mode: T2VA');
+ expect(plan.launch.stdin).toContain('Retained beat anchors:');expect(plan.launch.stdin).toContain('Native-tail-only beat anchors:');
+ const captured=await readFile(p.planPath,'utf8');await writeFile(join(f.source,'integrations/knowledge/video.md'),'later guidance');
+ expect(await readFile(p.planPath,'utf8')).toBe(captured);
+});
+test('continuation task routes to I2VA, not Ref2VA despite audio and image conditioning',async()=>{
+ const f=await fixture(),c=await attachContinuation(f),p=await prepareVideoTask(f.options,{execute:c.execute});
+ const plan=JSON.parse(await readFile(p.planPath,'utf8'));expect(plan.launch.stdin).toContain('Mode: I2VA');
+ expect(plan.launch.stdin).toContain('<Picture 1> (from [Shot 1]) is fully referenced.');expect(plan.launch.stdin).not.toContain('Mode: Ref2VA');
+});

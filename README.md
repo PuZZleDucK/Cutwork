@@ -117,7 +117,10 @@ panels collapse into shared status indicators.
 
 - **YuE2:** its own managed Python/venv and pinned music model assets.
 - **ComfyUI + H3:** a different managed Python/venv, owned loopback service and
-  product workflow that saves decoded PNG frames before video encoding.
+  product workflow that saves decoded PNG frames before video encoding. H3 setup
+  also installs pinned upstream prompting guides; each new video task captures
+  the complete relevant guide and its hash. These documents retain their upstream
+  licence and are downloaded separately from the large model weights.
 - **Audio analysis:** a separate CPU-only Librosa venv; it may reuse Comfy's base
   interpreter, never Comfy's installed packages. It measures duration/sample
   metadata, waveform peaks, estimated tempo and beat positions. Missing/uncertain

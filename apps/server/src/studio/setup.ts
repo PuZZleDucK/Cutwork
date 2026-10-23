@@ -1,3 +1,4 @@
+import {readH3PromptGuides} from './h3-prompt-guidance.ts';
 import { spawn } from 'node:child_process';
 import { createHash, randomUUID } from 'node:crypto';
 import { createReadStream } from 'node:fs';
@@ -216,6 +217,7 @@ export function createSetupAdapter({ runtime, source, execute = executeSetupComm
     try {
       await nativeEnvironment(tool === 'h3' ? 'comfyui' : tool, log); installed = true;
       if (tool === 'yue2' || tool === 'h3') await verifyModels(tool, log);
+      if (tool === 'h3') await readH3PromptGuides(runtime,source);
       if (tool === 'comfyui') {
         const port = await allocatePort(); if (!Number.isInteger(port) || port < 1024 || port > 65535) throw new Error('Invalid CPU probe port');
         await mkdir(join(runtime, 'setup-jobs'), { recursive: true, mode: 0o700 });
@@ -245,7 +247,10 @@ export function createSetupAdapter({ runtime, source, execute = executeSetupComm
     if (tool === 'agent') await shell('prepare-runtime.sh');
     else if (tool === 'yue2') { await shell('prepare-yue2.sh'); await models('prepare-yue2-models.py'); }
     else if (tool === 'comfyui') await shell('prepare-comfyui.sh');
-    else if (tool === 'h3') await models('prepare-h3-models.py');
+    else if (tool === 'h3') {
+      await models('prepare-h3-models.py');
+      await checked('/usr/bin/python3', ['-I', '-u', join(source,'scripts/prepare-h3-models.py'), '--prompt-guides', '--install'], 300_000, onLog);
+    }
     else await shell('prepare-analysis.sh');
     const status = await inspect(tool, provider, onLog); ensureOpen(); onLog(`${status.detail}\n`); return status;
   }

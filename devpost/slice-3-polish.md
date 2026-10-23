@@ -30,3 +30,7 @@ Source review found stable timing-input keys and no scroll/focus calls. Visible 
 - Dundee's immutable deployment passed the same **929/929 tests**, typecheck and build using pinned Node 24.22.0. All five tools finished startup readiness checks before the preservation audit.
 - Preservation audit: **26/26 checks, 438 registered assets**, exact creative/native rows and asset hashes unchanged. Schema remains 3. TTS invocation/PID and the personal ComfyUI PID/start time are unchanged; neither service was stopped.
 - Live browser refresh preserved the user's project, style, clip description and every timing field. Duration displayed **94 frames / 7 beats / 3.872 seconds** for the existing draft; completed library clips appeared at ascending starts **0, 108**. End remained selected with Start on its left. Generation is ready again. No new generation or render was run for this pass.
+
+## Learner checkpoint
+
+Accepted with “perfect” on 23 October 2026. This completes the integrated slice-3 feedback checkpoint; proceed to slice 4 in fast mode.

@@ -3,12 +3,13 @@ import { afterEach, expect, test, vi } from 'vitest';
 import { randomUUID, createHash } from 'node:crypto';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { mkdtemp, rm, mkdir, writeFile } from 'node:fs/promises';
+import { mkdtemp, rm, mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { openStudioStore } from '../../apps/server/src/studio/store.ts';
 import { openGpuQueue } from '../../apps/server/src/jobs/gpu-queue.ts';
 import { createStudioRuntime } from '../../apps/server/src/studio/runtime.ts';
+import { prepareMusicTask } from '../../apps/server/src/studio/music.ts';
 import { providerModels } from '../../apps/server/src/providers/launch.ts';
 import type { RenderOptions } from '../../apps/server/src/studio/render-contract.ts';
 import type { MusicAttempt, VideoAttempt, Provider, ProviderStatus, ToolId } from '../../packages/core/src/contracts/studio.ts';
@@ -16,7 +17,7 @@ const cleanup: (() => Promise<void>)[] = [];
 afterEach(async () => { for (const fn of cleanup.splice(0).reverse()) await fn(); });
 const draft = { musicPrompt: 'Synthetic scheduler fixture', lyrics: '' };
 function deferred() { let resolve!: () => void; const promise = new Promise<void>(r => { resolve = r; }); return { promise, resolve }; }
-async function fixture(nativeRuntimeLimitSeconds = 3600) {
+async function fixture(nativeRuntimeLimitSeconds = 3600, source?: string) {
  const root = await mkdtemp(join(tmpdir(), 'studio-runtime-'));
  cleanup.push(() => rm(root, { recursive: true, force: true }));
  const store = openStudioStore(join(root, 'studio.sqlite')), queue = openGpuQueue(join(root, 'gpu.sqlite'));
@@ -30,14 +31,14 @@ async function fixture(nativeRuntimeLimitSeconds = 3600) {
   probe: vi.fn(async (id: ToolId, _p: Provider) => ({ installed: installed.has(id), ready: installed.has(id), detail: 'FAKE readiness' })),
   install: vi.fn(async (id: ToolId, _p: Provider, log: (s: string) => void) => { log('FAKE install output\n'); installed.add(id); return { installed: true, ready: true, detail: 'FAKE complete' }; }),
  };
- const prepare = vi.fn(async ({ attempt }: { attempt: MusicAttempt }) => ({ planPath: join(root, attempt.id, 'captured-task.json') }));
+ const prepare = vi.fn(async ({ attempt }: Parameters<typeof prepareMusicTask>[0]) => ({ planPath: join(root, attempt.id, 'captured-task.json') }));
  const run = vi.fn(async ({ attempt }: { attempt: MusicAttempt }) => { store.patchAttempt(attempt.id, { state: 'failed', stage: 'FAKE run ended without media', error: 'FAKE test outcome' }); });
  const prepareVideo = vi.fn(async ({ attempt }: { attempt: VideoAttempt }) => ({ planPath: join(root, attempt.id, 'captured-task.json') }));
  const runVideo = vi.fn(async ({ attempt }: { attempt: VideoAttempt }) => { store.patchVideoAttempt(attempt.id, { state: 'failed', stage: 'FAKE video ended without media', error: 'FAKE outcome' }); });
  const render = vi.fn(async (o:RenderOptions) => { const outputPath=join(root,'projects',o.plan.projectId,'renders',o.renderId,'video.mp4'); await mkdir(join(outputPath,'..'),{recursive:true}); await writeFile(outputPath,'FAKE RENDER'); return {outputPath,sha256:createHash('sha256').update('FAKE RENDER').digest('hex'),bytes:11,frameCount:48,sampleCount:'96000',receiptPath:join(root,'receipt.json'),planHash:'c'.repeat(64)}; });
- const runtime = createStudioRuntime({ store, queue, runtime: root, source: root, origin: 'http://127.0.0.1:9122', setupAdapter: adapter, prepareMusic: prepare, runMusic: run, prepareVideo, runVideo, runRender: render, pollMs: 10, nativeRuntimeLimitSeconds });
+ const runtime = createStudioRuntime({ store, queue, runtime: root, source: source ?? root, origin: 'http://127.0.0.1:9122', setupAdapter: adapter, prepareMusic: prepare, runMusic: run, prepareVideo, runVideo, runRender: render, pollMs: 10, nativeRuntimeLimitSeconds });
  cleanup.push(() => runtime.close());
- return { runtime, store, queue, adapter, prepare, run, prepareVideo, runVideo, render, installed, auth, status };
+ return { root, runtime, store, queue, adapter, prepare, run, prepareVideo, runVideo, render, installed, auth, status };
 }
 const settled = (f: Awaited<ReturnType<typeof fixture>>) => vi.waitFor(() => expect(f.store.setupJobs().filter(j => ['queued', 'running'].includes(j.state))).toHaveLength(0));
 
@@ -139,6 +140,68 @@ test('stale provider auth result cannot overwrite newly selected provider status
  f.adapter.checkProvider.mockImplementationOnce(async p => { await gate.promise; return f.status(p); });
  const prior = f.runtime.checkProvider(); await f.runtime.selectProvider('claude'); gate.resolve(); await prior;
  expect(f.runtime.overview().provider.provider).toBe('claude'); expect(f.runtime.overview().provider.model).toBe('claude-opus-5-5');
+});
+test('startup cannot project the previous provider readiness onto the newly selected provider tool', async () => {
+ const f = await fixture(), gate = deferred(); cleanup.push(async () => { gate.resolve(); });
+ f.adapter.checkProvider.mockImplementationOnce(async provider => { await gate.promise; return { ...f.status(provider), installed: false, auth: 'unknown', detail: 'Old Codex observation: not installed' }; });
+ f.adapter.checkProvider.mockImplementation(async provider => ({ ...f.status(provider), detail: 'Selected Claude observation: signed in' }));
+ const starting = f.runtime.start(); await vi.waitFor(() => expect(f.adapter.checkProvider).toHaveBeenCalledTimes(1));
+ await f.runtime.selectProvider('claude');
+ expect(f.store.tool('agent')).toMatchObject({ installed: true, state: 'ready', detail: 'Selected Claude observation: signed in' });
+ gate.resolve(); await starting;
+ expect(f.runtime.overview().provider).toMatchObject({ provider: 'claude', auth: 'signed-in', detail: 'Selected Claude observation: signed in' });
+ expect(f.store.tool('agent')).toMatchObject({ installed: true, state: 'ready', detail: 'Selected Claude observation: signed in' });
+ expect(f.adapter.install).not.toHaveBeenCalled();
+});
+test('startup cannot reapply an older auth result after a newer check of the same provider', async () => {
+ const f = await fixture(), gate = deferred(); cleanup.push(async () => { gate.resolve(); });
+ f.adapter.checkProvider.mockImplementationOnce(async provider => { await gate.promise; return { ...f.status(provider), auth: 'sign-in-required', detail: 'Old Codex observation: sign in' }; });
+ f.adapter.checkProvider.mockImplementation(async provider => ({ ...f.status(provider), detail: 'Latest Codex observation: signed in' }));
+ const starting = f.runtime.start(); await vi.waitFor(() => expect(f.adapter.checkProvider).toHaveBeenCalledTimes(1));
+ await f.runtime.checkProvider(); gate.resolve(); await starting;
+ expect(f.runtime.overview().provider).toMatchObject({ provider: 'codex', auth: 'signed-in', detail: 'Latest Codex observation: signed in' });
+ expect(f.store.tool('agent')).toMatchObject({ installed: true, state: 'ready', detail: 'Latest Codex observation: signed in' });
+});
+test.each(['claude', 'codex'] as const)('agent setup completion uses the latest %s observation instead of its older final auth result', async provider => {
+ const f = await fixture(), gate = deferred(); cleanup.push(async () => { gate.resolve(); }); await f.runtime.start();
+ f.adapter.checkProvider.mockClear();
+ f.adapter.checkProvider.mockImplementationOnce(async p => f.status(p));
+ f.adapter.checkProvider.mockImplementationOnce(async p => { await gate.promise; return { ...f.status(p), installed: false, auth: 'unknown', detail: 'Obsolete final setup observation: missing CLI' }; });
+ f.adapter.checkProvider.mockImplementation(async p => ({ ...f.status(p), detail: `Latest ${p} observation: signed in` }));
+ f.runtime.setup('agent'); await vi.waitFor(() => expect(f.adapter.checkProvider).toHaveBeenCalledTimes(2));
+ if (provider === 'claude') await f.runtime.selectProvider(provider); else await f.runtime.checkProvider();
+ expect(f.store.tool('agent').state).toBe('installing');
+ gate.resolve(); await settled(f);
+ expect(f.store.setupJobs()[0]?.state).toBe('succeeded');
+ expect(f.runtime.overview().provider).toMatchObject({ provider, installed: true, auth: 'signed-in', detail: `Latest ${provider} observation: signed in` });
+ expect(f.store.tool('agent')).toMatchObject({ installed: true, state: 'ready', active: false, detail: `Latest ${provider} observation: signed in` });
+ expect(f.adapter.install).not.toHaveBeenCalled();
+});
+test('agent setup waits for a newly selected provider check rather than claiming readiness from the old provider', async () => {
+ const f = await fixture(), oldGate = deferred(), selectedGate = deferred();
+ cleanup.push(async () => { oldGate.resolve(); selectedGate.resolve(); }); await f.runtime.start();
+ f.adapter.checkProvider.mockClear();
+ f.adapter.checkProvider.mockImplementationOnce(async p => f.status(p));
+ f.adapter.checkProvider.mockImplementationOnce(async p => { await oldGate.promise; return { ...f.status(p), detail: 'Old Codex ready' }; });
+ f.adapter.checkProvider.mockImplementationOnce(async p => { await selectedGate.promise; return { ...f.status(p), auth: 'sign-in-required', detail: 'Selected Claude needs sign-in' }; });
+ f.runtime.setup('agent'); await vi.waitFor(() => expect(f.adapter.checkProvider).toHaveBeenCalledTimes(2));
+ const selecting = f.runtime.selectProvider('claude'); oldGate.resolve();
+ await new Promise(resolve => setTimeout(resolve, 30));
+ expect(f.store.setupJobs()[0]?.state).toBe('running'); expect(f.store.tool('agent')).toMatchObject({ state: 'installing', active: true });
+ selectedGate.resolve(); await selecting; await settled(f);
+ expect(f.store.setupJobs()[0]?.state).toBe('succeeded');
+ expect(f.store.tool('agent')).toMatchObject({ installed: true, state: 'error', active: false, detail: 'Selected Claude needs sign-in' });
+ expect(f.runtime.overview().provider).toMatchObject({ provider: 'claude', auth: 'sign-in-required' });
+});
+test('shutdown during the final agent setup check defers verification without launching another check', async () => {
+ const f = await fixture(), gate = deferred(); cleanup.push(async () => { gate.resolve(); }); await f.runtime.start();
+ f.adapter.checkProvider.mockClear();
+ f.adapter.checkProvider.mockImplementationOnce(async p => f.status(p));
+ f.adapter.checkProvider.mockImplementationOnce(async p => { await gate.promise; return f.status(p); });
+ f.runtime.setup('agent'); await vi.waitFor(() => expect(f.adapter.checkProvider).toHaveBeenCalledTimes(2));
+ const closing = f.runtime.close(); gate.resolve(); await closing;
+ expect(f.store.setupJobs()[0]?.state).toBe('queued'); expect(f.store.tool('agent')).toMatchObject({ state: 'queued', active: false });
+ expect(f.adapter.checkProvider).toHaveBeenCalledTimes(2); expect(f.adapter.install).not.toHaveBeenCalled(); expect(f.adapter.close).toHaveBeenCalledOnce();
 });
 
 test('startup uncertain probe retains maintenance instead of certifying cleanup', async () => {
@@ -247,6 +310,111 @@ test('music and video share original acceptance order across projects',async()=>
  const f=await fixture();const p=f.store.createProject('Sequence'),song=fixtureSong(f,p.id);
  const video=await f.runtime.submitVideo(p.id,randomUUID(),{songId:song.id,style:'',clipPrompt:'First',startFrame:0,endFrame:48}),music=await f.runtime.submitMusic(p.id,randomUUID(),draft);await f.runtime.start();
  await vi.waitFor(()=>expect(f.run).toHaveBeenCalledTimes(1));expect(f.runVideo).toHaveBeenCalledTimes(1);expect(f.runVideo.mock.invocationCallOrder[0]).toBeLessThan(f.run.mock.invocationCallOrder[0]!);expect(video.sequence).toBeLessThan(music.sequence);
+});
+test('an earlier accepted video still capturing cannot be overtaken by later music from another project/provider',async()=>{
+ const f=await fixture(),firstProject=f.store.createProject('Capture first'),song=fixtureSong(f,firstProject.id),secondProject=f.store.createProject('Capture second'),gate=deferred();
+ cleanup.push(async()=>{gate.resolve();});await f.runtime.start();
+ f.prepareVideo.mockImplementationOnce(async({attempt})=>{await gate.promise;return{planPath:`/fixture/${attempt.id}/captured-task.json`};});
+ const input={songId:song.id,style:'Original visual direction',clipPrompt:'Original first shot',startFrame:0,endFrame:48};
+ const firstPromise=f.runtime.submitVideo(firstProject.id,randomUUID(),input);
+ await vi.waitFor(()=>expect(f.prepareVideo).toHaveBeenCalledTimes(1));
+ f.store.selectProject(secondProject.id);await f.runtime.selectProvider('claude');
+ const second=await f.runtime.submitMusic(secondProject.id,randomUUID(),draft);
+ await new Promise(r=>setTimeout(r,40));
+ expect(f.runVideo).not.toHaveBeenCalled();expect(f.run).not.toHaveBeenCalled();
+ expect(f.store.attempt(second.id)?.state).toBe('queued');
+ gate.resolve();const first=await firstPromise;
+ await vi.waitFor(()=>expect(f.run).toHaveBeenCalledTimes(1));expect(f.runVideo).toHaveBeenCalledTimes(1);
+ expect(first.sequence).toBeLessThan(second.sequence);expect(f.runVideo.mock.invocationCallOrder[0]).toBeLessThan(f.run.mock.invocationCallOrder[0]!);
+ expect(f.runVideo.mock.calls[0]![0].attempt).toMatchObject({id:first.id,projectId:firstProject.id,provider:'codex',input});
+ expect(f.run.mock.calls[0]![0].attempt).toMatchObject({id:second.id,projectId:secondProject.id,provider:'claude'});
+ expect(f.prepareVideo).toHaveBeenCalledTimes(1);expect(f.prepare).toHaveBeenCalledTimes(1);
+});
+test('failed earlier capture releases FIFO for the next request without dispatching or recapturing the failed one',async()=>{
+ const f=await fixture(),p=f.store.createProject('Capture failure'),gate=deferred();
+ cleanup.push(async()=>{gate.resolve();});await f.runtime.start();
+ f.prepare.mockImplementationOnce(async()=>{await gate.promise;throw new Error('FAKE first capture failed');});
+ const key=randomUUID(),firstPromise=f.runtime.submitMusic(p.id,key,draft);
+ await vi.waitFor(()=>expect(f.prepare).toHaveBeenCalledTimes(1));
+ const second=await f.runtime.submitMusic(p.id,randomUUID(),{...draft,musicPrompt:'Later request'});
+ await new Promise(r=>setTimeout(r,40));expect(f.run).not.toHaveBeenCalled();
+ gate.resolve();const first=await firstPromise;
+ await vi.waitFor(()=>expect(f.run).toHaveBeenCalledTimes(1));expect(f.run.mock.calls[0]![0].attempt.id).toBe(second.id);
+ expect(first.state).toBe('failed');expect((await f.runtime.submitMusic(p.id,key,draft)).seeds).toEqual(first.seeds);
+ expect(f.prepare).toHaveBeenCalledTimes(2);expect(f.run.mock.calls.some(([o])=>o.attempt.id===first.id)).toBe(false);
+});
+test('running and queued work retain cross-project provider context, aggregate counts and captured workspaces through database reopen', async () => {
+ // Real task capture and SQLite persistence; executors are bounded, explicit
+ // fixtures. No provider CLI, native generator or user runtime is contacted.
+ const source = process.cwd(), f = await fixture(3600, source), gate = deferred();
+ cleanup.push(async () => { gate.resolve(); }); f.prepare.mockImplementation(prepareMusicTask);
+ const a = f.store.createProject('Original Codex project'), b = f.store.createProject('Later Claude project');
+ f.run.mockImplementationOnce(async ({ attempt }) => {
+  f.store.patchAttempt(attempt.id, { state: 'running', stage: 'FAKE owned native work' });
+  f.queue.submit({ id: attempt.nativeCallId, attemptId: attempt.id, projectId: attempt.projectId, tool: 'yue2', request: { fixture: true, seeds: attempt.seeds } });
+  const lease = f.queue.claim('fixture-worker')!;
+  f.queue.prepareLaunch(lease, { fixtureCommand: true }); f.queue.acknowledgeLaunch(lease, { fixtureOwner: true });
+  await gate.promise;
+  f.queue.finish(lease, 'failed', { fixtureEnded: true }, { fixtureReleased: true });
+  f.store.patchAttempt(attempt.id, { state: 'failed', stage: 'FAKE stopped cleanly before restart' });
+ });
+ await f.runtime.start();
+ const first = await f.runtime.submitMusic(a.id, randomUUID(), { musicPrompt: 'First exact Codex brief', lyrics: 'First words' });
+ await vi.waitFor(() => expect(f.store.attempt(first.id)?.state).toBe('running'));
+ await f.runtime.selectProvider('claude'); f.store.selectProject(b.id);
+ const second = await f.runtime.submitMusic(b.id, randomUUID(), { musicPrompt: 'Second exact Claude brief', lyrics: 'Second words' });
+ await f.runtime.selectProvider('codex');
+ const third = await f.runtime.submitMusic(a.id, randomUUID(), { musicPrompt: 'Third exact Codex brief', lyrics: 'Third words' });
+ const draft = f.store.project(b.id).project;
+ f.store.saveDraft(b.id, draft.revision, { musicPrompt: 'Changed after acceptance', lyrics: 'Not submitted', style: 'Visual only' });
+ const accepted = [first, second, third], originals = await Promise.all(accepted.map(attempt => readFile(String(attempt.details.planPath), 'utf8')));
+ const plans = originals.map(text => JSON.parse(text));
+ for (const [index, attempt] of accepted.entries()) {
+  const plan = plans[index], workspace = join(f.root, 'projects', attempt.projectId, 'workspace');
+  expect(attempt.details.planPath).toBe(join(f.root, 'projects', attempt.projectId, 'inputs', attempt.id, 'captured-task.json'));
+  expect(plan.attempt).toMatchObject({ id: attempt.id, nativeCallId: attempt.nativeCallId, projectId: attempt.projectId, input: attempt.input, seeds: attempt.seeds, provider: attempt.provider, model: attempt.model });
+  expect(plan.launch.cwd).toBe(workspace); expect(plan.launch.runDirectory).toBe(join(workspace, 'runs', attempt.id));
+  expect(plan.launch.stdin).toContain(attempt.input.musicPrompt); expect(plan.launch.stdin).toContain(attempt.input.lyrics);
+  expect(plan.launch.argv[plan.launch.argv.indexOf('--model') + 1]).toBe(attempt.model);
+  await expect(stat(plan.launch.runDirectory)).rejects.toMatchObject({ code: 'ENOENT' });
+ }
+ expect(plans[0].launch.cwd).toBe(plans[2].launch.cwd); expect(plans[1].launch.cwd).not.toBe(plans[0].launch.cwd);
+ expect(new Set(plans.map(plan => plan.launch.runDirectory)).size).toBe(3);
+ const overview = f.runtime.overview();
+ expect(overview.selectedProjectId).toBe(b.id); expect(overview.provider.provider).toBe('codex');
+ expect(overview.tools.find(t => t.id === 'agent')).toMatchObject({ active: true, queued: 2 });
+ expect(overview.tools.find(t => t.id === 'yue2')).toMatchObject({ active: true, queued: 0 });
+ expect(overview.projects.map(p => [p.id, p.activeAttempts])).toEqual([[a.id, 2], [b.id, 1]]);
+ expect(f.run).toHaveBeenCalledTimes(1); expect(f.prepare).toHaveBeenCalledTimes(3);
+ // Stop dispatch before releasing the fixture. The two never-dispatched plans
+ // remain queued; the stopped fixture is terminal and cannot be replayed.
+ const closing = f.runtime.close(); gate.resolve(); await closing;
+ expect(f.store.attempt(second.id)?.state).toBe('queued'); expect(f.store.attempt(third.id)?.state).toBe('queued');
+ expect(f.queue.heldLease()).toBeNull(); f.store.close(); f.queue.close();
+ const store = openStudioStore(join(f.root, 'studio.sqlite')), queue = openGpuQueue(join(f.root, 'gpu.sqlite'));
+ cleanup.push(async () => { store.close(); queue.close(); });
+ const capturedAgain = vi.fn(prepareMusicTask), seen: MusicAttempt[] = [];
+ const reopened = createStudioRuntime({ store, queue, runtime: f.root, source, origin: 'http://127.0.0.1:9122', setupAdapter: f.adapter, prepareMusic: capturedAgain,
+  runMusic: async ({ attempt }) => {
+   seen.push(structuredClone(attempt));
+   store.patchAttempt(attempt.id, { state: 'failed', stage: 'FAKE recorded dispatch only' });
+  }, pollMs: 10 });
+ cleanup.push(() => reopened.close()); f.adapter.checkProvider.mockClear();
+ expect(reopened.overview().tools.find(t => t.id === 'agent')).toMatchObject({ active: false, queued: 2 });
+ await reopened.start(); await vi.waitFor(() => expect(seen).toHaveLength(2));
+ expect(seen.map(attempt => attempt.id)).toEqual([second.id, third.id]);
+ expect(f.adapter.checkProvider.mock.calls.map(([provider]) => provider)).toEqual(['codex', 'claude', 'codex']);
+ for (const [index, attempt] of seen.entries()) {
+  const original = accepted[index + 1]!;
+  expect(attempt).toMatchObject({ id: original.id, projectId: original.projectId, nativeCallId: original.nativeCallId,
+   provider: original.provider, model: original.model, input: original.input, seeds: original.seeds, details: original.details });
+ }
+ expect(capturedAgain).not.toHaveBeenCalled(); expect(f.prepare).toHaveBeenCalledTimes(3);
+ expect(await Promise.all(accepted.map(attempt => readFile(String(attempt.details.planPath), 'utf8')))).toEqual(originals);
+ expect(reopened.overview().tools.find(t => t.id === 'agent')).toMatchObject({ active: false, queued: 0 });
+ expect(reopened.overview().tools.find(t => t.id === 'yue2')).toMatchObject({ active: false, queued: 0 });
+ expect(store.selectedProject()).toBe(b.id); expect(store.project(a.id).attempts.map(attempt => attempt.id)).toEqual([first.id, third.id]);
+ expect(store.project(b.id).attempts.map(attempt => attempt.id)).toEqual([second.id]);
 });
 test('render is revision-bound, idempotent, and completes through the CPU renderer',async()=>{
  const f=await fixture();await f.runtime.start();const p=f.store.createProject('Render'),song=fixtureSong(f,p.id),key=randomUUID(),revision=f.store.arrangement(p.id,song.id).revision;

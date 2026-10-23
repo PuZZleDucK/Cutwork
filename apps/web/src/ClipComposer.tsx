@@ -1,17 +1,20 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import type { SongArrangement, StudioSong, VideoAttempt, VideoReservation } from '../../../packages/core/src/contracts/studio.ts';
 import { displayTimingDuration, displayTimingValue, resolveTiming, timingFromFrames, type ClipTimingIntent, type TimingUnit, type LinkedTimingDisplay } from '../../../packages/core/src/time/linked-timing.ts';
 import { request } from './api.ts';
 import { useStudio } from './useStudio.ts';
+import { clipTimingEqual } from './clip-draft-state.ts';
 import { acceptedClipPrompt } from './feedback-state.ts';
-import { clipSessionKey, readSession, writeSession, decodeClipTiming, decodeSubmission, clearMatchingSession } from './clip-session.ts';
+import { useSavedClipDraft } from './useSavedClipDraft.ts';
+import { clipSessionKey, readSession, writeSession, decodeSubmission, clearMatchingSession } from './clip-session.ts';
 import { clipSuggestion, submissionIdentity, videoInput } from './video-state.ts';
 type Studio=ReturnType<typeof useStudio>;
 
 export function useClipDraft(studio:Studio,song:StudioSong,arrangement:SongArrangement) {
- const timingKey=clipSessionKey(song.projectId,song.id,'timing');
- const [manual,updateManual]=useState<ClipTimingIntent|null>(()=>decodeClipTiming(readSession(timingKey)));
- const setManual=(value:ClipTimingIntent|null)=>{writeSession(timingKey,value?JSON.stringify(value):null);updateManual(value);};
+ const saved=studio.snapshot!.clipDrafts.find(d=>d.songId===song.id)??{projectId:song.projectId,songId:song.id,revision:0,clipPrompt:'',timingIntent:null};
+ const persistence=useSavedClipDraft(saved);
+ const manual=persistence.value.timingIntent;
+ const setManual=(value:ClipTimingIntent|null)=>persistence.edit(current=>({...current,timingIntent:value}));
  const [accepted,setAccepted]=useState<VideoReservation[]>([]);
  const [error,setError]=useState<string|null>(null);
  const [target,setTarget]=useState<'start'|'end'>('end');
@@ -19,17 +22,16 @@ export function useClipDraft(studio:Studio,song:StudioSong,arrangement:SongArran
  const suggestion=clipSuggestion(song,arrangement.placements,[...studio.snapshot!.reservations,...unobserved]);
  const intent=manual??timingFromFrames(suggestion?.startFrame??0,suggestion?.endFrame??24);
  const timing=resolveTiming(song,intent);
- return {intent,timing,suggestion,manual,timingKey,setManual,setAccepted,error,setError,target,setTarget,
-  clearAcceptedTiming:(submitted:ClipTimingIntent)=>{clearMatchingSession(timingKey,JSON.stringify(submitted));updateManual(current=>JSON.stringify(current)===JSON.stringify(submitted)?null:current);},
+ return {intent,timing,suggestion,manual,persistence,setManual,setAccepted,error,setError,target,setTarget,
+  clearAccepted:(prompt:string,submitted:ClipTimingIntent)=>{persistence.edit(current=>({clipPrompt:acceptedClipPrompt(current.clipPrompt,prompt,true),timingIntent:clipTimingEqual(current.timingIntent,submitted)?null:current.timingIntent}));void persistence.save().catch(()=>{});},
   change:(next:ClipTimingIntent)=>{setManual(next);setError(null);}};
 }
 export type ClipDraft=ReturnType<typeof useClipDraft>;
 export function ClipForm({studio,song,draft}:{studio:Studio;song:StudioSong;draft:ClipDraft}) {
- const key=clipSessionKey(song.projectId,song.id,'prompt');
  const submissionKey=clipSessionKey(song.projectId,song.id,'submission');
- const [prompt,setPrompt]=useState(()=>readSession(key)??'');
+ const prompt=draft.persistence.value.clipPrompt;
+ const setPrompt=(value:string)=>draft.persistence.edit(current=>({...current,clipPrompt:value}));
  const submission=useRef<{signature:string;key:string}|null>(decodeSubmission(readSession(submissionKey)));
- useEffect(()=>{try{sessionStorage.setItem(key,prompt);}catch{/* Open-page draft remains usable. */}},[key,prompt]);
  const {timing,intent}=draft;
  const duration=displayTimingDuration(song,timing);
  const songEnd={numerator:BigInt(song.sampleCount),denominator:BigInt(song.sampleRate)};
@@ -47,16 +49,19 @@ export function ClipForm({studio,song,draft}:{studio:Studio;song:StudioSong;draf
   submission.current=submissionIdentity(submission.current,{projectId:song.projectId,input:submitted});const idempotencyKey=submission.current.key;
   const persistedIdentity=JSON.stringify(submission.current);writeSession(submissionKey,persistedIdentity);
   const ok=await studio.perform(async()=>{
+   await draft.persistence.save();
    const result=await request<VideoAttempt>(`/api/projects/${song.projectId}/video`,{idempotencyKey,input:submitted});
    draft.setAccepted(old=>[...old,{attemptId:result.id,songId:result.input.songId,startFrame:result.input.startFrame,endFrame:result.input.endFrame}]);
   },'Clip queued at its captured time. You can describe the next shot.');
-  if(ok){submission.current=null;clearMatchingSession(submissionKey,persistedIdentity);clearMatchingSession(key,submitted.clipPrompt);setPrompt(current=>acceptedClipPrompt(current,submitted.clipPrompt,true));draft.clearAcceptedTiming(intent);}
+  if(ok){submission.current=null;clearMatchingSession(submissionKey,persistedIdentity);draft.clearAccepted(submitted.clipPrompt,intent);}
  };
  return <section className="video-compose" aria-label="Clip generation"><div className="section-code">03 / DIRECT</div><div className="video-section-heading"><h2>Give the sound a scene.</h2><span className="micro">H3 / NATIVE 24 FPS</span></div>
   <p className="small-copy muted">Your agent combines the visual direction, this shot and the matching song audio. Each request keeps its own time and seeds.</p>
-  <form onSubmit={e=>{e.preventDefault();void generate();}}><fieldset disabled={studio.busy}>
+  <form onSubmit={e=>{e.preventDefault();void generate();}}><fieldset disabled={studio.busy||draft.persistence.resolving}>
    <label htmlFor="visual-style">Project visual style <span className="optional">VIDEO ONLY · OPTIONAL</span></label><textarea id="visual-style" rows={2} value={studio.draft.style} onChange={e=>studio.edit({...studio.draft,style:e.target.value})} placeholder="Consistent characters, palette, setting and camera language across all your clips…" />
    <label htmlFor="clip-prompt">Clip description</label><textarea id="clip-prompt" rows={4} value={prompt} maxLength={16000} onChange={e=>setPrompt(e.target.value)} placeholder="Describe one shot and what changes during it. The agent translates your idea and beat timing into H3’s native prompt." required />
+   <div className="clip-draft-status" role="status">{draft.persistence.saving?'Saving clip draft…':draft.persistence.conflict?'Clip draft conflict':draft.persistence.error?'Clip draft not saved':draft.persistence.dirty?'Clip draft unsaved':'Clip draft saved'}</div>
+   {(draft.persistence.conflict||draft.persistence.error)&&<div className="clip-draft-recovery"><p>{draft.persistence.conflict?'This song’s clip draft changed elsewhere. Your edits are retained; choose which draft to keep.':draft.persistence.error}</p>{draft.persistence.conflict?<><button type="button" className="button secondary small" onClick={()=>void draft.persistence.resolve(false)}>Load saved clip draft</button><button type="button" className="button secondary small" onClick={()=>void draft.persistence.resolve(true)}>Keep my clip draft</button></>:<button type="button" className="button secondary small" onClick={()=>void draft.persistence.save().catch(()=>{})}>Retry saving clip draft</button>}</div>}
    <div className="clip-timing-heading"><span className="eyebrow">TIMING / EDIT ANY UNIT</span><button type="button" className="text-button" disabled={!draft.suggestion} onClick={()=>{draft.setManual(null);draft.setError(null);}}>Next free beat window</button></div>
    <div className="linked-timing-grid">{(['start','duration','end'] as const).map(endpoint=>{
     if(endpoint==='duration')return <div className="timing-endpoint timing-duration" key={endpoint} aria-label="Generation duration"><h3>Duration</h3>{(['frames','beats','seconds'] as TimingUnit[]).map(unit=><div className="timing-value-row" key={unit}><span>{unit==='frames'?'Frames':unit==='beats'?'Beats':'Seconds'}</span><output aria-label={`Clip duration ${unit}`} title={unit==='frames'?'Generated frames after outward rounding to the 24 fps grid.':'Exact requested duration; repeating decimals are marked approximately.'}>{duration?.[unit]??'—'}</output></div>)}</div>;
@@ -71,6 +76,6 @@ export function ClipForm({studio,song,draft}:{studio:Studio;song:StudioSong;draf
    <div className="timing-readout"><span>Generated boundaries: {timing.valid?`${timing.startFrame} → ${timing.endFrame}`:'— → —'} (zero-based)</span><span>Duration: generated frames / requested beats and seconds.</span></div>
    {!draft.suggestion&&<p className="inline-advisory">Beat suggestions unavailable. Seconds and frame entry remain available.</p>}
    <div className="timing-feedback"><p className="error-copy" role="alert">{draft.error||(!timing.valid?timing.error:'')}</p>{warnings?.longDuration&&<span className="duration-advisory warning" tabIndex={0} role="img" aria-label="Longer than 15 seconds. Consider shorter generations; this is only an advisory." title="Consider several shorter generations; this remains your choice.">⚠ Long generation · over 15 seconds</span>}</div>
-  </fieldset><div className="compose-footer"><span className="micro">{draft.suggestion&&!draft.manual?`UP TO ${draft.suggestion.beatCount} BEATS / EARLIEST FREE RANGE`:'CUSTOM RANGE'}</span><button className="button primary" disabled={studio.busy||!ready||!timing.valid||!prompt.trim()||studio.conflict||!!studio.connection}>Generate clip →</button></div>{!ready&&<p className="inline-advisory">Set up and sign in to your agent, ComfyUI and H3 before generating clips.</p>}</form>
+  </fieldset><div className="compose-footer"><span className="micro">{draft.suggestion&&!draft.manual?`UP TO ${draft.suggestion.beatCount} BEATS / EARLIEST FREE RANGE`:'CUSTOM RANGE'}</span><button className="button primary" disabled={studio.busy||!ready||!timing.valid||!prompt.trim()||studio.conflict||draft.persistence.conflict||draft.persistence.resolving||!!studio.connection}>Generate clip →</button></div>{!ready&&<p className="inline-advisory">Set up and sign in to your agent, ComfyUI and H3 before generating clips.</p>}</form>
  </section>;
 }

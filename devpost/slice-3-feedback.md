@@ -23,7 +23,7 @@ Fast-mode approval applies; this is not a new model-generation test.
 - [x] Browser check of all requested controls, preview sound defaults and responsive layout.
 - [x] Immutable deployment, before/after data preservation and unrelated-service checks.
 - [x] Verified intended-file commit prepared.
-- [ ] Learner retry checkpoint.
+- [x] Learner retry checkpoint — accepted with “perfect”, 23 October 2026, after the further timing/order polish in `slice-3-polish.md`.
 
 ## Boundaries
 

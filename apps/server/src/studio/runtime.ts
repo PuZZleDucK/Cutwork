@@ -41,6 +41,7 @@ export function createStudioRuntime(options: RuntimeOptions): StudioRuntime & { 
  if (!Number.isSafeInteger(pollMs) || pollMs < 1 || pollMs > 10_000) throw new Error('Invalid studio poll interval');
  const providers = new Map<Provider, ProviderStatus>();
  const providerChecks = new Map<Provider, number>();
+ const latestProviderChecks = new Map<Provider, Promise<ProviderStatus>>();
  const checking = new Set<Promise<ProviderStatus>>();
  const captures = new Map<string, Promise<void>>();
  const renderChecks = new Set<Promise<StudioRender>>();
@@ -67,6 +68,7 @@ export function createStudioRuntime(options: RuntimeOptions): StudioRuntime & { 
    // A late observation cannot replace a more recently requested auth check.
    return providerChecks.get(provider) === sequence ? applyProvider(result) : result;
   })();
+  latestProviderChecks.set(provider, promise);
   checking.add(promise); void promise.then(() => checking.delete(promise), () => checking.delete(promise)); return promise;
  }
  function applyReadiness(id: ToolId, result: SetupReadiness) {
@@ -109,8 +111,10 @@ export function createStudioRuntime(options: RuntimeOptions): StudioRuntime & { 
     if (!queued) store.patchTool(id, { state: 'checking', detail: 'Verifying the managed installation; no model generation.' });
     const result = await probe(id);
     if (cleanupUncertain(result.detail)) { lease = null; reconcileTool(id, result.detail); continue; }
-    // Do not overwrite a request queued while this background check was running.
-    if (store.tool(id).state !== 'queued') applyReadiness(id, result);
+    // Agent checks already publish through the selected-provider and check-
+    // sequence guards. Reapplying their returned snapshot here could overwrite
+    // a newer selection/auth observation. Keep queued setup requests intact too.
+    if (id !== 'agent' && store.tool(id).state !== 'queued') applyReadiness(id, result);
    } catch (error) {
     const detail = message(error);
     if (cleanupUncertain(detail)) { lease = null; reconcileTool(id, detail); }
@@ -138,7 +142,20 @@ export function createStudioRuntime(options: RuntimeOptions): StudioRuntime & { 
    if (!result.ready && !(job.tool === 'agent' && result.installed)) { installDispatched = true; result = await adapter.install(job.tool, store.provider(), log); }
    if (cleanupUncertain(result.detail)) throw new Error(result.detail);
    if (stopped) { if (!installDispatched) { defer(); return true; } throw new Error('Setup stopped during server shutdown; verify before retrying'); }
-   if (job.tool === 'agent') { const p = await check(store.provider()); result = { installed: p.installed, ready: p.installed && p.auth === 'signed-in', detail: p.detail }; }
+   if (job.tool === 'agent') {
+    let provider = store.provider(), pending = check(provider);
+    for (;;) {
+     const p = await pending;
+     if (stopped) throw new Error('Provider verification stopped during server shutdown');
+     const selected = store.provider(), latest = latestProviderChecks.get(selected);
+     if (selected === provider && latest === pending) {
+      result = { installed: p.installed, ready: p.installed && p.auth === 'signed-in', detail: p.detail }; break;
+     }
+     // Await the superseding selection/auth check, without another probe.
+     // Once current, validate and commit below without another async gap.
+     provider = selected; pending = latest ?? check(selected);
+    }
+   }
    log(`${result.detail}\n`);
    if (!result.ready && !(job.tool === 'agent' && result.installed)) throw new Error(result.detail);
    store.patchSetup(job.id, 'succeeded'); applyReadiness(job.tool, result);
@@ -181,9 +198,12 @@ export function createStudioRuntime(options: RuntimeOptions): StudioRuntime & { 
   const job = store.setupJobs().find(j => j.state === 'queued');
   if (job) { await setupJob(job); return; }
   const pending = [...music.map(attempt => ({ kind: 'music' as const, attempt })), ...videos.map(attempt => ({ kind: 'video' as const, attempt }))]
-   .filter(v => v.attempt.state === 'queued' && typeof v.attempt.details.planPath === 'string').sort((a, b) => a.attempt.sequence - b.attempt.sequence);
+   .filter(v => v.attempt.state === 'queued').sort((a, b) => a.attempt.sequence - b.attempt.sequence);
   const next = pending[0];
-  if (!next) return;
+  // Acceptance, not asynchronous capture completion, defines shared FIFO order.
+  // Wait for the head capture; startup separately fails interrupted missing plans
+  // instead of reconstructing or blindly replaying them.
+  if (!next || typeof next.attempt.details.planPath !== 'string') return;
   const { attempt } = next, video = next.kind === 'video';
   const patch = video ? store.patchVideoAttempt.bind(store) : store.patchAttempt.bind(store);
   const read = () => video ? store.videoAttempt(attempt.id)! : store.attempt(attempt.id)!;

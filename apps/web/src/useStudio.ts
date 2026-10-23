@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
-import type { MusicAttempt, MusicDraft, MusicInput, ProjectSnapshot, StudioOverview, StudioProject, ToolId, Provider } from '../../../packages/core/src/contracts/studio.ts';
+import type { MusicAttempt, MusicDraft, ProjectSnapshot, StudioOverview, StudioProject, ToolId, Provider } from '../../../packages/core/src/contracts/studio.ts';
+import { prepareMusicSubmission, clearMusicSubmission } from './music-session.ts';
 import { errorNoticeReducer } from './notifications.ts';
 import { ApiError, request } from './api.ts';
 import { latestReadGuard } from './video-state.ts';
-import { attemptIsActive, createRequestId, emptyDraft, mergeSavedDraft, musicInputFromDraft } from './studio-state.ts';
+import { attemptIsActive, emptyDraft, mergeSavedDraft, musicInputFromDraft } from './studio-state.ts';
 
 export function useStudio() {
   const [overview, setOverview] = useState<StudioOverview | null>(null);
@@ -23,7 +24,6 @@ export function useStudio() {
   const actionFlight = useRef(false);
   const mounted = useRef(true);
   const reads = useRef(latestReadGuard());
-  const submission = useRef<{ projectId: string; input: MusicInput; key: string } | null>(null);
 
   const receive = useCallback((next: ProjectSnapshot, reset = false) => {
     const c = current.current;
@@ -151,11 +151,11 @@ export function useStudio() {
   const generate = () => act(async () => {
     await save(); const project = current.current.project; if (!project) return;
     const input = musicInputFromDraft(current.current.draft);
-    if (!submission.current || submission.current.projectId !== project.id || (submission.current.input.musicPrompt !== input.musicPrompt || submission.current.input.lyrics !== input.lyrics)) submission.current = { projectId: project.id, input, key: createRequestId() };
-    const attempt = await request<MusicAttempt>(`/api/projects/${encodeURIComponent(project.id)}/music`, { idempotencyKey: submission.current.key, input });
+    const identity = prepareMusicSubmission(project.id, input);
+    const attempt = await request<MusicAttempt>(`/api/projects/${encodeURIComponent(project.id)}/music`, { idempotencyKey: identity.key, input });
     setSnapshot(old => old?.project.id === project.id ? { ...old, attempts: old.attempts.some(a => a.id === attempt.id) ? old.attempts : [...old.attempts, attempt] } : old);
-    submission.current = null;
-    setNotice('Generation queued. You can keep working or switch projects.');
+    clearMusicSubmission(project.id, identity);
+    setNotice(attemptIsActive(attempt.state) ? 'Generation queued. You can keep working or switch projects.' : 'Recovered the previously accepted generation. Its result and details are in this project.');
     // Acceptance is already confirmed. A failed follow-up read must not masquerade as a failed submission.
     await refresh().catch(e => setConnection(e instanceof Error ? e.message : 'Waiting for the next studio update.'));
   });

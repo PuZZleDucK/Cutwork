@@ -5,7 +5,7 @@ import { StudioStoreError } from './store.ts';
 import { sendStudioAsset } from './assets.ts';
 import type { PlacementInput, StudioStore } from './store-contract.ts';
 import type { StudioRuntime } from './runtime-contract.ts';
-import type { MusicDraft, MusicInput, Provider, ToolId, VideoInput } from '../../../../packages/core/src/contracts/studio.ts';
+import type { ClipDraft, MusicDraft, MusicInput, Provider, ToolId, VideoInput } from '../../../../packages/core/src/contracts/studio.ts';
 
 interface StudioApiOptions { store: StudioStore; runtime: StudioRuntime; dataRoot: string; webRoot: string | null }
 const uuid = { type: 'string', pattern: '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$' };
@@ -23,6 +23,14 @@ const timingValue = { oneOf: [
   plain({ unit: { type: 'string', enum: ['frames', 'beats', 'seconds'] }, value: { type: 'string', minLength: 1, maxLength: 1000 } }),
   plain({ unit: { const: 'rational' }, value: plain({ numerator: { type: 'string', pattern: '^(0|[1-9][0-9]*)$', maxLength: 1000 }, denominator: { type: 'string', pattern: '^[1-9][0-9]*$', maxLength: 1000 } }) }),
 ] };
+// Drafts intentionally permit unfinished text and invalid intervals, unlike requests.
+const draftTimingText = { type: 'string', maxLength: 1000 };
+const draftTimingValue = { oneOf: [
+  plain({ unit: { type: 'string', enum: ['frames', 'beats', 'seconds'] }, value: draftTimingText }),
+  plain({ unit: { const: 'rational' }, value: plain({ numerator: draftTimingText, denominator: draftTimingText }) }),
+] };
+const clipDraft = plain({ revision, clipPrompt: { type: 'string', maxLength: 16000 },
+  timingIntent: { anyOf: [{ type: 'null' }, plain({ start: draftTimingValue, end: draftTimingValue })] } });
 const videoInput = { ...plain({ songId: uuid, clipPrompt: { type: 'string', maxLength: 16000, minLength: 1 }, style: draft.properties.style,
   startFrame: revision, endFrame: { ...revision, minimum: 1 } }), properties: {
     songId: uuid, clipPrompt: { type: 'string', maxLength: 16000, minLength: 1 }, style: draft.properties.style,
@@ -61,6 +69,11 @@ export async function registerStudioApi(app: FastifyInstance, { store, runtime, 
     api.post<{ Params: { id: string; songId: string }; Body: { revision: number } }>('/api/projects/:id/songs/:songId/select',
       { schema: { params: plain({ id: uuid, songId: uuid }), body: plain({ revision }), querystring: empty } },
       request => store.selectSong(request.params.id, request.params.songId, request.body.revision));
+    api.put<{ Params: SongParams; Body: Pick<ClipDraft, 'revision' | 'clipPrompt' | 'timingIntent'> }>('/api/projects/:id/songs/:songId/clip-draft',
+      { schema: { params: songParams, body: clipDraft, querystring: empty } }, request => {
+        const { revision, ...draft } = request.body;
+        return store.saveClipDraft(request.params.id, request.params.songId, revision, draft);
+      });
     api.post<{ Body: { provider: Provider } }>('/api/provider',
       { schema: { body: plain({ provider: { type: 'string', enum: ['codex', 'claude'] } }), querystring: empty } }, request => runtime.selectProvider(request.body.provider));
     api.post('/api/provider/check', { schema: { body: empty, querystring: empty } }, () => runtime.checkProvider());

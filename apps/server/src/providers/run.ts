@@ -1,13 +1,81 @@
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
-import { mkdir, open, readFile, rename, writeFile } from 'node:fs/promises';
-import { dirname, join } from 'node:path';
+import { mkdir, open, readFile, rename, writeFile, type FileHandle } from 'node:fs/promises';
+import { basename, dirname, join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { setTimeout, clearTimeout } from 'node:timers';
 import type { NativeOwner } from '../../../../packages/core/src/contracts/generation.ts';
-import type { providerLaunch } from './launch.ts';
+import type { providerLaunch, ProviderSessionBinding } from './launch.ts';
 
-export type ProviderLaunch = Omit<ReturnType<typeof providerLaunch>, 'executable'> & { executable: string };
+// Old immutable captured tasks and ordinary fixture executables have no binding.
+export type ProviderLaunch = Omit<ReturnType<typeof providerLaunch>, 'executable' | 'sessionBinding'> & { executable: string; sessionBinding?: ProviderSessionBinding };
+export interface ProviderSession {
+  provider: 'codex' | 'claude' | null;
+  status: 'observed' | 'assigned' | 'unavailable';
+  sessionId: string | null;
+  source: 'native-stderr-header' | 'cli-argument' | null;
+  detail: string;
+  cliVersion?: string;
+}
+const sessionUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+const sessionPrefixBytes = 65_536;
+const unavailableCodex = (detail: string): ProviderSession => ({ provider: 'codex', status: 'unavailable', sessionId: null, source: 'native-stderr-header', detail });
+
+/** Only the first native fenced header is evidence, never prompt/tool/reply prose. */
+export function parseCodexSessionHeader(prefix: string, expected: { cwd: string; model: string }): ProviderSession {
+  if (Buffer.byteLength(prefix, 'utf8') > sessionPrefixBytes) return unavailableCodex('Native header exceeds the bounded prefix');
+  const lines = prefix.replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, '').split(/\r?\n/);
+  const version = /^OpenAI Codex v([0-9]+\.[0-9]+\.[0-9]+(?:[-+][a-zA-Z0-9.-]+)?)$/.exec(lines[0] ?? '')?.[1];
+  if (!version || lines[1] !== '--------') return unavailableCodex('Initial native Codex header is unavailable; no later prose is searched');
+  const closing = lines.indexOf('--------', 2);
+  if (closing < 0 || closing > 64) return unavailableCodex('Native Codex header is incomplete or exceeds the header line bound');
+  const fields = new Map<string, string>();
+  for (const line of lines.slice(2, closing)) {
+    const match = /^(workdir|model|session id): (.*)$/.exec(line);
+    if (!match) continue;
+    if (fields.has(match[1]!)) return unavailableCodex('Ambiguous repeated identity field in native Codex header');
+    fields.set(match[1]!, match[2]!);
+  }
+  if (fields.get('workdir') !== expected.cwd || fields.get('model') !== expected.model) return unavailableCodex('Native header cwd/model does not match this captured launch');
+  const id = fields.get('session id');
+  if (!id || !sessionUuid.test(id)) return unavailableCodex('Native header has no canonical session UUID');
+  return { provider: 'codex', status: 'observed', sessionId: id, source: 'native-stderr-header', cliVersion: version,
+    detail: 'Observed native CLI startup header for this exact cwd/model; not independent transcript or server attestation.' };
+}
+
+function sessionForLaunch(launch: ProviderLaunch): ProviderSession {
+  const binding = launch.sessionBinding;
+  const name = binding?.provider ?? basename(launch.executable);
+  if (binding && !((binding.provider === 'codex' && binding.capture === 'native-stderr-header') || (binding.provider === 'claude' && binding.capture === 'assigned-cli-argument'))) throw new Error('Invalid captured provider session binding');
+  if (name === 'codex') return unavailableCodex('Native startup header has not yet been observed');
+  if (name === 'claude') {
+    const flags = launch.argv.flatMap((value, index) => value === '--session-id' ? [index] : []);
+    const id = flags.length === 1 ? launch.argv[flags[0]! + 1] : undefined;
+    if (binding?.provider === 'claude' && (!sessionUuid.test(binding.sessionId) || id !== binding.sessionId)) throw new Error('Captured Claude session ID does not match the CLI argument');
+    if (id && sessionUuid.test(id)) return { provider: 'claude', status: 'assigned', sessionId: id, source: 'cli-argument',
+      detail: 'Assigned through the captured native --session-id argument; native transcript identity has not been independently observed.' };
+    return { provider: 'claude', status: 'unavailable', sessionId: null, source: null,
+      detail: 'Legacy captured launch has no unambiguous assigned session UUID; no global/latest history is searched.' };
+  }
+  return { provider: null, status: 'unavailable', sessionId: null, source: null, detail: 'Executable has no known provider session protocol.' };
+}
+
+async function observedSession(launch: ProviderLaunch, session: ProviderSession, stderr: FileHandle): Promise<ProviderSession> {
+  if (session.provider !== 'codex') return session;
+  const modelFlags = launch.argv.flatMap((value, index) => value === '--model' ? [index] : []);
+  const model = modelFlags.length === 1 ? launch.argv[modelFlags[0]! + 1] : undefined;
+  if (!model) return unavailableCodex('Captured launch has no unambiguous explicit model to bind the native header');
+  try {
+    const buffer = Buffer.alloc(sessionPrefixBytes);
+    // Positional read of the original regular file, not a path reopen (which
+    // could follow a replacement or block on a newly created FIFO). This does
+    // not move the native writer's shared file offset.
+    const { bytesRead } = await stderr.read(buffer, 0, buffer.length, 0);
+    return parseCodexSessionHeader(buffer.subarray(0, bytesRead).toString('utf8'), { cwd: launch.cwd, model });
+  } catch (error) {
+    return unavailableCodex(`Native header could not be read: ${message(error).slice(0, 1000)}`);
+  }
+}
 type ProcessOwner = Extract<NativeOwner, { kind: 'process' }>;
 type Exit = { code: number | null; signal: string | null };
 export class ProviderLaunchAbortedError extends Error {
@@ -45,6 +113,7 @@ export async function runProvider(launchInput: ProviderLaunch, options: { signal
   const checkBeforeLaunch = () => { if (options.signal?.aborted) throw new ProviderLaunchAbortedError(); };
   checkBeforeLaunch();
   const launch = structuredClone(launchInput);
+  const session = sessionForLaunch(launch); // Validate new metadata before any child or run directory.
   await mkdir(dirname(launch.runDirectory), { recursive: true, mode: 0o700 });
   await mkdir(launch.runDirectory, { mode: 0o700 }); // never overwrite an earlier attempt
   const stdoutPath = join(launch.runDirectory, 'provider.stdout.log');
@@ -53,7 +122,7 @@ export async function runProvider(launchInput: ProviderLaunch, options: { signal
   const receipt: Record<string, unknown> = {
     schemaVersion: 1, state: 'prepared', executable: launch.executable,
     argv: launch.argv, cwd: launch.cwd, preparedAt: new Date().toISOString(),
-    stdoutPath, stderrPath,
+    stdoutPath, stderrPath, providerSession: session,
   };
   const save = async () => {
     const pending = `${receiptPath}.${randomUUID()}.tmp`;
@@ -64,7 +133,7 @@ export async function runProvider(launchInput: ProviderLaunch, options: { signal
   await save();
   const stdout = await open(stdoutPath, 'wx', 0o600);
   try {
-    const stderr = await open(stderrPath, 'wx', 0o600);
+    const stderr = await open(stderrPath, 'wx+', 0o600);
     try {
       let interrupted: 'SIGINT' | 'SIGTERM' | 'abort' | undefined;
       let wakeInterruption!: () => void;
@@ -161,6 +230,9 @@ export async function runProvider(launchInput: ProviderLaunch, options: { signal
           if (inputError) receipt.inputError = inputError.message;
           if (processError) receipt.processError = processError.message;
           if (interrupted) receipt.interruptedBy = interrupted;
+          // Metadata absence is a provenance limitation, never a reason to retry
+          // expensive work or overwrite the native launch/cleanup outcome.
+          receipt.providerSession = await observedSession(launch, session, stderr);
           await save();
           return {
             ...(outcome ?? { code: child.exitCode, signal: child.signalCode }),
@@ -172,6 +244,7 @@ export async function runProvider(launchInput: ProviderLaunch, options: { signal
             state: cleanup.cliStopped ? 'failed' : 'reconciling', succeeded: false,
             error: message(error), cleanup, ...(outcome ?? {}), endedAt: new Date().toISOString(),
           });
+          receipt.providerSession = await observedSession(launch, session, stderr);
           try { await save(); }
           catch (saveError) { throw new AggregateError([error, saveError], 'Provider failed; receipt update also failed'); }
           throw error;

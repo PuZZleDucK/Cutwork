@@ -35,3 +35,13 @@ it('only abandons a render key on the explicit terminal unavailable response',()
  expect(mustReplaceRenderKey(new Error('connection lost'))).toBe(false);
  expect(mustReplaceRenderKey({code:'REVISION_CONFLICT'})).toBe(false);
 });
+it('reuses uncertain request identity despite canonical persisted JSON key ordering',()=>{
+ const before={projectId:'p',input:{songId:'s',clipPrompt:'shot',style:'',startFrame:0,endFrame:8,timingIntent:{start:{unit:'seconds',value:'0.0'},end:{unit:'rational',value:{numerator:'1',denominator:'3'}}}}};
+ const after={input:{timingIntent:{end:{value:{denominator:'3',numerator:'1'},unit:'rational'},start:{value:'0.0',unit:'seconds'}},endFrame:8,startFrame:0,style:'',clipPrompt:'shot',songId:'s'},projectId:'p'};
+ const fresh=submissionIdentity(null,before,()=> 'first');
+ expect(submissionIdentity(fresh,after,()=> 'duplicate').key).toBe('first');
+ const legacy={signature:JSON.stringify(before),key:'legacy'};
+ expect(submissionIdentity(legacy,after,()=> 'duplicate').key).toBe('legacy');
+ expect(submissionIdentity(legacy,{...before,input:{...before.input,timingIntent:{...before.input.timingIntent,start:{unit:'seconds',value:'0'}}}},()=> 'changed').key).toBe('changed');
+ expect(submissionIdentity({signature:'not-json',key:'bad'},before,()=> 'recovered').key).toBe('recovered');
+});

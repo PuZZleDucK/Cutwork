@@ -16,6 +16,10 @@ export interface ProviderStatus {
 export interface MusicInput { musicPrompt: string; lyrics: string }
 /** Style is persistent visual direction for video, never part of new music input. */
 export interface MusicDraft extends MusicInput { style: string }
+/** Unsubmitted per-song form state; incomplete timing text is valid draft data. */
+export interface ClipDraft {
+  projectId: string; songId: string; revision: number; clipPrompt: string; timingIntent: ClipTimingIntent | null;
+}
 export interface StudioProject {
   id: string; name: string; createdAt: string; revision: number;
   draft: MusicDraft; selectedSongId: string | null;
@@ -42,6 +46,7 @@ export interface StudioSong {
 export interface ProjectSnapshot {
   project: StudioProject; songs: StudioSong[]; attempts: MusicAttempt[]; videoAttempts: VideoAttempt[];
   clips: StudioClip[]; arrangements: SongArrangement[]; reservations: VideoReservation[]; renders: StudioRender[]; events: ProjectEvent[];
+  clipDrafts: ClipDraft[];
 }
 export interface StudioOverview {
   projects: ProjectSummary[]; selectedProjectId: string | null;
@@ -87,7 +92,7 @@ export interface StudioRender {
 
 /** New committed operations only; migrations never invent unrecorded historical edits. */
 export type ProjectEventKind = 'project.created' | 'project.selected' | 'draft.saved' | 'style.changed' | 'song.selected'
-  | 'placement.added' | 'placement.moved' | 'placement.removed' | 'analysis.updated' | 'render.reused' | 'render.cache_invalidated';
+  | 'placement.added' | 'placement.moved' | 'placement.removed' | 'analysis.updated' | 'render.reused' | 'render.cache_invalidated' | 'clip_draft.saved';
 export interface ProjectEvent {
   id: string; projectId: string; sequence: number; createdAt: string; kind: ProjectEventKind; data: Record<string, unknown>;
 }

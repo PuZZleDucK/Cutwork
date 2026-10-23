@@ -23,15 +23,22 @@ host**, typecheck/build, three real browser clips, independently checked picture
 and original-song audio, browser export and headless VLC playback. The planned
 integrated learner checkpoint remains before precision editing. See
 [slice-3-live-evidence.md](slice-3-live-evidence.md). TTS is restored and personal
-ComfyUI is unchanged. Slice 3 remains unchecked until that hands-on feedback.
+ComfyUI is unchanged. Slice 3 and its integrated checkpoint are now accepted after the feedback/polish retry (“perfect”, 23 October 2026).
 
 The learner then requested timing/sequence/history refinements. These are now
 implemented and deployed: **919 tests per host**, exact schema-3 preservation
 and LAN browser checks. See [slice-3-feedback.md](slice-3-feedback.md). The
-requested-feedback retry remains the integrated checkpoint; later precision
+requested-feedback retry was accepted with “perfect”; later precision
 editing and recovery slices are not marked complete.
 
 A subsequent small timing/order polish pass is recorded in [slice-3-polish.md](slice-3-polish.md): ascending clip starts, a linked duration column, Start-left selection and stable timing layout. Later build slices remain pending.
+
+Slice 4 is complete and deployed: **996/996** tests on both hosts, both real
+provider adapters (**51/51** independent checks), an isolated process-restart
+fixture (**15/15**) and exact migration/media preservation (**43/43**, 554 assets).
+Draft navigation and lost-response retries were exercised in the browser;
+existing live inputs survived reload unchanged. See
+[slice-4-continuity.md](slice-4-continuity.md) for boundaries and evidence.
 
 ## Working Agreement
 
@@ -255,7 +262,7 @@ The next work is the prepared real-model lane verification; no slice/G4 gate is 
   Commit: `Add browser setup and project music generation`
   Mechanical checkpoint: 23 October 2026. Projects/setup/music/playback/history are deployed on Dundee; 718 tests per host plus typecheck/build and independently audited real browser generation pass. Drafts, selected song, completed analysis and history survive an actual idle service restart unchanged. Setup verification and generation survive page reload. This was an already-prepared host, not a fresh-download installation demonstration. Early learner feedback was received; its requested corrections are now deployed and mechanically checked (750 tests per host). The learner accepted the corrected UI with “great, perfect”; slice 2 and its early feedback checkpoint are complete. See slice-2-feedback.md.
 
-- [ ] **3. Generate clips and export the first browser-made music video**
+- [x] **3. Generate clips and export the first browser-made music video**
   Becomes usable: Describe clips against the selected song, see them placed at their submitted times, preview the assembled result, and download a real music video that plays outside the app.
   Why now: Completes the distinctive creative loop early. Editing and recovery refinements then improve something that already produces the intended output, instead of postponing export until the end.
   PRD ref: `prd.md > The Core Journey` (steps 6–9); `prd.md > Music and Video Generation`; `prd.md > Persistent Visual Style`; `prd.md > Default Clip Timing`; `prd.md > Raw Frame Preservation`; `prd.md > Timeline and Music Coverage`; `prd.md > Preview, Black Gaps, and Export`.
@@ -264,9 +271,9 @@ The next work is the prepared real-model lane verification; no slice/G4 gate is 
   Verify (mechanical): Run reviewed preset/reservation/ingestion/render tests, including steady and irregular beat maps, pending ranges not counting as coverage, duplicate completion and native overshoot without timeline overhang. In the browser, generate approximately three real clips with captured song/style inputs; inspect complete raw frames and record entries. Check coverage, black gaps and output duration against the edit plan. Decode/probe the downloadable file and compare frame/audio intervals with the preview; independently play it in VLC. An edit during rendering must mark the older preview stale, not export it as current.
   Learner check: Make a short video from your generated song and a few clip descriptions. Deliberately leave one gap, preview it, export, and play the download in VLC. Check whether the output matches the visible sequence and whether the flow preserves your creative intent.
   Commit: `Complete browser clip generation and video export`
-  Mechanical checkpoint: 23 October 2026. All slice-3 mechanical checks passed; ordinary GUI VLC listening/inspection and integrated creative-flow feedback are the next learner checkpoint. See slice-3-live-evidence.md.
+  Mechanical checkpoint: 23 October 2026. All slice-3 mechanical checks passed. The learner accepted the integrated flow and requested refinements after trying it; the final timing-polish retry was accepted with “perfect” on 23 October. See slice-3-live-evidence.md, slice-3-feedback.md and slice-3-polish.md.
 
-- [ ] **4. Switch projects, songs and providers without losing or redirecting work**
+- [x] **4. Switch projects, songs and providers without losing or redirecting work**
   Becomes usable: Work on multiple projects and songs, change the selected provider for future requests, and return to earlier arrangements while submitted jobs finish in their original context.
   Why now: The first complete loop gives us actual media and jobs with which to test isolation and continuity. Make that reliable before more editing operations multiply the possible states.
   PRD ref: `prd.md > Projects and Shared Tools`; `prd.md > Frontier Agent Setup and Selection`; `prd.md > Song Selection and Saved Arrangements`; `prd.md > Music and Video Generation`; `prd.md > Persistent Visual Style`; `prd.md > Generation History`.
@@ -329,7 +336,7 @@ The next work is the prepared real-model lane verification; no slice/G4 gate is 
 ## Hands-on Checkpoints
 
 - [x] Early usable behavior explored — slice 2 (corrections accepted with “great, perfect”, 23 October 2026): actual setup and song generation in the LAN UI; feedback is resolved before building the browser video workflow. Slice 1 also has its contract/media learner check, not a substitute for this UI feedback.
-- [ ] Integrated creative loop explored — slice 3: create clips and independently play the export before investing in precision editing. This checks whether the central creative flow works, distinct from setup feedback.
+- [x] Integrated creative loop explored — slice 3 (accepted with “perfect”, 23 October 2026): create clips and independently play the export before investing in precision editing. This checks whether the central creative flow works, distinct from setup feedback.
 - [ ] Final kick-the-tires exploration and feedback completed — slice 9 and Final Review; record this session once rather than repeating it. In learn mode every slice also receives its own Learner check.
 
 ## Final Review
@@ -419,3 +426,14 @@ Activity mode: Proposed focused planning/verification investigation suitable for
 - **23 October 2026 — early UI feedback:** the learner requested floating, dismissible notices, original music/lyrics restoration on song changes, and visual style excluded from music generation. Updated PRD/spec and their HTML companions; implemented and verified the changes without new generation or altering retained media/history. Preserve the card-heavy look comment for polish. The learner accepted the corrections with “great, perfect”; proceed to the integrated browser video loop.
 
 - **23 October, further integrated feedback:** add read-only generation duration between linked endpoints; sort library entries by current placement/original request time without changing overlap priority; put Start left while keeping End the default; stabilize timing/selection layout rather than globally suppress scrolling. Detailed evidence and the intermittent-scroll verification boundary are in `slice-3-polish.md`.
+
+- **23 October — integrated checkpoint accepted:** “perfect” accepts the timing-polish retry and completes slice 3. Continue slice 4 under standing fast-mode approval; its continuity audit/test plan is `slice-4-continuity.md`.
+
+
+- **23 October — continuity completed:** added revisioned per-song clip drafts,
+  context-scoped retry journals, native provider-session provenance and guarded
+  FIFO/provider-check races. A browser test reproduced duplicate clip submission
+  from JSON key reordering; canonical/legacy signature matching repairs it.
+  Independent review also repaired storage and late-response ownership edges.
+  No product scope or agent capability was narrowed. Source upgrades are drained;
+  interrupted inference remains explicit reconciliation rather than blind replay.

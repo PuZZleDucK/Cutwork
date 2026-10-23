@@ -1,10 +1,14 @@
 import { isAbsolute, join } from 'node:path';
+import { randomUUID } from 'node:crypto';
 import type { Intent, Provider } from '../../../../packages/core/src/contracts/generation.ts';
 import { identifier } from '../../../../packages/core/src/contracts/validation.ts';
 
 export const providerModels: Readonly<Record<Provider, string>> = {
   codex: 'gpt-6.1-sol', claude: 'claude-opus-5-5',
 };
+export type ProviderSessionBinding =
+  | { provider: 'codex'; capture: 'native-stderr-header' }
+  | { provider: 'claude'; capture: 'assigned-cli-argument'; sessionId: string };
 
 export function captureIntent(input: Intent): Intent {
   // No references back to mutable form/default/seed state survive submission.
@@ -19,9 +23,14 @@ export function providerLaunch(root: string, intent: Intent) {
   }
   const cwd = join(root, 'projects', identifier(intent.projectId, 'projectId'), 'workspace');
   const runDirectory = join(cwd, 'runs', identifier(intent.attemptId, 'attemptId'));
-  const argv = intent.provider === 'codex'
+  // Capture once with the task, not on execution/replay. This is native CLI
+  // conversation identity, not a response schema or a restriction on tools.
+  const sessionBinding: ProviderSessionBinding = intent.provider === 'codex'
+    ? { provider: 'codex', capture: 'native-stderr-header' }
+    : { provider: 'claude', capture: 'assigned-cli-argument', sessionId: randomUUID() };
+  const argv = sessionBinding.provider === 'codex'
     ? ['exec', '--model', intent.model, '--dangerously-bypass-approvals-and-sandbox', '--skip-git-repo-check', '--cd', cwd, '-']
-    : ['-p', '--model', intent.model, '--dangerously-skip-permissions'];
+    : ['-p', '--model', intent.model, '--dangerously-skip-permissions', '--session-id', sessionBinding.sessionId];
   const stdin = [
     'Create media for this project using your normal tools and capabilities.',
     'You may research, inspect relevant project context, write scripts and create or edit scores.',
@@ -36,5 +45,5 @@ export function providerLaunch(root: string, intent: Intent) {
     'If using your own script, register equivalent evidence and coordinate the shared GPU lane.',
     'Report missing capabilities or tracking limitations instead of claiming success. Reply naturally; no JSON answer schema is required.',
   ].join('\n\n');
-  return { executable: intent.provider, shell: false as const, argv, cwd, runDirectory, stdin };
+  return { executable: intent.provider, shell: false as const, argv, cwd, runDirectory, stdin, sessionBinding };
 }

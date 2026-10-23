@@ -16,8 +16,13 @@ export function renderForRevision(renders:StudioRender[],songId:string,revision:
   return {current:ordered.find(r=>r.revision===revision),playable:ordered.find(r=>r.state==='succeeded'&&r.assetId)};
 }
 export function videoHistory(attempts:VideoAttempt[]) {return [...attempts].sort((a,b)=>b.sequence-a.sequence);}
+function stableSignature(input:unknown):string {
+  return JSON.stringify(input,(_key,value:unknown)=>value&&typeof value==='object'&&!Array.isArray(value)?Object.fromEntries(Object.entries(value).sort(([a],[b])=>a<b?-1:a>b?1:0)):value);
+}
 export function submissionIdentity(previous:{signature:string;key:string}|null,input:unknown,key=createRequestId):{signature:string;key:string} {
-  const signature=JSON.stringify(input);return previous?.signature===signature?previous:{signature,key:key()};
+  const signature=stableSignature(input);
+  if(previous){try{if(stableSignature(JSON.parse(previous.signature))===signature)return previous;}catch{/* Invalid recovery is not an accepted request identity. */}}
+  return {signature,key:key()};
 }
 
 /** A late read cannot overwrite newer accepted mutation/read results. */

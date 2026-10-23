@@ -587,3 +587,35 @@ project events with existing generation/render submission and terminal records.
 Video source changes initialize playback to unmuted volume 0.5 once, not on
 polling rerenders; encoding/mixing inputs are unaffected. Navbar order is a
 presentation rule, separate from installation dependency order.
+
+### Context continuity implementation refinement (23 October 2026)
+
+Schema 4 adds `studio_clip_drafts`, keyed by song with project membership and an
+independent revision. `PUT /api/projects/:projectId/songs/:songId/clip-draft`
+saves bounded prompt/timing text without requiring an incomplete form to be a
+valid generation request. Generation still validates exact timing separately.
+Migration creates only empty revision-zero forms; existing creative rows and
+history are not rewritten. Clip-draft history records changed fields and revision,
+not a second copy of every unsent prompt.
+
+A per-tab recovery journal complements server autosave. Newer local typing is
+retained across saves, navigation and conflicts; an old unmounted response cannot
+overwrite its successor's recovery. Conflicts offer explicit load-saved/keep-local
+choices. Music/video submission journals are scoped to their originating context;
+canonical signatures preserve uncertain request identity even when JSON property
+order changes. Ordinary confirmed re-generation creates a new key/seed. If browser
+storage cannot be written, fallback recovery lasts only for that page lifetime.
+
+FIFO dispatch is ordered by durable acceptance, including a head request whose
+capture is still pending. Provider-check results apply only to their current
+selection/check generation. Captured jobs never adopt a later provider or model.
+Provider receipts distinguish an observed Codex native header session from a
+Claude session assigned through its native CLI argument; absent metadata does not
+fabricate an ID or turn a valid creative result into failure. Normal tools and
+ordinary-language agent replies remain unchanged.
+
+Uncertain interrupted work remains reconciling and blocks blind dispatch.
+Never-dispatched captured jobs can proceed after a same-source restart. Upgrades
+are drained/idle deployments: plans tied to a different immutable source are
+refused rather than silently re-captured or reinterpreted. This is not
+reboot-resumable model inference.

@@ -144,10 +144,19 @@ occurrence from both the inbox and count. Review cannot undo dismissal.
   leaves two; a new occurrence of the same failure announces again and expires;
   resolving failures leaves an empty/disabled inbox; dismissed LAN warning is
   absent after reload. Exact 5,000ms duration retains fake-timer coverage.
-- [ ] Application success-action check, safe deployment and production proof.
+- [x] Application success-action check, safe deployment and production proof.
 - [ ] Learner review of notification behaviour.
 
 Private evidence: `.local-evidence/slice-9/notification-dismissal/`. No model
 download or new generation is required. Previous notification tests incorrectly
 encoded manual resurrection as expected behaviour; those expectations are now
 replaced, not presented as proof that the old behaviour was correct.
+
+Deployed checkpoint `4ae666d`: the actual disposable application swapped
+priority in both directions with zero notifications. On Dundee the inbox now
+shows **0**, including migration of the previously dismissed LAN warning; all
+four sequence placements remain visible. The web-only publication preserves
+all database schemas/rows, **832 media assets**, native/Debug data and application,
+TTS and personal-Comfy process identities. No service restart, download or new
+generation. All nine HTTP-served frontend files match the reviewed bundle.
+Screenshot: `notification-dismissal/production.png` in the private evidence root.

@@ -11,6 +11,16 @@ The scope, PRD and technical specification are approved. The learner approved th
 
 ## Latest fast-mode verification index
 
+**Notification fix deployed:** dismissed occurrences no longer return on panel
+close/reopen or polling; counts include only undismissed notices. The inbox is
+failures-only except for the first-use LAN security notice, whose dismissal is
+remembered across visits. Success messages and GPU/timeout explanations are
+excluded. **1,418 tests**, typecheck/build and exact four-to-two browser regression
+pass. The live inbox shows zero; web-only publication preserves all databases,
+**832 assets** and service identities. The learner accepted whole-clip priority
+with “thats perfect”; notification retry remains open. See the latest follow-up
+in [workbench-round-two.md](workbench-round-two.md).
+
 **Priority clarification deployed:** one whole sequence block per placement,
 never split across rows, with at most one move-up arrow. The reported four-clip
 project now shows exactly four blocks (previously seven fragments). **1,411

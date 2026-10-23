@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "Agent-mediated LAN music-video studio; soundtrack browser slice in progress.",
+  "description": "Agent-mediated LAN music-video studio with generation, frame-exact editing and retained provenance.",
   "engines": {
     "node": ">=24 <25"
   },
@@ -32,5 +32,6 @@
     "fastify": "5.12.7",
     "react": "19.3.1",
     "react-dom": "19.3.1"
-  }
+  },
+  "license": "MIT"
 }

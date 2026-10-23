@@ -82,6 +82,8 @@ Carry forward `prd.md > Look and Feel` and `Screens and Layout`: Projects/Config
 
 Use Kirsty for top-level titles **once the specific asset's web embedding and redistribution terms are verified**; use a system sans-serif for ordinary UI and a system monospace for times/logs. Do not call an unbundled local fallback a verified Kirsty rendering. [The official Kirsty page](https://typodermicfonts.com/kirsty/) identifies the font; downloading or assuming a permissive licence is not part of this planning work.
 
+**Slice-9 asset verification (23 October 2026):** bundle the unchanged historical Kirsty Regular v1.0 (2000) TTF from Ubuntu's `fonts-larabie-straight` package, with its original author licence and notices. The retained licence permits unmodified redistribution; the current commercial/free-desktop release is not substituted. Exact source/package/font hashes and the no-modification record are in `apps/web/public/fonts/provenance.json`. This satisfies the asset-provenance gate, not a claim that Kirsty itself is MIT or open source.
+
 **Accepted styling direction:** graphite surfaces, warm neutral text, amber for unfinished/advisory states and a restrained cool accent for selection. Hazard stripes mark work still needed and gaps; movement marks actual activity or the next essential action, not every panel. Respect reduced-motion preferences, provide text/icon status rather than colour alone, visible focus and keyboard-operated dialogs/disclosures. Numeric controls distinguish source frames from song positions. On narrow screens stack panels and allow the timeline's own horizontal scrolling rather than shrinking timing text. This review page is a document, not a finished product mockup.
 
 ## Components
@@ -420,7 +422,7 @@ FFmpeg/FFprobe are local processes, not a hosted rendering API. Build filter gra
 
 Framework references: [React with TypeScript](https://react.dev/learn/typescript), [Vite](https://vite.dev/guide/), [Vite TypeScript checking](https://vite.dev/guide/features.html#typescript), [Fastify TypeScript](https://fastify.dev/docs/latest/Reference/TypeScript/), [Node child processes](https://nodejs.org/api/child_process.html), [systemd user-service concepts](https://www.freedesktop.org/software/systemd/man/latest/systemd.service.html), [Vitest](https://vitest.dev/guide/), [Playwright tests](https://playwright.dev/docs/intro).
 
-Record code licences, model/checkpoint terms, redistribution/download conditions, output-related conditions, font embedding and codec/build obligations separately in `THIRD_PARTY_NOTICES.md` and the tool manifest. Do not flatten them into “all CC-NC” or “all outputs unrestricted”. The project's own open-source licence still needs selection before publication. A dedicated licensing/about UI is deferred, not this investigation or required notices. No legal compatibility conclusion is asserted by this draft.
+Record code licences, model/checkpoint terms, redistribution/download conditions, output-related conditions, font embedding and codec/build obligations separately in `THIRD_PARTY_NOTICES.md` and the tool manifest. Do not flatten them into “all CC-NC” or “all outputs unrestricted”. The learner selected MIT for the application's own source on 23 October 2026. This does not relicense third-party tools, weights, fonts or their outputs. A dedicated licensing/about UI is deferred, not this investigation or required notices. No legal compatibility conclusion is asserted by this draft.
 
 ## File Structure
 

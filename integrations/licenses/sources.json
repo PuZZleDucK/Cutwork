@@ -1,0 +1,83 @@
+[
+  {
+    "path": "integrations/licenses/MiniMaxAI--MiniMax-H3--LICENSE",
+    "url": "https://huggingface.co/MiniMaxAI/MiniMax-H3/resolve/42ed227ee7df40d41602854ae760620d6eb651fe/LICENSE",
+    "sha256": "59b99642b95ea21630e311198ddbfffbfe05aadba0c2f5d884cbdf4efcc90f44",
+    "bytes": 17604
+  },
+  {
+    "path": "integrations/licenses/m-a-p--YuE2-3B--LICENSE",
+    "url": "https://huggingface.co/m-a-p/YuE2-3B/resolve/8f24312f187763b9854adeec87e437e2b03bbff1/LICENSE",
+    "sha256": "060985741d20e70613b4c189c7de106cabd3fb2109fbbfb6d705c9d619417dd0",
+    "bytes": 20309
+  },
+  {
+    "path": "integrations/licenses/m-a-p--YuE2-3B--THIRD_PARTY_NOTICES.md",
+    "url": "https://huggingface.co/m-a-p/YuE2-3B/resolve/8f24312f187763b9854adeec87e437e2b03bbff1/THIRD_PARTY_NOTICES.md",
+    "sha256": "14d3fd9f6fee86b4260b69b0979735b99ffec8c6b4db254567047a4215cd9af3",
+    "bytes": 793
+  },
+  {
+    "path": "integrations/licenses/m-a-p--YuE2-Vae--LICENSE",
+    "url": "https://huggingface.co/m-a-p/YuE2-Vae/resolve/152733a19ad43aa67e367f9b5503ef8075bb5126/LICENSE",
+    "sha256": "060985741d20e70613b4c189c7de106cabd3fb2109fbbfb6d705c9d619417dd0",
+    "bytes": 20309
+  },
+  {
+    "path": "integrations/licenses/m-a-p--YuE2-Vae--THIRD_PARTY_NOTICES.md",
+    "url": "https://huggingface.co/m-a-p/YuE2-Vae/resolve/152733a19ad43aa67e367f9b5503ef8075bb5126/THIRD_PARTY_NOTICES.md",
+    "sha256": "14d3fd9f6fee86b4260b69b0979735b99ffec8c6b4db254567047a4215cd9af3",
+    "bytes": 793
+  },
+  {
+    "path": "integrations/licenses/ComfyUI-LICENSE.txt",
+    "url": "https://raw.githubusercontent.com/Comfy-Org/ComfyUI/f5c611e3849ff7219dfb7d7b251092ab8a9b51dc/LICENSE",
+    "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986",
+    "bytes": 35149
+  },
+  {
+    "path": "integrations/licenses/YuE-code-LICENSE.txt",
+    "url": "https://raw.githubusercontent.com/multimodal-art-projection/YuE/1647252d68b70cbead046ffd3f7caf036dde47ee/LICENSE",
+    "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+    "bytes": 11358
+  },
+  {
+    "path": "integrations/licenses/librosa-license.txt",
+    "url": "https://raw.githubusercontent.com/librosa/librosa/0.11.0/LICENSE.md",
+    "sha256": "1746ca32b53fa31941c38b63a986e4126ab998e81a2f73a566000847a588e2a3",
+    "bytes": 766
+  },
+  {
+    "path": "apps/web/public/fonts/kirsty__.ttf",
+    "url": "https://archive.ubuntu.com/ubuntu/pool/multiverse/f/fonts-larabie/fonts-larabie-straight_20011216-6_all.deb",
+    "archivePath": "usr/share/fonts/truetype/larabie/kirsty__.ttf",
+    "sha256": "f879b17aa6787ea4546aff3298a1ece251dfd733b7cbaac490f30cd823a44496",
+    "bytes": 46380
+  },
+  {
+    "path": "apps/web/public/fonts/READ_ME.TXT",
+    "url": "https://archive.ubuntu.com/ubuntu/pool/multiverse/f/fonts-larabie/fonts-larabie-straight_20011216-6_all.deb",
+    "archivePath": "usr/share/doc/fonts-larabie-straight/READ_ME.TXT.gz",
+    "sha256": "243d4b93a29ac1a57defbe5f59b1f304919ef736f87c94a8be5a6169579fc099",
+    "bytes": 4782
+  },
+  {
+    "path": "apps/web/public/fonts/copyright",
+    "url": "https://archive.ubuntu.com/ubuntu/pool/multiverse/f/fonts-larabie/fonts-larabie-straight_20011216-6_all.deb",
+    "archivePath": "usr/share/doc/fonts-larabie-straight/copyright",
+    "sha256": "3f8ba7fa00d7f6cad019e26c889663de0470460397d0c1595a76b6cf0856316a",
+    "bytes": 3777
+  },
+  {
+    "path": "integrations/licenses/SnakeBeta-NVIDIA-MIT.txt",
+    "url": "https://huggingface.co/m-a-p/YuE2-3B/resolve/8f24312f187763b9854adeec87e437e2b03bbff1/licenses/SnakeBeta-NVIDIA-MIT.txt",
+    "sha256": "da9858d516047d82096d01c112a61bd67f26d289039464d668a1d45f91738ecc",
+    "bytes": 1076
+  },
+  {
+    "path": "integrations/licenses/stable-audio-tools-MIT.txt",
+    "url": "https://huggingface.co/m-a-p/YuE2-3B/resolve/8f24312f187763b9854adeec87e437e2b03bbff1/licenses/stable-audio-tools-MIT.txt",
+    "sha256": "a1fac33b7bcd791b74fb33aeb439f825e7277e239fc119fb7d2ab6f084a0c101",
+    "bytes": 1069
+  }
+]

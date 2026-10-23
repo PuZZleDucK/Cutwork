@@ -1,9 +1,10 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { mkdir, readFile, realpath, stat } from 'node:fs/promises';
-import { homedir, hostname, networkInterfaces } from 'node:os';
+import { hostname, networkInterfaces } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { resolveStudioDataRoot } from './runtime-paths.ts';
 import { startNativeCoordinator } from './http/native-coordinator.ts';
 import { createSystemdGpuAdapter } from './jobs/systemd-gpu.ts';
 import { resolveNativeCommand } from './generation/native-command.ts';
@@ -16,11 +17,11 @@ import { createSetupAdapter } from './studio/setup.ts';
 import { registerStudioApi } from './studio/api.ts';
 import { reconcileStudioStartup, validateStudioNativeCall,studioNativeSource } from './studio/recovery.ts';
 
-/** Developer launch entrypoint. Full fresh-host packaging remains a later slice.
+/** Server entrypoint; scripts/bootstrap-ubuntu.sh provides newcomer packaging.
  * Uses one user-owned server/queue; inherited credentials and creative-agent tools
  * remain normal. Never stops unrelated services or replaces host Python. */
 const source = await realpath(resolve(dirname(fileURLToPath(import.meta.url)), '../../..'));
-const dataRoot = resolve(process.env.STUDIO_DATA_ROOT ?? join(homedir(), '.local/share/music-video-studio'));
+const dataRoot = resolveStudioDataRoot();
 const port = Number(process.env.STUDIO_PORT ?? 9122), host = process.env.STUDIO_HOST ?? '0.0.0.0';
 const nativeLimit = Number(process.env.STUDIO_NATIVE_LIMIT_SECONDS ?? 3600);
 if (!Number.isSafeInteger(port) || port < 1024 || port > 65535) throw new Error('STUDIO_PORT must be an unprivileged TCP port');

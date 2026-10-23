@@ -383,6 +383,8 @@ Activity mode: Proposed focused planning/verification investigation suitable for
 
 ## Revisions
 
+- **23 October — slice 9 packaging checkpoint (not slice completion):** learner chose MIT for application code. Historical Kirsty v1.0 redistribution was verified against the original Linux-package author licence after the learner correctly pointed out the older distribution; retain unchanged font bytes and notices, not current-release assumptions. Bootstrap, XDG paths, persistent service checks, notices and the 160-criterion evidence map are implemented. Full local suite passes 1,332 tests in 88 files plus typecheck/build; bootstrap bridge includes 29 Python cases. Real browser checks repaired medium-width tooltip clipping and verified narrow keyboard timing/dialog behavior and bundled Kirsty. Fresh-runtime installation is being exercised separately; no fresh-OS, production upgrade, human-listening or final-review completion is claimed.
+
 - 23 October 2026 slice 6: added captured continuation identity and image-plus-audio
   workflow wiring without changing ordinary generation. Independent review fixed
   prepared-draft/late-response ownership races. Three real continuations and exact

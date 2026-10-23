@@ -1,0 +1,22 @@
+{
+  "family": "Kirsty",
+  "style": "Regular",
+  "version": "Version 1.0; 2000; initial release",
+  "copyright": "Copyright (c) Ray Larabie, 2000. All rights reserved. Freeware. Dedicated to the late Kirsty MacColl.",
+  "trademark": "Kirsty is a trademark of Ray Larabie.",
+  "source": "https://archive.ubuntu.com/ubuntu/pool/multiverse/f/fonts-larabie/fonts-larabie-straight_20011216-6_all.deb",
+  "package": "fonts-larabie-straight",
+  "packageVersion": "1:20011216-6",
+  "packageSha256": "737f0fc6aa699c68952bca2b9da227e927178d7892c46135b2362b4af3fcfd79",
+  "originalPath": "usr/share/fonts/truetype/larabie/kirsty__.ttf",
+  "sha256": "f879b17aa6787ea4546aff3298a1ece251dfd733b7cbaac490f30cd823a44496",
+  "bytes": 46380,
+  "modified": false,
+  "embeddingFsType": 0,
+  "licenseFiles": [
+    "READ_ME.TXT",
+    "copyright"
+  ],
+  "extractedAt": "2026-10-23",
+  "note": "Unmodified original historical freeware TTF, not a current Typodermic commercial OTF. No conversion, subsetting or renaming. Redistribution relies on this copy\u2019s retained author EULA, not MIT or current catalog terms."
+}

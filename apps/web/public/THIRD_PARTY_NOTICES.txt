@@ -1,0 +1,43 @@
+ASSEMBLY browser third-party notices
+
+Application source: MIT; see the source repository LICENSE.
+This file preserves notices for bundled browser code and the historical Kirsty font.
+The full source, runtime, model and output conditions are in THIRD_PARTY_NOTICES.md
+in the source repository. Model/runtime licences are not replaced by the app MIT licence.
+
+react, react-dom and scheduler — MIT licence, copyright Meta Platforms, Inc. and affiliates.
+The same original licence text applies to all three packages:
+
+MIT License
+
+Copyright (c) Meta Platforms, Inc. and affiliates.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+
+Kirsty Regular v1.0 (2000), Ray Larabie
+Copyright (c) Ray Larabie, 2000. All rights reserved. Freeware.
+Dedicated to the late Kirsty MacColl. Kirsty is a trademark of Ray Larabie.
+
+The original TTF is distributed unchanged as /fonts/kirsty__.ttf.
+Full original author licence and copyright notices accompany it at
+/fonts/READ_ME.TXT and /fonts/copyright; exact source and hashes at
+/fonts/provenance.json. This historical freeware licence is not MIT or an
+OSI-approved open-source licence; do not apply current commercial-font terms
+to this older copy, or assume its permissions cover other releases.

@@ -1,6 +1,6 @@
 # Dense editing workspace and reachable actions
 
-23 October 2026 — learner feedback, implemented and locally verified; deployment pending. The card-heavy page wastes space
+23 October 2026 — learner feedback, implemented, verified and deployed. The card-heavy page wastes space
 and makes required continuation and restored-clip placement appear missing.
 Product work takes priority over the separate cold-download proof; use the
 established runtime and retained media for these UI checks.
@@ -27,7 +27,7 @@ established runtime and retained media for these UI checks.
 
 - [x] Focused tests, full suite (1,347 in 92 files), typecheck and build.
 - [x] Browser before/after, visible actions and functional workflow checks; details below.
-- [ ] Existing runtime deployment and no creative-data changes.
+- [x] Existing runtime deployment and no creative-data changes.
 - [ ] Learner retry of the revised workspace.
 
 ## Verified interactions (CPU fixture, not new model inference)
@@ -54,3 +54,29 @@ established runtime and retained media for these UI checks.
 Existing full-access agent behavior, model inputs, source-frame retention and
 backend timing/archival operations are unchanged. This does not finish the cold
 install journey or constitute the learner's final UI acceptance.
+
+## Deployment and retained evidence
+
+- Web release `workbench-20261023-213606-e5792a0` is live at the existing Dundee
+  studio on port 9122. Source commit: `e5792a0`. The existing backend was not
+  rebuilt or restarted; this is an explicit static-web overlay, not a claim that
+  its frozen source tree or original web manifest still matches the current UI.
+- The release retains its exact source archive, web candidate/checksums, the
+  previous complete web directory and private before/after audit snapshots under
+  the runtime's `web-releases` directory. Old hashed resources remain available;
+  the new index was published atomically after its resources.
+- All six preservation checks passed: exact database rows/schema, registered
+  assets, Debug data, application process/unit identity, unrelated service
+  identities and old/new web resources. All **831 registered assets** are intact.
+  All nine reviewed web resources were then fetched over LAN HTTP and matched
+  their expected checksums. No model download, inference or service restart was
+  required for this update.
+- The actual existing browser tab was reloaded after confirming its drafts were
+  saved. Clockwork Light retained its project, music, clip description/style and
+  timing inputs. Its already-restored clip now visibly exposes an enabled
+  **Place in sequence** button; all three clips expose **Continue From End**.
+  The production arrangement was not changed. Browser warnings/errors: none.
+- Private evidence: `.local-evidence/slice-9/workbench/` includes full test logs,
+  HTTP and deployment receipts, `deployed-top.png`, `deployed-clip-actions.png`
+  and the narrow synthetic-editor screenshot. Functional mutations/rendering
+  were tested only in the explicitly synthetic disposable fixture.

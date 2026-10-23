@@ -11,7 +11,18 @@ The scope, PRD and technical specification are approved. The learner approved th
 
 ## Latest fast-mode verification index
 
-**Latest: the slice 9 packaging checkpoint is deployed; slice 9 is not complete.**
+**Latest: the learner-requested compact workspace is deployed; slice 9 is not complete.**
+The card stack is replaced by Music / Video / Archive / History tabs, a compact
+project selector, side-by-side direction/preview and horizontal clip rows.
+Continue and Place/Remove are visible actions; timeline clips open their exact
+edit context. **1,347 tests in 92 files**, typecheck/build, synthetic browser
+archive/restore/place/trim/continuation/reuse and CPU rendering pass. The web-only
+deployment preserves exact databases, all **831 assets** and service identities;
+the existing live tab displays the new controls with saved drafts intact. No
+generator download or restart was required. See
+[workbench-feedback.md](workbench-feedback.md). Final learner retry remains open.
+
+The preceding slice 9 packaging checkpoint remains deployed:
 The corrected source passes **1,332 tests in 88 files** on Dundee, typecheck/build
 and 30 Python bootstrap cases. Actual persistent-service installation exposed and
 repaired a working-directory quoting error missed by mocks. All **55/55** final

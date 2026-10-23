@@ -10,18 +10,20 @@ import { prepareVideoTask, runVideoTask } from './video.ts';
 import { runStudioRender } from './render.ts';
 import type { RenderPlan } from './render-contract.ts';
 import { StudioStoreError } from './store.ts';
+import {readAttempt,patchStudioAttempt,settleCancellation} from './cancellation.ts';
+import {prepareRecoveryTask} from './replay.ts';
 import type { StudioStore } from './store-contract.ts';
 import type { StudioRuntime } from './runtime-contract.ts';
-import type { MusicInput, Provider, ProviderStatus, SetupJob, ToolId, StudioRender } from '../../../../packages/core/src/contracts/studio.ts';
+import type { MusicInput, Provider, ProviderStatus, SetupJob, ToolId, StudioRender, StudioAttempt } from '../../../../packages/core/src/contracts/studio.ts';
 
 interface RuntimeOptions {
  store: StudioStore; queue: GpuQueue; runtime: string; source: string; origin: string;
  setupAdapter?: Omit<ReturnType<typeof createSetupAdapter>, 'close'> & { close?(): void | Promise<void> };
  prepareMusic?: typeof prepareMusicTask; runMusic?: typeof runMusicTask;
- prepareVideo?: typeof prepareVideoTask; runVideo?: typeof runVideoTask; runRender?: typeof runStudioRender; pollMs?: number; nativeRuntimeLimitSeconds?: number;
+ prepareVideo?: typeof prepareVideoTask; runVideo?: typeof runVideoTask; runRender?: typeof runStudioRender; pollMs?: number; nativeRuntimeLimitSeconds?: number; hasExternalMaintenance?: () => boolean;
 }
 const ids: ToolId[] = ['agent', 'yue2', 'comfyui', 'h3', 'analysis'];
-const active = ['preparing', 'waiting_gpu', 'running', 'validating'];
+const active = ['preparing', 'waiting_gpu', 'running', 'validating', 'cancel_requested'];
 const message = (e: unknown) => (e instanceof Error ? e.message : String(e)).slice(0, 12_000);
 const cleanupUncertain = (text: string) => /cleanup.*unconfirmed|cleanup could not be confirmed/i.test(text);
 const maintenanceTool = (id: ToolId) => id === 'yue2' ? 'yue2' as const : id === 'h3' || id === 'comfyui' ? 'h3' as const : null;
@@ -29,7 +31,7 @@ const maintenanceTool = (id: ToolId) => id === 'yue2' ? 'yue2' as const : id ===
 /** Server-owned scheduling. Browser connections have no ownership of work.
  * Readiness checks are cached, not executed by polling. No background installs,
  * automatic replay of interrupted work, or stopping unrelated host services. */
-export function createStudioRuntime(options: RuntimeOptions): StudioRuntime & { start(): Promise<void>; close(): Promise<void> } {
+export function createStudioRuntime(options: RuntimeOptions): StudioRuntime & { start(): Promise<void>; close(): Promise<void>; applyProviderStatus(status:ProviderStatus):ProviderStatus } {
  const { store, queue, runtime, source, origin } = options;
  const adapter = options.setupAdapter ?? createSetupAdapter({ runtime, source });
  const prepareMusic = options.prepareMusic ?? prepareMusicTask, runMusic = options.runMusic ?? runMusicTask;
@@ -44,6 +46,8 @@ export function createStudioRuntime(options: RuntimeOptions): StudioRuntime & { 
  const latestProviderChecks = new Map<Provider, Promise<ProviderStatus>>();
  const checking = new Set<Promise<ProviderStatus>>();
  const captures = new Map<string, Promise<void>>();
+ const attemptControllers = new Map<string, AbortController>(), captureControllers = new Map<string,AbortController>();
+ const cancellations = new Map<string,Promise<void>>();
  const renderChecks = new Set<Promise<StudioRender>>();
  let started = false, stopped = false, initial: Promise<void> | undefined, running: Promise<void> | undefined, renderRunning: Promise<void> | undefined;
  let timer: NodeJS.Timeout | undefined, closing: Promise<void> | undefined, fault: string | null = null;
@@ -52,7 +56,7 @@ export function createStudioRuntime(options: RuntimeOptions): StudioRuntime & { 
  }
  function applyProvider(status: ProviderStatus) {
   providers.set(status.provider, status);
-  if (store.provider() === status.provider) {
+  if (store.provider() === status.provider && !options.hasExternalMaintenance?.()) {
    const current = store.tool('agent');
    if (!['queued', 'installing', 'reconciling'].includes(current.state)) store.patchTool('agent', { installed: status.installed,
     state: status.installed && status.auth === 'signed-in' ? 'ready' : status.installed ? 'error' : 'missing', detail: status.detail, checkedAt: new Date().toISOString() });
@@ -98,7 +102,7 @@ export function createStudioRuntime(options: RuntimeOptions): StudioRuntime & { 
    store.patchVideoAttempt(attempt.id, { state: 'failed', stage: 'Task capture was interrupted before dispatch; submit a new request', error: 'No complete captured task was recorded before server restart' });
   }
   for (const id of ids) {
-   if (stopped) break;
+   if (stopped || options.hasExternalMaintenance?.()) break;
    if (store.tool(id).state === 'reconciling') continue;
    const tool = maintenanceTool(id); let lease: MaintenanceLease | null = null;
    if (tool) {
@@ -197,7 +201,7 @@ export function createStudioRuntime(options: RuntimeOptions): StudioRuntime & { 
   }
  }
  async function step() {
-  if (stopped || fault || queue.heldLease()) return;
+  if (stopped || fault || options.hasExternalMaintenance?.() || queue.heldLease()) return;
   // Unknown creative work may still use managed tools outside the native lane.
   const music = store.attempts(), videos = store.videoAttempts();
   if ([...music, ...videos].some(a => a.state === 'reconciling') || store.renders().some(r => r.state === 'reconciling')) return;
@@ -213,28 +217,38 @@ export function createStudioRuntime(options: RuntimeOptions): StudioRuntime & { 
   const { attempt } = next, video = next.kind === 'video';
   const patch = video ? store.patchVideoAttempt.bind(store) : store.patchAttempt.bind(store);
   const read = () => video ? store.videoAttempt(attempt.id)! : store.attempt(attempt.id)!;
+  const attemptController=new AbortController();attemptControllers.set(attempt.id,attemptController);
+  const signal=AbortSignal.any([controller.signal,attemptController.signal]);let taskDispatched=false;
   patch(attempt.id, { state: 'preparing', stage: `Checking captured provider and ${video ? 'video' : 'music'} tool readiness` });
   try {
-   const status = await check(attempt.provider);
+   if (!attempt.details.nativeReplayRequest) {
+    const status = await check(attempt.provider);
+    if(read().cancellation)return;
+    if (!status.installed || status.auth !== 'signed-in') throw new Error('Captured provider needs server sign-in. Check its configuration before a new request.');
+   }
+   if(read().cancellation)return;
    if (stopped) { patch(attempt.id, { state: 'queued', stage: 'Queued; shutdown occurred before provider dispatch' }); return; }
-   if (!status.installed || status.auth !== 'signed-in') throw new Error('Captured provider needs server sign-in. Check its configuration before a new request.');
    if (video) {
     if (store.tool('comfyui').state !== 'ready' || store.tool('h3').state !== 'ready') throw new Error('ComfyUI and H3 must be ready before a new request.');
-    await runVideo({ runtime, source, origin, attempt: store.videoAttempt(attempt.id)!, store, queue, signal: controller.signal });
+    taskDispatched=true;await runVideo({ runtime, source, origin, attempt: store.videoAttempt(attempt.id)!, store, queue, signal });
    } else {
     if (store.tool('yue2').state !== 'ready') throw new Error('YuE2 is not ready. Complete or verify its setup before a new request.');
-    await runMusic({ runtime, source, origin, attempt: store.attempt(attempt.id)!, store, queue, signal: controller.signal });
+    taskDispatched=true;await runMusic({ runtime, source, origin, attempt: store.attempt(attempt.id)!, store, queue, signal });
    }
   } catch (error) {
    const current = read();
+   if(current.cancellation)return;
    if (stopped && current.state === 'preparing') { patch(attempt.id, { state: 'queued', stage: 'Queued; shutdown occurred before provider dispatch' }); return; }
    if (!['succeeded', 'failed', 'reconciling'].includes(current.state)) patch(attempt.id, {
     state: current.state === 'preparing' ? 'failed' : 'reconciling', stage: 'Generation stopped', error: message(error) });
    else if (current.state === 'succeeded') process.stderr.write(`Media retained; post-ingestion error: ${message(error)}\n`);
+  }finally{
+   const current=read();if(current.cancellation&&current.state==='cancel_requested')await settleCancellation({store,queue,runtime,attemptId:attempt.id,providerStopped:!taskDispatched});
+   attemptControllers.delete(attempt.id);
   }
  }
  function wakeRender() {
-  if (!started || stopped || fault || renderRunning) return;
+  if (!started || stopped || fault || renderRunning || options.hasExternalMaintenance?.()) return;
   const attempts = [...store.attempts(), ...store.videoAttempts()];
   if (attempts.some(a => a.state === 'reconciling') || store.renders().some(r => r.state === 'reconciling')) return;
   const lease = queue.heldLease(), held = lease ? queue.get(lease.callId) : null;
@@ -258,16 +272,52 @@ export function createStudioRuntime(options: RuntimeOptions): StudioRuntime & { 
   if (!started || stopped || running || fault) return;
   running = step().catch(error => { fault = message(error); process.stderr.write(`Studio scheduler stopped: ${fault}\n`); }).finally(() => { running = undefined; });
  }
- function assertOpen() { if (stopped) throw new StudioStoreError(409, 'STUDIO_STOPPING', 'The studio is shutting down. Retry after it restarts.'); }
+ function assertOpen() { if(options.hasExternalMaintenance?.())throw new StudioStoreError(409,'STUDIO_MAINTENANCE','Shared tool Debug maintenance is active'); if (stopped) throw new StudioStoreError(409, 'STUDIO_STOPPING', 'The studio is shutting down. Retry after it restarts.'); }
+ function cancelNeverDispatched(id:string){
+  if(cancellations.has(id))return;
+  const work=settleCancellation({store,queue,runtime,attemptId:id,providerStopped:true});cancellations.set(id,work);void work.finally(()=>cancellations.delete(id));
+ }
+ async function captureAttempt(attempt:StudioAttempt,parent?:StudioAttempt):Promise<StudioAttempt>{
+  if(attempt.state!=='queued'||attempt.details.planPath)return attempt;
+  let capture=captures.get(attempt.id);
+  if(!capture){const local=new AbortController();captureControllers.set(attempt.id,local);const signal=AbortSignal.any([controller.signal,local.signal]);
+   capture=(async()=>{try{
+    const result=parent&&typeof parent.details.planPath==='string'?await prepareRecoveryTask({runtime,origin,attempt,parent,queue}):'song' in attempt?await prepareVideo({runtime,source,origin,attempt,store,signal}):await prepareMusic({runtime,source,origin,attempt,signal});
+    const current=readAttempt(store,attempt.id)!;
+    patchStudioAttempt(store,attempt.id,{details:{...current.details,...result,...(parent&&!parent.details.planPath?{recoveryBeforeNative:{parentAttemptId:parent.id,actualNativeCallExisted:false}}:{})},...(!current.cancellation?{stage:'Queued; immutable task captured'}:{})});
+   }catch(error){const current=readAttempt(store,attempt.id)!;if(!current.cancellation)patchStudioAttempt(store,attempt.id,{state:'failed',stage:'Could not capture generation task',error:message(error)});}
+   finally{captureControllers.delete(attempt.id);const current=readAttempt(store,attempt.id);if(current?.cancellation)await settleCancellation({store,queue,runtime,attemptId:attempt.id,providerStopped:true});}
+   })();captures.set(attempt.id,capture);
+  }
+  await capture;captures.delete(attempt.id);return readAttempt(store,attempt.id)!;
+ }
  return {
   start() {
    if (initial) return initial;
    initial = initialChecks().then(() => { if (!stopped) { started = true; timer = setInterval(wake, pollMs); wake(); } });
    return initial;
   },
+  applyProviderStatus:applyProvider,
+  hasActiveWork(){return !!((initial&&!started&&!stopped)||captures.size||running||renderRunning||renderChecks.size||checking.size||cancellations.size||queue.heldLease()||store.setupJobs().some(j=>['queued','running','reconciling'].includes(j.state))||[...store.attempts(),...store.videoAttempts()].some(a=>['queued',...active,'reconciling'].includes(a.state))||store.renders().some(r=>['queued','running','reconciling'].includes(r.state)));},
+  async cancelAttempt(id){
+   if(stopped)throw new StudioStoreError(409,'STUDIO_STOPPING','Studio is shutting down');
+   const before=readAttempt(store,id);if(!before)throw new StudioStoreError(404,'STUDIO_NOT_FOUND','Attempt not found');
+   const attempt=store.requestCancel(id);if(['succeeded','failed','cancelled'].includes(attempt.state))return attempt;
+   queue.cancelAttempt(id);attemptControllers.get(id)?.abort(new Error('Generation cancelled by user'));captureControllers.get(id)?.abort(new Error('Generation cancelled by user'));
+   if(!attemptControllers.has(id)&&!captures.has(id)&&before.state==='queued')cancelNeverDispatched(id);
+   return readAttempt(store,id)!;
+  },
+  async recoverAttempt(id,mode,key){assertOpen();const parent=readAttempt(store,id);if(!parent)throw new StudioStoreError(404,'STUDIO_NOT_FOUND','Attempt not found');
+   const held=queue.heldLease();if(held&&queue.get(held.callId)?.attemptId===id)throw new StudioStoreError(409,'STUDIO_CONFLICT','Native recovery requires confirmed release');
+   const attempt=store.recoverAttempt(id,mode,key);return captureAttempt(attempt,parent);
+  },
   overview() {
    const attempts = [...store.attempts(), ...store.videoAttempts()], native = queue.list(), tools = store.tools().map(t => {
-    if (t.id === 'agent') return { ...t, active: t.active || attempts.some(a => active.includes(a.state)), queued: attempts.filter(a => a.state === 'queued').length };
+    if (t.id === 'agent') {
+     // Resolved native replay bypasses the provider, but remains studio/GPU work.
+     const providerAttempts = attempts.filter(a => !a.details.nativeReplayRequest);
+     return { ...t, active: t.active || providerAttempts.some(a => active.includes(a.state)), queued: providerAttempts.filter(a => a.state === 'queued').length };
+    }
     if (t.id === 'yue2' || t.id === 'h3' || t.id === 'comfyui') {
      // H3 runs through the owned ComfyUI service; both indicators describe the
      // same native lane, not additional jobs or pre-agent reservations.
@@ -297,29 +347,10 @@ export function createStudioRuntime(options: RuntimeOptions): StudioRuntime & { 
    return plan.map(id => store.enqueueSetup(id));
   },
   async submitMusic(projectId: string, idempotencyKey: string, input: MusicInput) {
-   assertOpen(); const attempt = store.submitMusic(projectId, idempotencyKey, input);
-   if (attempt.state !== 'queued' || attempt.details.planPath) return attempt;
-   let capture = captures.get(attempt.id);
-   if (!capture) {
-    capture = (async () => {
-     try { const result = await prepareMusic({ runtime, source, origin, attempt }); store.patchAttempt(attempt.id, { details: { ...attempt.details, ...result }, stage: 'Queued; immutable task captured' }); }
-     catch (error) { store.patchAttempt(attempt.id, { state: 'failed', stage: 'Could not capture generation task', error: message(error) }); }
-    })();
-    captures.set(attempt.id, capture);
-   }
-   await capture; captures.delete(attempt.id); return store.attempt(attempt.id)!;
+   assertOpen();return await captureAttempt(store.submitMusic(projectId,idempotencyKey,input)) as ReturnType<StudioStore['submitMusic']>;
   },
   async submitVideo(projectId, idempotencyKey, input) {
-   assertOpen(); const attempt = store.submitVideo(projectId, idempotencyKey, input);
-   if (attempt.state !== 'queued' || attempt.details.planPath) return attempt;
-   let capture = captures.get(attempt.id);
-   if (!capture) {
-    capture = (async () => {
-     try { const result = await prepareVideo({ runtime, source, origin, attempt, store }); store.patchVideoAttempt(attempt.id, { details: { ...attempt.details, ...result }, stage: 'Queued; immutable video task captured' }); }
-     catch (error) { store.patchVideoAttempt(attempt.id, { state: 'failed', stage: 'Could not capture video task', error: message(error) }); }
-    })(); captures.set(attempt.id, capture);
-   }
-   await capture; captures.delete(attempt.id); return store.videoAttempt(attempt.id)!;
+   assertOpen();return await captureAttempt(store.submitVideo(projectId,idempotencyKey,input)) as ReturnType<StudioStore['submitVideo']>;
   },
   render(projectId, songId, revision, idempotencyKey) {
    assertOpen();
@@ -345,7 +376,7 @@ export function createStudioRuntime(options: RuntimeOptions): StudioRuntime & { 
    let adapterClosed: Promise<void>;
    try { adapterClosed = Promise.resolve(adapter.close?.()); } catch (error) { adapterClosed = Promise.reject(error); }
    return closing = (async () => {
-    const results = await Promise.allSettled([adapterClosed, initial, ...captures.values(), running, renderRunning, ...renderChecks, ...checking]);
+    const results = await Promise.allSettled([adapterClosed, initial, ...captures.values(), ...cancellations.values(), running, renderRunning, ...renderChecks, ...checking]);
     const failed = results.find(result => result.status === 'rejected'); if (failed?.status === 'rejected') throw failed.reason;
    })();
   },

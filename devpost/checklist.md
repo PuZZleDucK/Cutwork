@@ -11,6 +11,16 @@ The scope, PRD and technical specification are approved. The learner approved th
 
 ## Latest fast-mode verification index
 
+**Latest: slice 7 is complete and deployed.** Final checks pass **1,248 tests in
+78 files on both hosts**, typecheck and build. Real queued/running provider and
+native cancellations, exact music/H3 replays, confirmed real Debug repair and
+browser recovery/navigation passed. A real H3 host-memory OOM was retained;
+conservative owned-Comfy settings then completed the fresh/cancel/restart proof.
+All 789 original assets remain exact in the final 137-check preservation audit;
+TTS is restored and personal ComfyUI unchanged. See [slice-7-evidence.md](slice-7-evidence.md).
+Slices 8–9 and the final learner review/wrap-up remain unfinished.
+
+
 The chronological notes below remain as history. Slice 1 is complete; its
 assertion-to-run map is [slice-1-native-evidence.md](slice-1-native-evidence.md).
 Slice 2 and its early hands-on checkpoint are complete. The learner accepted the
@@ -318,7 +328,7 @@ The next work is the prepared real-model lane verification; no slice/G4 gate is 
   Learner check: Trim and move a clip, use its own Continue From End control, and inspect the proposed image/start/end before Generate. Continue past the music and watch/listen to the longer export. Judge whether the control follows the specific clip you intended.
   Commit: `Add frame-exact continuation and post-song video`
 
-- [ ] **7. Recover visibly from installation and generation failures**
+- [x] **7. Recover visibly from installation and generation failures**
   Becomes usable: Retry failed work, stop queued/running generations, restart cancelled work or restore its inputs for editing, and explicitly authorise a setup-debugging agent after reviewing its exact launch context.
   Why now: Native stopping was tested in slice 1; now the full UI state machine can be exercised against real installation, generation, continuation and provider contexts. This is not the first time process ownership is considered.
   PRD ref: `prd.md > Tool Setup and Failure Recovery`; `prd.md > Debug Confirmation and Agent Authority`; `prd.md > Music and Video Generation`; `prd.md > Generation Seeds and Variations`; `prd.md > Frontier Agent Setup and Selection`; `prd.md > Generation History`.

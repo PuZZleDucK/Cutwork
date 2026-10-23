@@ -1,4 +1,7 @@
 import assert from 'node:assert/strict';
+import {captureExecutionSource,captureReplayFile,fileHash,verifyExecutionSource,type ExecutionSource,type ReplayFile} from './execution-snapshot.ts';
+import {settleCancellation} from './cancellation.ts';
+import {runReplayCall,type ReplayCall} from './replay.ts';
 import { createHash, randomUUID } from 'node:crypto';
 import { createReadStream } from 'node:fs';
 import { mkdir, open, readFile, realpath, stat, writeFile } from 'node:fs/promises';
@@ -12,12 +15,13 @@ import type { VideoAttempt } from '../../../../packages/core/src/contracts/studi
 import type { GpuCall, GpuQueue } from '../jobs/gpu-queue-contract.ts';
 import type { StudioStore, VideoOutputInput } from './store-contract.ts';
 
-interface VideoOptions { runtime:string; source:string; origin:string; attempt:VideoAttempt; store:StudioStore }
+interface VideoOptions { runtime:string; source:string; origin:string; attempt:VideoAttempt; store:StudioStore; signal?:AbortSignal }
 interface RunOptions extends VideoOptions { queue:GpuQueue; signal?:AbortSignal }
 export interface VideoTaskDependencies { provider?:typeof runProvider; execute?:SetupExecutor }
 type Rec=Record<string,unknown>;
 type CapturedAttempt=Pick<VideoAttempt,'id'|'nativeCallId'|'projectId'|'provider'|'model'|'input'|'seeds'|'song'|'continuation'>;
-interface TaskPlan {
+export interface TaskPlan {
+ executionSource?:ExecutionSource; replaySong?:ReplayFile; replayCall?:ReplayCall;
  schemaVersion:1; runtime:string; source:string; origin:string; attempt:CapturedAttempt; nativePlan:VideoPlan;
  song:{path:string;sha256:string}; launch:ProviderLaunch;
  firstFrame?:{path:string;sha256:string;pixelSha256:string};
@@ -69,8 +73,8 @@ function validate(o:VideoOptions){
  }
  nativeVideoPlan(o.attempt);
 }
-export async function prepareVideoTask(o:VideoOptions,deps:Pick<VideoTaskDependencies,'execute'>={}):Promise<{planPath:string}>{
- validate(o);const {runtime,source,origin,attempt,store}=o,project=join(runtime,'projects',attempt.projectId);
+export async function prepareVideoTask(o:VideoOptions,deps:Pick<VideoTaskDependencies,'execute'>={}):Promise<{planPath:string;planSha256?:string}>{
+ o.signal?.throwIfAborted();validate(o);const {runtime,source,origin,attempt,store}=o,project=join(runtime,'projects',attempt.projectId);
  const asset=store.asset(attempt.song.assetId);assert.ok(asset&&asset.projectId===attempt.projectId&&asset.sha256===attempt.song.sha256,'Captured song asset not registered');
  await managed(project,asset.path);assert.equal(await sha(asset.path),attempt.song.sha256,'Captured song hash changed');
  const pins=await json(join(source,'integrations/tool-manifest.json')),providers=record(pins.providers),codex=record(providers.codex),claude=record(providers.claude);
@@ -91,7 +95,7 @@ export async function prepareVideoTask(o:VideoOptions,deps:Pick<VideoTaskDepende
   assert.ok(clip,'Captured predecessor source is missing');assert.deepEqual(clip.rawFrames.find(v=>v.index===c.frame.index),c.frame,'Captured original frame manifest differs');
   await managed(project,frameAsset.path);assert.equal((await stat(frameAsset.path)).size,c.frame.bytes);assert.equal(await sha(frameAsset.path),c.frame.sha256,'Captured continuation source hash changed');
   await writeFile(firstFrame.path,await readFile(frameAsset.path),{flag:'wx',mode:0o600});assert.equal(await sha(firstFrame.path),c.frame.sha256,'Continuation changed during capture');
-  assert.equal(await sha(frameAsset.path),c.frame.sha256,'Original continuation changed during capture');await inspectFirstFrame(o,firstFrame.path,deps.execute??executeSetupCommand);
+  assert.equal(await sha(frameAsset.path),c.frame.sha256,'Original continuation changed during capture');await inspectFirstFrame(o,firstFrame.path,deps.execute??executeSetupCommand,o.signal);
   assert.equal(await sha(join(source,'integrations/h3/media.py')),sourceHashes['media.py'],'PNG inspector changed during capture');
   firstFrameSource={path:frameAsset.path,...c.frame};
  }
@@ -114,8 +118,12 @@ export async function prepareVideoTask(o:VideoOptions,deps:Pick<VideoTaskDepende
   ...guidance.map(g=>`Product guidance ${g.sourcePath}; SHA256 ${g.sha256}:\n\n${g.text}`),
  ].join('\n\n');
  const plan:TaskPlan={schemaVersion:1,runtime,source,origin,attempt:captured(attempt),nativePlan,song,launch,...(firstFrame?{firstFrame,firstFrameSource:firstFrameSource!}:{}),guidance,sourceHashes,verifiedModels,modelManifestSha256:await sha(join(source,'integrations/h3/models.json')),recipeSha256:await sha(join(source,'integrations/comfyui/recipe.json')),lockSha256:await sha(join(source,'integrations/comfyui/requirements.lock')),sourceRevision:String(record(recipe.source).revision),paths};
+ plan.executionSource=await captureExecutionSource(source,join(paths.planPath,'..','execution-source'),'h3');
+ for(const [name,expected] of Object.entries(plan.sourceHashes))assert.equal(await fileHash(join(plan.executionSource.root,'integrations/h3',name)),expected,'Helper changed during capture');
+ assert.equal(await fileHash(join(plan.executionSource.root,'integrations/h3/models.json')),plan.modelManifestSha256);assert.equal(await fileHash(join(plan.executionSource.root,'integrations/comfyui/recipe.json')),plan.recipeSha256);assert.equal(await fileHash(join(plan.executionSource.root,'integrations/comfyui/requirements.lock')),plan.lockSha256);
+ plan.replaySong=await captureReplayFile(asset.path,join(paths.planPath,'..','source-song.wav'),asset.sha256);
  await mkdir(launch.cwd,{recursive:true,mode:0o700});
- await writeFile(paths.planPath,JSON.stringify(plan,null,2)+'\n',{flag:'wx',mode:0o600});return{planPath:paths.planPath};
+ await writeFile(paths.planPath,JSON.stringify(plan,null,2)+'\n',{flag:'wx',mode:0o600});return{planPath:paths.planPath,planSha256:await fileHash(paths.planPath)};
 }
 async function verifyRelease(call:GpuCall,queue:GpuQueue,runtime:string){
  assert.notEqual(queue.heldLease()?.callId,call.id,'Native GPU lease remains held');const owner=record(call.owner),release=record(call.release);assert.equal(owner.kind,'systemd-unit');assert.equal(typeof owner.directory,'string');
@@ -127,7 +135,7 @@ function bounded(value:unknown,path:string,max=100000):unknown{const text=JSON.s
 async function tail(path:string){const f=await open(path,'r');try{const size=(await f.stat()).size,b=Buffer.alloc(Math.min(size,32768));await f.read(b,0,b.length,size-b.length);return{text:b.toString('utf8'),sourcePath:path,truncated:size>b.length};}finally{await f.close();}}
 function duration(stream:Rec,rate:number){assert.match(String(stream.duration_ts),/^\d+$/);assert.match(String(stream.time_base),/^\d+\/[1-9]\d*$/);const[n,d]=String(stream.time_base).split('/').map(BigInt);const v=BigInt(String(stream.duration_ts))*n!*BigInt(rate);assert.equal(v%d!,0n,'Non-integral native duration');return v/d!;}
 async function verifyVideo(plan:TaskPlan,call:GpuCall,execute:SetupExecutor,signal?:AbortSignal):Promise<{output:VideoOutputInput;details:Rec}>{
- const {attempt,runtime,source,paths,nativePlan}=plan,project=join(runtime,'projects',attempt.projectId),run=join(project,'runs',attempt.nativeCallId),outputRoot=join(run,'comfy-base/output');
+ const {attempt,runtime,paths,nativePlan}=plan,source=plan.executionSource?.root??plan.source,project=join(runtime,'projects',attempt.projectId),run=join(project,'runs',attempt.nativeCallId),outputRoot=join(run,'comfy-base/output');
  assert.equal(call.state,'succeeded');assert.equal(call.tool,'h3');assert.equal(call.id,attempt.nativeCallId);assert.equal(call.attemptId,attempt.id);assert.equal(call.projectId,attempt.projectId);
  const command=record(record(call.launch).command);assert.ok(Array.isArray(command.args));const args=command.args as string[];assert.equal(args[args.indexOf('--request')+1],paths.nativeRequest);assert.ok(args.includes('--run')&&!args.includes('--fixture'),'Native command cannot use synthetic output');
  await managed(project,paths.nativeRequest);await managed(project,paths.nativeReceipt);
@@ -198,30 +206,37 @@ async function verifyVideo(plan:TaskPlan,call:GpuCall,execute:SetupExecutor,sign
  return{output:{title:(attempt.input.clipPrompt.split(/\r?\n/).find(s=>s.trim())??'Generated clip').trim().slice(0,240).replace(/[\uD800-\uDBFF]$/u,''),video:{assetId:randomUUID(),path:videoPath,sha256:String(video.sha256)},audio:{assetId:randomUUID(),path:audioPath,sha256:String(audio.sha256),sampleCount:String(nativeSamples),sampleRate:32000,channels:2},frames,frameCount:nativePlan.nativeFrames,width:640,height:480,fps:'24/1'},details};
 }
 export async function runVideoTask(o:RunOptions,deps:VideoTaskDependencies={}):Promise<void>{
- const {store,queue,attempt,runtime}=o,provider=deps.provider??runProvider,execute=deps.execute??executeSetupCommand;let dispatched=false,knownStopped=false,plan:TaskPlan|undefined;
+ const {store,queue,attempt,runtime}=o,provider=deps.provider??runProvider,execute=deps.execute??executeSetupCommand;let dispatched=false,nativeDispatched=false,knownStopped=false,plan:TaskPlan|undefined;
  let details:Rec={...(store.videoAttempt(attempt.id)?.details??{}),planPath:planPath(o)};
  try{
   o.signal?.throwIfAborted();validate(o);plan=await json(planPath(o)) as unknown as TaskPlan;
-  assert.equal(plan.schemaVersion,1);assert.equal(plan.runtime,runtime);assert.equal(plan.source,o.source);assert.equal(plan.origin,o.origin);assert.deepEqual(plan.attempt,captured(attempt));assert.deepEqual(plan.nativePlan,nativeVideoPlan(attempt));assert.equal(plan.paths.planPath,planPath(o));
+  if(attempt.details.planSha256)assert.equal(await fileHash(planPath(o)),attempt.details.planSha256,'Captured task hash changed');
+  if(plan.executionSource)await verifyExecutionSource(plan.executionSource);
+  assert.equal(plan.schemaVersion,1);assert.equal(plan.runtime,runtime);if(!plan.executionSource)assert.equal(plan.source,o.source);assert.equal(plan.origin,o.origin);assert.deepEqual(plan.attempt,captured(attempt));assert.deepEqual(plan.nativePlan,nativeVideoPlan(attempt));assert.equal(plan.paths.planPath,planPath(o));
   assert.deepEqual(plan.firstFrame,continuationFrameInput(runtime,attempt));
   assert.equal(plan.launch.cwd,join(runtime,'projects',attempt.projectId,'workspace'));assert.equal(plan.launch.runDirectory,join(plan.launch.cwd,'runs',attempt.id));
-  const asset=store.asset(attempt.song.assetId);assert.ok(asset&&asset.projectId===attempt.projectId&&asset.sha256===attempt.song.sha256);assert.deepEqual(plan.song,{path:asset.path,sha256:asset.sha256});await managed(join(runtime,'projects',attempt.projectId),asset.path);assert.equal(await sha(asset.path,o.signal),asset.sha256,'Source song changed since capture');
+  const asset=store.asset(attempt.song.assetId);assert.ok(asset&&asset.projectId===attempt.projectId&&asset.sha256===attempt.song.sha256);assert.equal(plan.song.sha256,asset.sha256);assert.equal(plan.song.path,attempt.recovery&&plan.replaySong?plan.replaySong.path:asset.path);await managed(join(runtime,'projects',attempt.projectId),plan.song.path);assert.equal(await sha(plan.song.path,o.signal),asset.sha256,'Source song changed since capture');
   if(plan.firstFrame){await managed(join(runtime,'projects',attempt.projectId),plan.firstFrame.path);assert.equal(await sha(plan.firstFrame.path,o.signal),plan.firstFrame.sha256,'Captured continuation snapshot changed');
    assert.ok(plan.firstFrameSource);
    const {path:_sourcePath,...sourceFrame}=plan.firstFrameSource;assert.deepEqual(sourceFrame,attempt.continuation!.frame);
-   assert.equal(await sha(join(o.source,'integrations/h3/media.py'),o.signal),plan.sourceHashes['media.py'],'PNG inspector changed since capture');await inspectFirstFrame(o,plan.firstFrame.path,execute,o.signal);
+   assert.equal(await sha(join(plan.executionSource?.root??o.source,'integrations/h3/media.py'),o.signal),plan.sourceHashes['media.py'],'PNG inspector changed since capture');await inspectFirstFrame({...o,source:plan.executionSource?.root??o.source},plan.firstFrame.path,execute,o.signal);
   }
   details={...details,...(attempt.continuation?{continuation:attempt.continuation,firstFrame:plan.firstFrame,firstFrameSource:plan.firstFrameSource}:{}),guidance:plan.guidance.map(({text:_text,...g})=>g),capturedProvider:attempt.provider,capturedModel:attempt.model,sourceSong:attempt.song,nativePlan:plan.nativePlan};
-  o.signal?.throwIfAborted();store.patchVideoAttempt(attempt.id,{state:'running',stage:'Creative agent translating visual brief',details});dispatched=true;
+  o.signal?.throwIfAborted();store.patchVideoAttempt(attempt.id,{state:'running',stage:plan.replayCall?'Replaying exact captured native video request':'Creative agent translating visual brief',details});
+  if(plan.replayCall){nativeDispatched=true;knownStopped=true;details.recovery={...plan.replayCall,providerInvoked:false};await runReplayCall({plan:plan.replayCall,attempt,queue,...(o.signal?{signal:o.signal}:{})});}
+  else {dispatched=true;
   const result=await provider(plan.launch,o.signal?{signal:o.signal}:{}),path=join(plan.launch.runDirectory,'provider-receipt.json');assert.equal(result.receiptPath,path);const receipt=await json(path);knownStopped=['exited','failed'].includes(String(receipt.state))&&(typeof receipt.code==='number'||typeof receipt.signal==='string');
   details={...details,providerReceiptPath:path,providerOutcome:bounded(receipt,path,40000),providerFinalProse:await tail(result.stdoutPath)};store.patchVideoAttempt(attempt.id,{state:'validating',stage:'Verifying native clip and complete original frame batch',details});
   assert.ok(result.succeeded&&result.code===0&&result.signal===null&&result.inputDelivered,'Creative provider did not complete successfully');assert.equal(receipt.state,'exited');assert.equal(receipt.succeeded,true);assert.equal(receipt.code,0);assert.equal(receipt.inputDelivered,true);assert.equal(receipt.executable,plan.launch.executable);assert.deepEqual(receipt.argv,plan.launch.argv);assert.equal(receipt.cwd,plan.launch.cwd);
+  }
+  o.signal?.throwIfAborted();
   const call=queue.get(attempt.nativeCallId);assert.ok(call,'Provider completed without registered native clip');await verifyRelease(call,queue,runtime);const verified=await verifyVideo(plan,call,execute,o.signal);o.signal?.throwIfAborted();
   store.finishVideo(attempt.id,verified.output,{...details,...verified.details});
  }catch(error){
-  if(o.signal?.aborted&&!dispatched){const current=store.videoAttempt(attempt.id);if(current&&!['succeeded','failed','reconciling'].includes(current.state))store.patchVideoAttempt(attempt.id,{state:'queued',stage:'Queued; studio stopped before provider dispatch',details});return;}
+  if(o.signal?.aborted&&!dispatched&&!nativeDispatched&&!store.videoAttempt(attempt.id)?.cancellation){const current=store.videoAttempt(attempt.id);if(current&&!['succeeded','failed','reconciling'].includes(current.state))store.patchVideoAttempt(attempt.id,{state:'queued',stage:'Queued; studio stopped before provider dispatch',details});return;}
   if(error instanceof ProviderLaunchAbortedError)knownStopped=true;
   if(dispatched&&!knownStopped&&plan){try{const path=join(plan.launch.runDirectory,'provider-receipt.json'),r=await json(path);knownStopped=['exited','failed'].includes(String(r.state))&&(typeof r.code==='number'||typeof r.signal==='string'||(!!r.cleanup&&record(r.cleanup).cliStopped===true));details.providerReceiptPath=path;details.providerOutcome=bounded(r,path,40000);details.providerFinalProse=await tail(join(plan.launch.runDirectory,'provider.stdout.log'));}catch{/* Retain uncertain owned provider. */}}
+  if(store.videoAttempt(attempt.id)?.cancellation){await settleCancellation({store,queue,runtime,attemptId:attempt.id,providerStopped:!dispatched||knownStopped,details});return;}
   const call=queue.get(attempt.nativeCallId);let uncertain=dispatched&&!knownStopped;
   if(call){if(!['succeeded','failed','cancelled'].includes(call.state)||queue.heldLease()?.callId===call.id){uncertain=true;queue.cancelAttempt(attempt.id);}else if(call.owner!==null){try{await verifyRelease(call,queue,runtime);}catch{uncertain=true;}}else if(call.state==='succeeded'||!call.release||record(call.release).neverLaunched!==true)uncertain=true;}
   details.failure=message(error);const current=store.videoAttempt(attempt.id);if(current&&!['succeeded','failed'].includes(current.state))store.patchVideoAttempt(attempt.id,{state:uncertain?'reconciling':'failed',stage:uncertain?'Native/provider cleanup requires reconciliation':'Video generation failed',error:message(error),details});

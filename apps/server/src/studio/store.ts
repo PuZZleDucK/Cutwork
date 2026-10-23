@@ -7,7 +7,7 @@ import { isAbsolute, normalize } from 'node:path';
 import { providerModels } from '../providers/launch.ts';
 import { RENDER_PROFILE } from './render-contract.ts';
 import type { AttemptPatch, ClipDraftInput, ClipEditPatch, ClipEditResult, RegisteredAssetInput, SongInput, StudioStore, VideoOutputInput } from './store-contract.ts';
-import type { ClipDraft, ClipEditContext, ContinuationCapture, ContinuationReference, MusicAttempt, MusicDraft, MusicInput, Provider, SetupJob, SongAnalysis, StudioProject, StudioSong,
+import type { ClipDraft, ClipEditContext, ContinuationCapture, ContinuationReference, MusicAttempt, MusicDraft, MusicInput, Provider, SetupJob, SongAnalysis, StudioAttempt, StudioProject, StudioSong,
   ToolId, ToolStatus, VideoInput, VideoAttempt, StudioClip, SongArrangement, StudioRender, ProjectEvent, ProjectEventKind } from '../../../../packages/core/src/contracts/studio.ts';
 
 export class StudioStoreError extends Error {
@@ -24,9 +24,9 @@ function missing(message: string): never { return fail(404, 'STUDIO_NOT_FOUND', 
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const toolIds: ToolId[] = ['agent', 'yue2', 'comfyui', 'h3', 'analysis'];
 const labels: Record<ToolId, string> = { agent: 'Creative agent', yue2: 'YuE2', comfyui: 'ComfyUI', h3: 'H3 video', analysis: 'Audio analysis' };
-const attemptStates = ['queued', 'preparing', 'waiting_gpu', 'running', 'validating', 'succeeded', 'failed', 'reconciling'];
+const attemptStates = ['queued', 'preparing', 'waiting_gpu', 'running', 'validating', 'succeeded', 'failed', 'reconciling', 'cancel_requested', 'cancelled'];
 const setupStates = ['queued', 'running', 'succeeded', 'failed', 'reconciling'];
-const activeStates = ['queued', 'preparing', 'waiting_gpu', 'running', 'validating', 'reconciling'];
+const activeStates = ['queued', 'preparing', 'waiting_gpu', 'running', 'validating', 'reconciling', 'cancel_requested'];
 const now = () => new Date().toISOString();
 function text(value: unknown, name: string, maximum: number, nonempty = false): string {
   if (typeof value !== 'string' || value.length > maximum || value.includes('\0') ||
@@ -233,6 +233,7 @@ function attemptPatch(value: unknown): AttemptPatch {
   const p = object(value, [], ['state', 'stage', 'error', 'details']) as AttemptPatch;
   if (p.state !== undefined && !attemptStates.includes(p.state)) invalid('Unsupported attempt state');
   if (p.state === 'succeeded') conflict('Successful completion requires atomic artifact ingestion');
+  if (p.state === 'cancelled' || p.state === 'cancel_requested') conflict('Cancellation requires its dedicated lifecycle operation');
   if (p.stage !== undefined) text(p.stage, 'Attempt stage', 1000);
   if (p.error !== undefined && p.error !== null) text(p.error, 'Attempt error', 16000);
   if (p.details !== undefined) p.details = details(p.details); return p;
@@ -265,7 +266,7 @@ export function openStudioStore(path: string): StudioStore {
       db.exec(`CREATE TABLE IF NOT EXISTS studio_meta (singleton INTEGER PRIMARY KEY CHECK(singleton=1), version INTEGER NOT NULL,
         provider TEXT NOT NULL, selected_project TEXT); INSERT OR IGNORE INTO studio_meta VALUES (1,1,'codex',NULL);`);
       const meta = db.prepare('SELECT version FROM studio_meta WHERE singleton=1').get() as { version: number };
-      if (![1, 2, 3, 4, 5, 6].includes(meta.version)) conflict('Unsupported studio schema version');
+      if (![1, 2, 3, 4, 5, 6, 7].includes(meta.version)) conflict('Unsupported studio schema version');
       db.exec(`
         CREATE TABLE IF NOT EXISTS studio_projects (sequence INTEGER PRIMARY KEY AUTOINCREMENT, id TEXT NOT NULL UNIQUE, data TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS studio_attempts (sequence INTEGER PRIMARY KEY AUTOINCREMENT, id TEXT NOT NULL UNIQUE,
@@ -355,8 +356,8 @@ export function openStudioStore(path: string): StudioStore {
             sourceStartFrame: 0, sourceEndFrame: clip.requestedFrames, audioSource: 'song', placementIntent: null, trimIntent: null });
         }
       }
-      // Version6 guards new conditioning metadata without changing existing rows/schema.
-      db.exec('UPDATE studio_meta SET version=6 WHERE singleton=1');
+      // Version7 guards lifecycle metadata without changing any existing row or schema object.
+      db.exec('UPDATE studio_meta SET version=7 WHERE singleton=1');
       for (const id of toolIds) {
         const t: ToolStatus = { id, label: labels[id], state: 'missing', installed: false, detail: 'Not checked', log: '', checkedAt: null, jobId: null, active: false, queued: 0 };
         db.prepare('INSERT OR IGNORE INTO studio_tools VALUES (?,?)').run(id, canonical(t));
@@ -448,6 +449,16 @@ export function openStudioStore(path: string): StudioStore {
     if (!asset || asset.projectId !== c.projectId || asset.mediaType !== 'image/png' || asset.sha256 !== frame.sha256) conflict('Preserved continuation frame registration differs');
     return { contextId: c.id, contextRevision: c.revision, clipId: c.clipId, songId: c.songId, sourceOriginFrame: c.sourceOriginFrame,
       sourceStartFrame: c.sourceStartFrame, sourceEndFrame: c.sourceEndFrame, endFrame, frame: { ...frame } };
+  }
+  function anyAttempt(id: string): { kind: 'music' | 'video'; row: AttemptRow; attempt: StudioAttempt } {
+    const music = attemptRow(id); if (music) return { kind: 'music', row: music, attempt: attemptSnapshot(music) };
+    const video = videoRow(id); if (video) return { kind: 'video', row: video, attempt: videoSnapshot(video) };
+    return missing('Generation attempt not found');
+  }
+  function saveAnyAttempt(attempt: StudioAttempt): StudioAttempt { return 'song' in attempt ? saveVideo(attempt) : saveAttempt(attempt); }
+  function checkAttemptPatch(attempt: StudioAttempt, patch: AttemptPatch): void {
+    if (['succeeded', 'failed', 'cancelled'].includes(attempt.state)) conflict('Finished attempts cannot be changed');
+    if (attempt.cancellation && patch.state !== undefined && patch.state !== 'reconciling') conflict('Cancellation cannot be resumed or completed by a normal lifecycle patch');
   }
   function currentClipDraft(projectId: string, songId: string, revision: number): ClipDraft {
     integer(revision, 'Clip draft revision'); const p = project(projectId), song = songById(songId);
@@ -646,6 +657,7 @@ export function openStudioStore(path: string): StudioStore {
         const p = project(projectId);
         const old = db.prepare('SELECT * FROM studio_attempts WHERE project_id=? AND idempotency_key=?').get(p.id, key) as AttemptRow | undefined;
         if (old) {
+          if (attemptSnapshot(old).recovery) conflict('Submission key belongs to a recovery action');
           // Earlier captures included project visual style. Compare the music
           // fields only, but return the original record without rewriting history.
           const previous = object(JSON.parse(old.input_json), ['musicPrompt', 'lyrics'], ['style']);
@@ -661,19 +673,116 @@ export function openStudioStore(path: string): StudioStore {
         return { ...a, sequence: Number(result.lastInsertRowid) };
       });
     },
+    requestCancel(id) {
+      return write(() => {
+        const { kind, attempt: a } = anyAttempt(id);
+        if (['succeeded', 'failed', 'cancelled'].includes(a.state) || a.cancellation) return a;
+        const timestamp = now(), updated = saveAnyAttempt({ ...a, state: a.state === 'reconciling' ? 'reconciling' : 'cancel_requested',
+          stage: a.state === 'reconciling' ? 'Cancellation requested; owned cleanup still requires reconciliation' : 'Cancellation requested; waiting for owned work to stop',
+          cancellation: { requestedAt: timestamp, completedAt: null }, updatedAt: timestamp });
+        recordEvent(a.projectId, 'attempt.cancel_requested', { attemptId: a.id, kind }, timestamp); return updated;
+      });
+    },
+    finishCancellation(id, evidence) {
+      const capturedDetails = details(evidence);
+      return write(() => {
+        const { kind, attempt: a } = anyAttempt(id);
+        if (a.state === 'succeeded' || a.state === 'cancelled') return a;
+        if (!a.cancellation || !['cancel_requested', 'reconciling'].includes(a.state)) conflict('Cancellation has not been requested or owned work is not in a cancellable state');
+        const timestamp = now(), updated = saveAnyAttempt({ ...a, state: 'cancelled', stage: 'Cancelled; owned work stopped', error: null,
+          cancellation: { ...a.cancellation, completedAt: timestamp }, details: { ...a.details, ...capturedDetails }, updatedAt: timestamp });
+        recordEvent(a.projectId, 'attempt.cancelled', { attemptId: a.id, kind }, timestamp); return updated;
+      });
+    },
+    recoverAttempt(id, action, idempotencyKey) {
+      const key = uuid(idempotencyKey); if (action !== 'retry' && action !== 'restart') invalid('Recovery action must be retry or restart');
+      return write(() => {
+        const { kind, row, attempt: parent } = anyAttempt(id), table = kind === 'music' ? 'studio_attempts' : 'studio_video_attempts';
+        const old = db.prepare(`SELECT * FROM ${table} WHERE project_id=? AND idempotency_key=?`).get(parent.projectId, key) as AttemptRow | undefined;
+        if (old) {
+          const previous = kind === 'music' ? attemptSnapshot(old) : videoSnapshot(old);
+          if (previous.recovery?.parentAttemptId !== parent.id || previous.recovery.action !== action) conflict('Submission key already belongs to another recovery or generation');
+          return previous;
+        }
+        if (parent.state !== (action === 'retry' ? 'failed' : 'cancelled')) conflict(action === 'retry' ? 'Retry requires a failed attempt with known stopped work' : 'Restart requires confirmed cancellation');
+        const timestamp = now();
+        // New lifecycle identity, but immutable user intent, provider pairing,
+        // all original seeds/song/frame/timing references are copied verbatim.
+        const { cancellation: _cancel, recovery: _recovery, placeholderDiscardedAt: _hidden, ...original } = parent;
+        const child: StudioAttempt = { ...original, id: randomUUID(), nativeCallId: randomUUID(), sequence: nextSequence(),
+          createdAt: timestamp, updatedAt: timestamp, state: 'queued', stage: 'Queued recovery', error: null,
+          recovery: { parentAttemptId: parent.id, action }, details: { recoverySource: { attemptId: parent.id, nativeCallId: parent.nativeCallId,
+            ...(typeof parent.details.planPath === 'string' ? { planPath: parent.details.planPath } : {}) } } };
+        db.prepare(`INSERT INTO ${table}(sequence,id,native_call_id,project_id,idempotency_key,input_json,data) VALUES (?,?,?,?,?,?,?)`)
+          .run(child.sequence, child.id, child.nativeCallId, child.projectId, key, row.input_json, canonical(child));
+        // Visibility changes must not move the parent's genuine terminal timestamp.
+        if (!parent.placeholderDiscardedAt) saveAnyAttempt({ ...parent, placeholderDiscardedAt: timestamp });
+        recordEvent(parent.projectId, 'attempt.recovered', { attemptId: child.id, parentAttemptId: parent.id, kind, action }, timestamp); return child;
+      });
+    },
+    discardAttempt(id) {
+      return write(() => {
+        const { kind, attempt: a } = anyAttempt(id);
+        if (!['failed', 'cancelled'].includes(a.state)) conflict('Only a stopped failed or cancelled placeholder can be discarded');
+        if (a.placeholderDiscardedAt) return a;
+        const timestamp = now(), updated = saveAnyAttempt({ ...a, placeholderDiscardedAt: timestamp });
+        recordEvent(a.projectId, 'attempt.discarded', { attemptId: a.id, kind }, timestamp); return updated;
+      });
+    },
+    restoreAttempt(id, revisions) {
+      const requested = object(revisions, ['projectRevision'], ['clipDraftRevision']);
+      integer(requested.projectRevision, 'Project revision');
+      if (requested.clipDraftRevision !== undefined) integer(requested.clipDraftRevision, 'Clip draft revision');
+      return write(() => {
+        const { kind, attempt: a } = anyAttempt(id);
+        if (!['failed', 'cancelled', 'succeeded'].includes(a.state)) conflict('Restore requires stopped work; successful results may be reused');
+        const p = project(a.projectId); if (p.revision !== requested.projectRevision) conflict('Project changed; reload before restoring parameters');
+        let draft: ClipDraft | null = null, music = p.draft, selectedSongId = p.selectedSongId;
+        if ('song' in a) {
+          if (requested.clipDraftRevision === undefined) invalid('Video restore requires the original song clip draft revision');
+          const before = currentClipDraft(p.id, a.song.id, requested.clipDraftRevision as number);
+          selectedSongId = a.song.id;
+          if (p.selectedSongId !== selectedSongId) {
+            const song = songById(selectedSongId), original = attemptRow(song.attemptId);
+            if (!original) conflict('Soundtrack is missing its original generation request');
+            const songInput = attemptSnapshot(original).input;
+            music = { ...music, musicPrompt: songInput.musicPrompt, lyrics: songInput.lyrics };
+          }
+          music = { ...music, style: a.input.style };
+          const timingIntent = a.input.timingIntent ?? (a.input.requestedIntervalSeconds
+            ? { start: { unit: 'seconds' as const, value: a.input.requestedIntervalSeconds.start }, end: { unit: 'seconds' as const, value: a.input.requestedIntervalSeconds.end } }
+            : { start: exactFrameTime(a.input.startFrame), end: exactFrameTime(a.input.endFrame) });
+          // Restore the captured image, even when the editable predecessor has
+          // since changed. Fresh Generate must explicitly reprepare/remove stale refs.
+          draft = persistClipDraft(before, { clipPrompt: a.input.clipPrompt, timingIntent, continuation: a.continuation ?? null });
+        } else {
+          music = { ...music, musicPrompt: a.input.musicPrompt, lyrics: a.input.lyrics };
+          if (a.songId !== null) {
+            if (songById(a.songId).projectId !== p.id) conflict('Restored song does not belong to this project');
+            selectedSongId = a.songId;
+          }
+        }
+        const revision = integer(p.revision + 1, 'Project revision'), timestamp = now();
+        if (p.draft.style !== music.style) recordEvent(p.id, 'style.changed', { before: p.draft.style, after: music.style, revision }, timestamp);
+        if (p.draft.musicPrompt !== music.musicPrompt || p.draft.lyrics !== music.lyrics) recordEvent(p.id, 'draft.saved', {
+          before: { musicPrompt: p.draft.musicPrompt, lyrics: p.draft.lyrics }, after: { musicPrompt: music.musicPrompt, lyrics: music.lyrics }, revision }, timestamp);
+        if (p.selectedSongId !== selectedSongId) recordEvent(p.id, 'song.selected', { before: p.selectedSongId, after: selectedSongId, cause: 'restore', revision }, timestamp);
+        const updated = saveProject({ ...p, draft: music, selectedSongId, revision }), previousProjectId = store.selectedProject();
+        db.prepare('UPDATE studio_meta SET selected_project=? WHERE singleton=1').run(p.id);
+        if (previousProjectId !== p.id) recordEvent(p.id, 'project.selected', { previousProjectId }, timestamp);
+        const restored = a.state === 'succeeded' || a.placeholderDiscardedAt ? a : saveAnyAttempt({ ...a, placeholderDiscardedAt: timestamp });
+        recordEvent(p.id, 'attempt.restored', { attemptId: a.id, kind, action: a.state === 'succeeded' ? 'reuse' : 'restore',
+          projectRevision: revision, ...(draft ? { songId: draft.songId, clipDraftRevision: draft.revision } : {}) }, timestamp);
+        return { project: updated, draft, attempt: restored };
+      });
+    },
     attempts() { return (db.prepare('SELECT sequence,data FROM studio_attempts ORDER BY sequence').all() as AttemptRow[]).map(attemptSnapshot); },
     attempt(id) { const row = attemptRow(id); return row ? attemptSnapshot(row) : null; },
     patchAttempt(id, patch) {
-      const p = object(patch, [], ['state', 'stage', 'error', 'details']) as AttemptPatch;
-      if (p.state !== undefined && !attemptStates.includes(p.state)) invalid('Unsupported attempt state');
-      if (p.state === 'succeeded') conflict('Successful completion requires atomic song ingestion');
-      if (p.stage !== undefined) text(p.stage, 'Attempt stage', 1000);
-      if (p.error !== undefined && p.error !== null) text(p.error, 'Attempt error', 16000);
-      if (p.details !== undefined) p.details = details(p.details);
+      const p = attemptPatch(patch);
       return write(() => {
         const row = attemptRow(id); if (!row) missing('Attempt not found'); const a = attemptSnapshot(row);
-        if (a.state === 'succeeded' || a.state === 'failed') conflict('Finished attempts cannot be changed');
-        return saveAttempt({ ...a, ...p, updatedAt: now() });
+        checkAttemptPatch(a, p); return saveAttempt({ ...a, ...p, updatedAt: now() });
       });
     },
     finishMusic(id, value, evidence) {
@@ -684,7 +793,7 @@ export function openStudioStore(path: string): StudioStore {
           if (row.completion_json !== completion) conflict('Completed attempt already has different output');
           if (!a.songId) conflict('Completed attempt is missing its song reference'); return songById(a.songId);
         }
-        if (a.state === 'failed' || a.state === 'reconciling') conflict('Failed or unreconciled work cannot be ingested as successful');
+        if (a.cancellation || ['failed', 'reconciling', 'cancel_requested', 'cancelled'].includes(a.state)) conflict('Cancelled, failed or unreconciled work cannot be ingested as successful');
         if (db.prepare('SELECT id FROM studio_assets WHERE id=? OR path=?').get(input.assetId, input.assetPath)) conflict('Asset already belongs to a completed generation');
         const { assetPath, ...songFields } = input;
         const s: StudioSong = { ...songFields, id: randomUUID(), projectId: a.projectId, attemptId: a.id, createdAt: now() };
@@ -709,7 +818,7 @@ export function openStudioStore(path: string): StudioStore {
         const p = project(projectId), song = songById(captured.songId);
         if (song.projectId !== p.id) missing('Song not found in this project');
         const old = db.prepare('SELECT * FROM studio_video_attempts WHERE project_id=? AND idempotency_key=?').get(p.id, key) as AttemptRow | undefined;
-        if (old) { if (old.input_json !== inputJson) conflict('Submission key already belongs to different inputs'); return videoSnapshot(old); }
+        if (old) { if (videoSnapshot(old).recovery) conflict('Submission key belongs to a recovery action'); if (old.input_json !== inputJson) conflict('Submission key already belongs to different inputs'); return videoSnapshot(old); }
         const continuation = captured.continuation ? captureContinuation(p.id, captured.continuation, song.id) : undefined;
         let timingResolution: VideoAttempt['timingResolution'];
         if (captured.timingIntent) {
@@ -739,7 +848,7 @@ export function openStudioStore(path: string): StudioStore {
     patchVideoAttempt(id, patch) {
       const p = attemptPatch(patch);
       return write(() => { const row = videoRow(id); if (!row) missing('Video attempt not found'); const a = videoSnapshot(row);
-        if (a.state === 'succeeded' || a.state === 'failed') conflict('Finished attempts cannot be changed');
+        checkAttemptPatch(a, p);
         return saveVideo({ ...a, ...p, updatedAt: now() }); });
     },
     finishVideo(id, value, evidence) {
@@ -750,7 +859,7 @@ export function openStudioStore(path: string): StudioStore {
           if (row.completion_json !== completion) conflict('Completed attempt already has different output');
           if (!a.clipId) conflict('Completed attempt is missing its clip reference'); return clipById(a.clipId);
         }
-        if (a.state === 'failed' || a.state === 'reconciling') conflict('Failed or unreconciled work cannot be ingested as successful');
+        if (a.cancellation || ['failed', 'reconciling', 'cancel_requested', 'cancelled'].includes(a.state)) conflict('Cancelled, failed or unreconciled work cannot be ingested as successful');
         const song = songById(a.song.id), requestedFrames = a.input.endFrame - a.input.startFrame;
         if (song.projectId !== a.projectId || song.sha256 !== a.song.sha256 || song.assetId !== a.song.assetId) conflict('Captured soundtrack no longer matches');
         if (input.frameCount < requestedFrames) invalid('Native source does not cover requested frames');
@@ -926,10 +1035,10 @@ export function openStudioStore(path: string): StudioStore {
     },
     markInterrupted() {
       write(() => {
-        for (const a of store.attempts()) if (['preparing', 'waiting_gpu', 'running', 'validating'].includes(a.state)) {
+        for (const a of store.attempts()) if (['preparing', 'waiting_gpu', 'running', 'validating', 'cancel_requested'].includes(a.state)) {
           saveAttempt({ ...a, state: 'reconciling', stage: 'Interrupted; native ownership must be reconciled before retry', updatedAt: now() });
         }
-        for (const a of store.videoAttempts()) if (['preparing', 'waiting_gpu', 'running', 'validating'].includes(a.state)) {
+        for (const a of store.videoAttempts()) if (['preparing', 'waiting_gpu', 'running', 'validating', 'cancel_requested'].includes(a.state)) {
           saveVideo({ ...a, state: 'reconciling', stage: 'Interrupted; native ownership must be reconciled before retry', updatedAt: now() });
         }
         for (const r of store.renders()) if (r.state === 'running') saveRender({ ...r, state: 'reconciling', stage: 'Interrupted render; review before retry', updatedAt: now() });

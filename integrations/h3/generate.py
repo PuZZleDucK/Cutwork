@@ -321,6 +321,12 @@ def main():
         command = [str(tool / "venv/bin/python"), "-s", str(tool / "source/main.py"),
                    "--listen", "127.0.0.1", "--port", str(args.port), "--base-directory", str(base),
                    "--user-directory", str(base / "user"), "--disable-auto-launch", "--log-stdout"]
+        # The pinned Comfy revision otherwise enables async offload and host
+        # pinning on NVIDIA. Prefer disk-backed/synchronous transfers on the
+        # 22 GiB host: potentially slower, not a guarantee or hard RAM limit.
+        # This changes only our owned service; immutable old task helpers keep
+        # their captured policy when retried. The actual argv is receipted below.
+        command += ["--disable-pinned-memory", "--disable-async-offload", "--fast-disk"]
         command += ["--cpu"] if args.fixture else ["--models-directory", str(model_directory)]
         receipt.update(command=command, state="starting-service", gpuBefore=gpu_processes())
         persist()

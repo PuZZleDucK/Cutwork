@@ -32,6 +32,9 @@ async function fixture(withWeb = false) {
     submitMusic: vi.fn(async (id, key, input) => store.submitMusic(id, key, input)),
     submitVideo: vi.fn(async (id, key, input) => store.submitVideo(id, key, input)),
     render: vi.fn(async (id, songId, revision, key) => store.enqueueRender(id, songId, revision, key)),
+    hasActiveWork:()=>false,
+    cancelAttempt:async id=>store.requestCancel(id),
+    recoverAttempt:async(id,mode,key)=>store.recoverAttempt(id,mode,key),
   };
   const app = createNativeApi({ queue, allowedHosts: [host], validateSubmission() {}, hasAttempt: () => false });
   cleanup.push(() => app.close());

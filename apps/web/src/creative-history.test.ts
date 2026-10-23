@@ -31,15 +31,23 @@ test('render request and terminal rows use their actual timestamps and expose or
   const s=snapshot(); s.renders=[{id:'render',projectId:'project',songId:'song',revision:1,createdAt:'2026-10-23T00:50:00.000Z',updatedAt:timestamp,state:'succeeded',stage:'Complete',error:null,snapshot:{song:s.songs[0]!,arrangement:s.arrangements[0]!,clips:s.clips},snapshotHash:'1'.repeat(64),assetId:'render-asset',sha256:'2'.repeat(64),frameCount:24,planHash:'3'.repeat(64),details:{receipt:'ORIGINAL receipt'}} as StudioRender];
   expect(creativeHistoryRows(s).slice(0,2).map(r=>[r.kind,r.timestamp])).toEqual([['render.succeeded',timestamp],['render.requested','2026-10-23T00:50:00.000Z']]);
 });
-test('rendered unified component preserves user/agent prompts, seeds, waveform and video thumbnail without fake video restore', () => {
+test('rendered unified component preserves user/agent prompts, seeds, waveform and video thumbnail with recovery controls for both generation tools', () => {
   const s=snapshot(), studio={snapshot:s,draft:s.project.draft,busy:false,dirty:false,edit:vi.fn()} as unknown as ReturnType<typeof useStudio>;
-  const html=renderToStaticMarkup(createElement(CreativeHistory,{studio}));
+  const html=renderToStaticMarkup(createElement(CreativeHistory,{studio,onRestoreVideo:vi.fn()}));
   for(const value of ['ORIGINAL user idea','ORIGINAL lyrics','AGENT processed prompt','9223372036854775806','VISUAL user idea','STYLE direction','ACTUAL H3 prompt','Before style','After style'])expect(html).toContain(value);
-  expect(html).toContain('/api/assets/frame-asset'); expect(html).toContain('Audio waveform'); expect(html.match(/Use these inputs/g)).toHaveLength(1);
+  expect(html).toContain('/api/assets/frame-asset'); expect(html).toContain('Audio waveform'); expect(html.match(/Reuse parameters/g)).toHaveLength(2);
   expect(html).not.toContain('Undo'); expect(html).toContain('earlier edits');
 });
 test('restoring music uses the original user fields, preserves current visual style, and leaves immutable input untouched', () => {
   const s=snapshot(), original=structuredClone(s.attempts[0]!);
   expect(restoreMusicDraft(s.project.draft,original)).toEqual({musicPrompt:'ORIGINAL user idea',lyrics:'ORIGINAL lyrics',style:'KEEP THIS STYLE'});
   expect(original).toEqual(s.attempts[0]);
+});
+
+test('cancelled attempts keep request and cancellation evidence without inventing an output',()=>{
+ const s=snapshot();s.attempts[0]!.state='cancelled';s.attempts[0]!.songId=null;s.videoAttempts[0]!.state='cancelled';s.videoAttempts[0]!.clipId=null;s.songs=[];s.clips=[];
+ const rows=creativeHistoryRows(s);expect(rows.filter(r=>r.kind.endsWith('.cancelled'))).toHaveLength(2);
+ const studio={snapshot:s,draft:s.project.draft,busy:false,dirty:false} as unknown as ReturnType<typeof useStudio>;
+ const html=renderToStaticMarkup(createElement(CreativeHistory,{studio,onRestoreVideo:vi.fn()}));
+ expect(html.match(/>Restart</g)).toHaveLength(2);expect(html.match(/>Restore parameters</g)).toHaveLength(2);expect(html).not.toContain('<video');expect(html).not.toContain('<audio');
 });

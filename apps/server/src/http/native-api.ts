@@ -12,6 +12,9 @@ export interface NativeApiOptions {
    * Throw GPU_QUEUE_INPUT for rejected input; unexpected failures stay private. */
   validateSubmission(input: CallInput): void;
   hasAttempt(id: string): boolean;
+  /** The composed studio owns provider + native cancellation; fixtures may use
+   * the narrow queue-only fallback. Never invoke both for one request. */
+  cancelAttempt?(id: string): unknown | Promise<unknown>;
 }
 function inputError(): never { throw new GpuQueueError('GPU_QUEUE_INPUT', 'Invalid native call input'); }
 function identifier(value: unknown): asserts value is string {
@@ -124,10 +127,11 @@ export function createNativeApi(options: NativeApiOptions): FastifyInstance {
     const call = queue.get(request.params.id);
     return call ? projection(call) : reply.code(404).send({ error: 'Native call not found', code: 'NATIVE_API_NOT_FOUND' });
   });
-  app.post<{ Params: { id: string } }>('/api/attempts/:id/cancel', (request, reply) => {
+  app.post<{ Params: { id: string } }>('/api/attempts/:id/cancel', async (request, reply) => {
     identifier(request.params.id);
     if (request.body !== undefined) inputError();
     if (hasAttempt(request.params.id) !== true) return reply.code(404).send({ error: 'Attempt not found', code: 'NATIVE_API_NOT_FOUND' });
+    if (options.cancelAttempt) return reply.code(202).send(await options.cancelAttempt(request.params.id));
     queue.cancelAttempt(request.params.id);
     return reply.code(202).send({ attemptId: request.params.id, cancelRequested: true });
   });

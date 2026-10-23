@@ -9,8 +9,10 @@ import { createSystemdGpuAdapter } from './jobs/systemd-gpu.ts';
 import { resolveNativeCommand } from './generation/native-command.ts';
 import { openStudioStore } from './studio/store.ts';
 import { createStudioRuntime } from './studio/runtime.ts';
+import { createDebugManager, type DebugManager } from './studio/debug.ts';
+import { createSetupAdapter } from './studio/setup.ts';
 import { registerStudioApi } from './studio/api.ts';
-import { reconcileStudioStartup, validateStudioNativeCall } from './studio/recovery.ts';
+import { reconcileStudioStartup, validateStudioNativeCall,studioNativeSource } from './studio/recovery.ts';
 
 /** Developer launch entrypoint. Full fresh-host packaging remains a later slice.
  * Uses one user-owned server/queue; inherited credentials and creative-agent tools
@@ -39,16 +41,39 @@ const store = openStudioStore(join(dataRoot, 'studio.sqlite'));
 const adapter = createSystemdGpuAdapter({ runRoot: join(dataRoot, 'jobs/native-units'), node,
  supervisor: join(source, 'scripts/native-gpu-supervisor.ts'), runtimeLimitSeconds: nativeLimit,
  gpu: { executable: '/usr/bin/nvidia-smi', expectedGpuUuids: [gpu], timeoutMs: 15_000, cleanupTimeoutMs: 2000, maxOutputBytes: 1_048_576 },
- resolveCommand: call => resolveNativeCommand({ runtime: dataRoot, source, call }) });
+ resolveCommand: async call => resolveNativeCommand({ runtime: dataRoot, source:await studioNativeSource(store,call,source), call }) });
 let studio: ReturnType<typeof createStudioRuntime> | undefined;
+let debug: DebugManager | undefined;
+const debugChecks=createSetupAdapter({runtime:dataRoot,source});
 try {
  const server = await startNativeCoordinator({ database: join(dataRoot, 'jobs/gpu-queue.sqlite'), adapter, host, port, allowedHosts,
   hasAttempt: id => store.attempt(id) !== null || store.videoAttempt(id) !== null,
+  cancelAttempt: id => studio!.cancelAttempt(id),
   validateSubmission: call => validateStudioNativeCall(store, call, dataRoot),
   async configure(app, queue) {
    reconcileStudioStartup(store, queue);
-   studio = createStudioRuntime({ store, queue, runtime: dataRoot, source, origin: `http://127.0.0.1:${port}`, nativeRuntimeLimitSeconds: nativeLimit });
-   await registerStudioApi(app, { store, runtime: studio, dataRoot, webRoot });
+   studio = createStudioRuntime({ store, queue, runtime: dataRoot, source, origin: `http://127.0.0.1:${port}`, nativeRuntimeLimitSeconds: nativeLimit, hasExternalMaintenance:()=>debug?.isBlocking()??false });
+   debug=await createDebugManager({runtime:dataRoot,source,queue,
+    context:tool=>({provider:store.provider(),tool:store.tool(tool),setupJob:store.setupJobs().find(j=>j.id===store.tool(tool).jobId)??null}),
+    hasActiveWork:()=>studio!.hasActiveWork(),
+    checkProvider:async provider=>studio!.applyProviderStatus(await debugChecks.checkProvider(provider)),
+    probe:async(tool,provider)=>{
+     if(tool!=='agent')return debugChecks.probe(tool,provider);
+     const status=studio!.applyProviderStatus(await debugChecks.checkProvider(provider));
+     return {installed:status.installed,ready:status.installed&&status.auth==='signed-in',detail:status.detail};
+    },
+    closeChecks:()=>debugChecks.close(),
+    applyReadiness:(tool,result)=>store.patchTool(tool,{installed:result.installed,state:result.ready?'ready':result.installed?'error':'missing',detail:result.detail,checkedAt:new Date().toISOString(),active:false}),
+    onRecord:record=>{
+     if(['disclosed','cancelled','expired','stale'].includes(record.state))return;
+     const readiness=record.outcome?.readiness,working=['confirmed','running','checking'].includes(record.state);
+     store.patchTool(record.tool,{state:record.state==='reconciling'?'reconciling':working?'checking':readiness?.ready?'ready':'error',active:working,
+      ...(readiness?{installed:readiness.installed,checkedAt:new Date().toISOString()}:{}),
+      detail:working?`Confirmed Debug: ${record.state}. Shared work is paused.`:record.error??readiness?.detail??'Debug completed; inspect its report.',
+      log:[record.error,record.outcome?.provider?.report,readiness?.detail,record.outcome?.boundary].filter(Boolean).join('\n\n')});
+    },
+   });
+   await registerStudioApi(app, { store, runtime: studio, dataRoot, webRoot, debug });
   },
  });
  let stopping = false;
@@ -56,7 +81,7 @@ try {
   if (stopping) return; stopping = true;
   // runProvider receives the same process signal and stops its owned CLI group.
   // Keep coordinator/DB alive while its registered client and native work drain.
-  try { await studio!.close(); }
+  try { const results=await Promise.allSettled([studio!.close(),debug!.close()]); const failed=results.find(r=>r.status==='rejected'); if(failed?.status==='rejected')throw failed.reason; }
   catch (error) { console.error('Studio tasks need shutdown review:', error); process.exitCode = 1; }
   finally {
    try { await server.close(); }
@@ -68,4 +93,4 @@ try {
  console.log(JSON.stringify({ event: 'studio-listening', host, port, allowedHosts, dataRoot, nativeRuntimeLimitSeconds: nativeLimit,
   warning: 'Trusted LAN only. Full-access agents; no user accounts. Never expose to the public Internet.' }));
  void studio!.start().catch(error => { console.error('Studio initial checks failed:', error); });
-} catch (error) { await studio?.close(); store.close(); throw error; }
+} catch (error) { debugChecks.close(); await Promise.allSettled([studio?.close(),debug?.close()]); store.close(); throw error; }

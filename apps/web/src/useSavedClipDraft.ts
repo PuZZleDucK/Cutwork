@@ -18,7 +18,7 @@ export function useSavedClipDraft(server:ClipDraft) {
  });
  const [writer]=useState(()=>draftWriter(key));
  const [resolution]=useState(draftResolutionGuard);
- const current=useRef(state),mounted=useRef(true),flight=useRef<Promise<void>|null>(null),resolutionFlight=useRef(false);
+ const current=useRef(state),mounted=useRef(true),flight=useRef<Promise<ClipDraft>|null>(null),resolutionFlight=useRef(false);
  const [saving,setSaving]=useState(false),[resolving,setResolving]=useState(false),[error,setError]=useState<string|null>(null);
  const put=(next:ClipDraftState)=>{
   current.current=next;
@@ -30,7 +30,7 @@ export function useSavedClipDraft(server:ClipDraft) {
   }
   if(mounted.current)setState(next);
  };
- const save=async():Promise<void>=>{
+ const save=async():Promise<ClipDraft>=>{
   if(flight.current)return flight.current;
   const work=async()=>{
    if(mounted.current)setSaving(true);
@@ -42,12 +42,13 @@ export function useSavedClipDraft(server:ClipDraft) {
      put(acknowledgeClipDraft(current.current,submitted,saved));
     }
     if(mounted.current)setError(null);
+    return current.current.base;
    }catch(e){
     if(e instanceof ApiError&&e.status===409)put({...current.current,conflict:true});
     if(mounted.current)setError(e instanceof Error?e.message:'Clip draft was not saved.');throw e;
    }finally{if(mounted.current)setSaving(false);}
   };
-  const promise=work();flight.current=promise;try{await promise;}finally{flight.current=null;}
+  const promise=work();flight.current=promise;try{return await promise;}finally{flight.current=null;}
  };
  const saveRef=useRef(save);saveRef.current=save;
  useEffect(()=>{writer.claim();mounted.current=true;return()=>{mounted.current=false;void saveRef.current().catch(()=>{});};},[]);
@@ -73,5 +74,6 @@ export function useSavedClipDraft(server:ClipDraft) {
   }catch(e){if(mounted.current)setError(e instanceof Error?e.message:'Could not resolve the clip draft.');}
   finally{resolutionFlight.current=false;if(mounted.current)setResolving(false);}
  };
- return {value:state.value,baseRevision:state.base.revision,edit,save,resolve,dirty,saving,resolving,error,conflict:state.conflict};
+ const acceptRestored=(saved:ClipDraft,before:ClipDraftValues)=>{put(acknowledgeClipDraft(current.current,before,saved));};
+ return {acceptRestored,value:state.value,baseRevision:state.base.revision,edit,save,resolve,dirty,saving,resolving,error,conflict:state.conflict};
 }

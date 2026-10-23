@@ -1,5 +1,5 @@
 import type { ClipDraft, ClipEditContext, ContinuationReference, MusicAttempt, MusicDraft, MusicInput, ProjectSnapshot, ProjectSummary, Provider, SetupJob,
-  SongAnalysis, StudioProject, StudioSong, ToolId, ToolStatus, VideoAttempt, VideoInput, StudioClip, SongArrangement, StudioRender } from '../../../../packages/core/src/contracts/studio.ts';
+  SongAnalysis, StudioAttempt, StudioProject, StudioSong, ToolId, ToolStatus, VideoAttempt, VideoInput, StudioClip, SongArrangement, StudioRender } from '../../../../packages/core/src/contracts/studio.ts';
 export type AttemptPatch = Partial<Pick<MusicAttempt, 'state' | 'stage' | 'error' | 'details'>>;
 export type SongInput = Omit<StudioSong, 'id' | 'projectId' | 'attemptId' | 'createdAt'> & { assetPath: string };
 export interface RegisteredAssetInput { assetId: string; path: string; sha256: string }
@@ -17,6 +17,8 @@ export interface ClipEditPatch {
 export interface ClipEditResult { context: ClipEditContext; arrangement: SongArrangement }
 export interface ClipDraftInput extends Pick<ClipDraft, 'clipPrompt' | 'timingIntent'> { continuation?: ContinuationReference | null }
 export interface RenderOutputInput extends RegisteredAssetInput { frameCount: number; planHash: string; receiptPath: string }
+export interface RestoreAttemptInput { projectRevision: number; clipDraftRevision?: number }
+export interface RestoreAttemptResult { project: StudioProject; draft: ClipDraft | null; attempt: StudioAttempt }
 export interface StudioStore {
   close(): void;
   provider(): Provider;
@@ -31,6 +33,12 @@ export interface StudioStore {
   prepareContinuation(projectId: string, contextId: string, revision: number, draftRevision: number): { draft: ClipDraft; presetBeatCount: number | null };
   selectSong(projectId: string, songId: string, revision: number): StudioProject;
   submitMusic(projectId: string, idempotencyKey: string, input: MusicInput): MusicAttempt;
+  requestCancel(attemptId: string): StudioAttempt;
+  /** Runtime calls only after owned provider/native stop and release are proven. */
+  finishCancellation(attemptId: string, details: Record<string, unknown>): StudioAttempt;
+  recoverAttempt(attemptId: string, action: 'retry' | 'restart', idempotencyKey: string): StudioAttempt;
+  discardAttempt(attemptId: string): StudioAttempt;
+  restoreAttempt(attemptId: string, revisions: RestoreAttemptInput): RestoreAttemptResult;
   attempts(): MusicAttempt[];
   attempt(id: string): MusicAttempt | null;
   patchAttempt(id: string, patch: AttemptPatch): MusicAttempt;

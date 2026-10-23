@@ -73,7 +73,7 @@ test.each([1, 2])('schema %i migration preserves existing rows bytewise and does
   const rows = Object.fromEntries(tables.map(table => [table, before.prepare(`SELECT * FROM ${table}`).all()]));
   before.exec(`DROP TABLE studio_events; UPDATE studio_meta SET version=${version}`); before.close();
   const reopened = openStudioStore(path); stores.push(reopened); expect(reopened.project(p.id).events).toEqual([]);
-  const check = new Database(path, { readonly: true }); expect(check.prepare('SELECT version FROM studio_meta').get()).toEqual({ version: 6 });
+  const check = new Database(path, { readonly: true }); expect(check.prepare('SELECT version FROM studio_meta').get()).toEqual({ version: 7 });
   for (const table of tables) expect(check.prepare(`SELECT * FROM ${table}`).all()).toEqual(rows[table]); check.close();
   const old = reopened.project(p.id).project; reopened.saveDraft(p.id, old.revision, { ...old.draft, style: 'New logged style' });
   expect(reopened.project(p.id).events).toEqual([expect.objectContaining({ kind: 'style.changed', data: { before: 'Old unlogged style', after: 'New logged style', revision: old.revision + 1 } })]);

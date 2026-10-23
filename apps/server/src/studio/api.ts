@@ -3,11 +3,12 @@ import fastifyStatic from '@fastify/static';
 import { isAbsolute, resolve } from 'node:path';
 import { StudioStoreError } from './store.ts';
 import { sendStudioAsset } from './assets.ts';
-import type { ClipDraftInput, ClipEditPatch, PlacementInput, StudioStore } from './store-contract.ts';
+import type { ClipDraftInput, ClipEditPatch, PlacementInput, StudioStore,RestoreAttemptInput } from './store-contract.ts';
+import type { DebugManager } from './debug.ts';
 import type { StudioRuntime } from './runtime-contract.ts';
 import type { MusicDraft, MusicInput, Provider, ToolId, VideoInput } from '../../../../packages/core/src/contracts/studio.ts';
 
-interface StudioApiOptions { store: StudioStore; runtime: StudioRuntime; dataRoot: string; webRoot: string | null }
+interface StudioApiOptions { store: StudioStore; runtime: StudioRuntime; dataRoot: string; webRoot: string | null; debug?: DebugManager }
 const uuid = { type: 'string', pattern: '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$' };
 const revision = { type: 'integer', minimum: 0, maximum: Number.MAX_SAFE_INTEGER };
 const plain = (properties: Record<string, unknown>) => ({ type: 'object', additionalProperties: false, required: Object.keys(properties), properties });
@@ -57,7 +58,7 @@ function lossless(value: unknown, depth = 0): void {
 
 /** Registered onto the existing native API so its Host/Origin, strict JSON and
  * private unexpected-error protections remain in force. No listener starts here. */
-export async function registerStudioApi(app: FastifyInstance, { store, runtime, dataRoot, webRoot }: StudioApiOptions): Promise<void> {
+export async function registerStudioApi(app: FastifyInstance, { store, runtime, dataRoot, webRoot, debug }: StudioApiOptions): Promise<void> {
   if (!isAbsolute(dataRoot) || (webRoot !== null && !isAbsolute(webRoot))) throw new Error('Studio paths must be absolute');
   const root = resolve(dataRoot);
   app.register(async function studioRoutes(api) {
@@ -67,6 +68,16 @@ export async function registerStudioApi(app: FastifyInstance, { store, runtime, 
       if (error instanceof StudioStoreError) return reply.code(error.statusCode).send({ code: error.code, error: error.message });
       throw error; // Delegate unexpected/storage/parser/schema failures to the parent.
     });
+    if(debug){
+      const debugParams=plain({debugId:uuid});
+      api.get('/api/debug',{schema:{querystring:empty}},()=>debug.list());
+      api.get<{Params:{debugId:string}}>('/api/debug/:debugId',{schema:{params:debugParams,querystring:empty}},request=>{
+        const record=debug.get(request.params.debugId);if(!record)throw new StudioStoreError(404,'DEBUG_NOT_FOUND','Debug record not found');return record;
+      });
+      api.post<{Params:{tool:ToolId}}>('/api/setup/:tool/debug',{schema:{params:plain({tool:{type:'string',enum:['agent','yue2','comfyui','h3','analysis']}}),body:empty,querystring:empty}},async(request,reply)=>reply.code(201).send(await debug.prepare(request.params.tool)));
+      api.post<{Params:{debugId:string};Body:{digest:string}}>('/api/debug/:debugId/confirm',{schema:{params:debugParams,body:plain({digest:{type:'string',pattern:'^[a-f0-9]{64}$'}}),querystring:empty}},async(request,reply)=>reply.code(202).send(await debug.confirm(request.params.debugId,request.body.digest)));
+      api.post<{Params:{debugId:string}}>('/api/debug/:debugId/cancel',{schema:{params:debugParams,body:empty,querystring:empty}},request=>debug.cancel(request.params.debugId));
+    }
     api.get('/api/studio', { schema: { querystring: empty } }, () => runtime.overview());
     api.post<{ Body: { name: string } }>('/api/projects', { schema: { body: plain({ name: { type: 'string', minLength: 1, maxLength: 120 } }), querystring: empty } },
       (request, reply) => reply.code(201).send(store.createProject(request.body.name)));
@@ -96,6 +107,28 @@ export async function registerStudioApi(app: FastifyInstance, { store, runtime, 
     api.post<{ Params: { id: string }; Body: { idempotencyKey: string; input: VideoInput } }>('/api/projects/:id/video',
       { schema: { params: projectParams, body: plain({ idempotencyKey: uuid, input: videoInput }), querystring: empty } }, async (request, reply) =>
         reply.code(202).send(await runtime.submitVideo(request.params.id, request.body.idempotencyKey, request.body.input)));
+    const recoveryParams=plain({id:uuid,attemptId:uuid});
+    const ownedAttempt=(projectId:string,attemptId:string)=>{
+      const attempt=store.attempt(attemptId)??store.videoAttempt(attemptId);
+      if(!attempt||attempt.projectId!==projectId.toLowerCase())throw new StudioStoreError(404,'STUDIO_NOT_FOUND','Generation attempt not found in this project');
+      return attempt;
+    };
+    for(const action of ['retry','restart'] as const){
+      api.post<{Params:{id:string;attemptId:string};Body:{idempotencyKey:string}}>(`/api/projects/:id/attempts/:attemptId/${action}`,
+        {schema:{params:recoveryParams,body:plain({idempotencyKey:uuid}),querystring:empty}},async(request,reply)=>{
+          const attempt=ownedAttempt(request.params.id,request.params.attemptId);
+          return reply.code(202).send(await runtime.recoverAttempt(attempt.id,action,request.body.idempotencyKey));
+        });
+    }
+    api.post<{Params:{id:string;attemptId:string};Body:RestoreAttemptInput}>('/api/projects/:id/attempts/:attemptId/restore-parameters',
+      {schema:{params:recoveryParams,body:{...plain({projectRevision:revision}),properties:{projectRevision:revision,clipDraftRevision:revision}},querystring:empty}},request=>{
+        const attempt=ownedAttempt(request.params.id,request.params.attemptId);
+        return store.restoreAttempt(attempt.id,request.body);
+      });
+    api.post<{Params:{id:string;attemptId:string}}>('/api/projects/:id/attempts/:attemptId/discard',
+      {schema:{params:recoveryParams,body:empty,querystring:empty}},request=>{
+        const attempt=ownedAttempt(request.params.id,request.params.attemptId);return store.discardAttempt(attempt.id);
+      });
     api.get<{ Params: SongParams }>('/api/projects/:id/songs/:songId/arrangement',
       { schema: { params: songParams, querystring: empty } }, request => store.arrangement(request.params.id, request.params.songId));
     api.post<{ Params: SongParams; Body: PlacementInput & { revision: number } }>('/api/projects/:id/songs/:songId/placements',

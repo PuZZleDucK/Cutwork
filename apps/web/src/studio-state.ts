@@ -28,8 +28,8 @@ export function formatDuration(seconds: number): string {
   if (!Number.isFinite(seconds) || seconds < 0) return '—';
   return `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`;
 }
-export const attemptIsActive = (state: AttemptState) => ['queued', 'preparing', 'waiting_gpu', 'running', 'validating'].includes(state);
-export const stateLabel = (state: string) => ({waiting_gpu: 'Waiting for GPU', preparing: 'Preparing', validating: 'Validating audio', reconciling: 'Needs attention', succeeded: 'Complete', failed: 'Failed', queued: 'Queued', running: 'Generating', installing: 'Installing', checking: 'Checking', ready: 'Ready', missing: 'Not installed', error: 'Setup failed'}[state] ?? state);
+export const attemptIsActive = (state: AttemptState) => ['queued', 'preparing', 'waiting_gpu', 'running', 'validating','cancel_requested'].includes(state);
+export const stateLabel = (state: string) => ({waiting_gpu: 'Waiting for GPU', preparing: 'Preparing', validating: 'Validating media', cancel_requested:'Stopping',cancelled:'Cancelled',reconciling: 'Needs attention', succeeded: 'Complete', failed: 'Failed', queued: 'Queued', running: 'Generating', installing: 'Installing', checking: 'Checking', ready: 'Ready', missing: 'Not installed', error: 'Setup failed'}[state] ?? state);
 
 /** Activity is the shared agent tool's observed work, not an inferred auth/model status. */
 export function agentActivity(tools: Pick<ToolStatus, 'id' | 'active' | 'queued'>[]): string | null {

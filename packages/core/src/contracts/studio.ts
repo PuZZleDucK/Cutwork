@@ -33,8 +33,16 @@ export interface StudioProject {
   draft: MusicDraft; selectedSongId: string | null;
 }
 export interface ProjectSummary extends StudioProject { songCount: number; activeAttempts: number; coveragePercent: number | null }
-export type AttemptState = 'queued' | 'preparing' | 'waiting_gpu' | 'running' | 'validating' | 'succeeded' | 'failed' | 'reconciling';
-export interface MusicAttempt {
+export type AttemptState = 'queued' | 'preparing' | 'waiting_gpu' | 'running' | 'validating' | 'succeeded' | 'failed' | 'reconciling' | 'cancel_requested' | 'cancelled';
+export interface AttemptLifecycle {
+  /** Absent on historical records and work which was never cancelled. */
+  cancellation?: { requestedAt: string; completedAt: string | null };
+  recovery?: { parentAttemptId: string; action: 'retry' | 'restart' };
+  /** Hides only the library placeholder; provenance stays in history. */
+  placeholderDiscardedAt?: string;
+}
+export type StudioAttempt = MusicAttempt | VideoAttempt;
+export interface MusicAttempt extends AttemptLifecycle {
   id: string; nativeCallId: string; projectId: string; sequence: number;
   createdAt: string; updatedAt: string; state: AttemptState;
   provider: Provider; model: string; input: MusicInput; seeds: Record<string, string>;
@@ -72,7 +80,7 @@ export interface VideoInput {
   timingIntent?: ClipTimingIntent;
   continuation?: ContinuationReference;
 }
-export interface VideoAttempt {
+export interface VideoAttempt extends AttemptLifecycle {
   id: string; nativeCallId: string; projectId: string; sequence: number;
   createdAt: string; updatedAt: string; state: AttemptState;
   provider: Provider; model: string; input: VideoInput; seeds: { h3: string };
@@ -111,7 +119,8 @@ export interface StudioRender {
 /** New committed operations only; migrations never invent unrecorded historical edits. */
 export type ProjectEventKind = 'project.created' | 'project.selected' | 'draft.saved' | 'style.changed' | 'song.selected'
   | 'placement.added' | 'placement.moved' | 'placement.removed' | 'analysis.updated' | 'render.reused' | 'render.cache_invalidated' | 'clip_draft.saved'
-  | 'clip.trimmed' | 'clip.moved' | 'clip.audio_changed' | 'placement.priority_swapped';
+  | 'clip.trimmed' | 'clip.moved' | 'clip.audio_changed' | 'placement.priority_swapped'
+  | 'attempt.cancel_requested' | 'attempt.cancelled' | 'attempt.recovered' | 'attempt.discarded' | 'attempt.restored';
 export interface ProjectEvent {
   id: string; projectId: string; sequence: number; createdAt: string; kind: ProjectEventKind; data: Record<string, unknown>;
 }

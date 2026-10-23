@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-import type { SongArrangement, StudioSong, ClipEditContext, ClipDraft as SavedClipDraft, ProjectSnapshot } from '../../../packages/core/src/contracts/studio.ts';
+import type { SongArrangement, StudioSong, ClipEditContext, ClipDraft as SavedClipDraft, ProjectSnapshot,VideoAttempt } from '../../../packages/core/src/contracts/studio.ts';
 import { request } from './api.ts';
 import { clipSessionKey,readSession,writeSession } from './clip-session.ts';
-import { preparedClipRecovery } from './clip-draft-state.ts';
+import { restoreVideoParameters } from './restore-video.ts';
+import { clipDraftValues,preparedClipRecovery } from './clip-draft-state.ts';
 import { draftWriter } from './clip-draft-ownership.ts';
 import { useStudio } from './useStudio.ts';
 import { attemptIsActive } from './studio-state.ts';
@@ -12,15 +13,17 @@ import { VideoTimeline } from './VideoTimeline.tsx';
 import { PreviewVideo } from './PreviewVideo.tsx';
 import { ClipEditControls } from './ClipEditControls.tsx';
 import { orderedClipLibrary } from './clip-library-order.ts';
+import { CreativeHistory } from './CreativeHistory.tsx';
+import { GenerationActions } from './GenerationActions.tsx';
 import './video.css';
 type Studio = ReturnType<typeof useStudio>;
 const asset = (id:string) => `/api/assets/${encodeURIComponent(id)}`;
-function ClipLibrary({studio,song,arrangement,onContinue}:{studio:Studio;song:StudioSong;arrangement:SongArrangement;onContinue:(context:ClipEditContext)=>Promise<void>}){
+function ClipLibrary({studio,song,arrangement,onContinue,onRestore}:{studio:Studio;song:StudioSong;arrangement:SongArrangement;onContinue:(context:ClipEditContext)=>Promise<void>;onRestore:(attempt:VideoAttempt)=>Promise<unknown>}){
  const clips=studio.snapshot!.clips,attempts=studio.snapshot!.videoAttempts;
  const entries=orderedClipLibrary(clips,attempts,arrangement.placements);
  return <section className="clip-library" aria-label="Generated clip library"><div className="video-section-heading"><h2>Your takes.</h2><span className="micro">{clips.length} CLIPS / PROJECT LIBRARY</span></div>
   {!entries.length&&<p className="empty-video">No clips yet. Describe the first shot; its successful result will join the sequence automatically.</p>}
-  <div className="clip-shelf">{entries.map(entry=>{if(entry.kind==='attempt'){const a=entry.attempt;return <article className={`clip-card clip-pending ${attemptIsActive(a.state)?'working':''}`} key={entry.id} data-start-frame={entry.startFrame}><span className="eyebrow">H3 / {a.state.replaceAll('_',' ').toUpperCase()}</span><h3>{a.input.clipPrompt}</h3><p className="small-copy">{a.stage}</p><span className="micro">{a.input.startFrame} → {a.input.endFrame} / {a.input.songId===song.id?'THIS SONG':'OTHER SONG'}</span>{a.error&&<details><summary className="warning">Failure details</summary><pre>{a.error}</pre></details>}</article>;} const clip=entry.clip;const contexts=studio.snapshot!.editContexts.filter(c=>c.clipId===clip.id&&c.songId===song.id).sort((a,b)=>(a.sourceOriginFrame+a.sourceStartFrame)-(b.sourceOriginFrame+b.sourceStartFrame));return <article className="clip-card" key={entry.id} data-start-frame={entry.startFrame??undefined}><PreviewVideo controls preload="none" src={asset(clip.assetId)} poster={clip.rawFrames[0]?asset(clip.rawFrames[0].assetId):undefined} aria-label={`Preview clip ${clip.title}`} /><div className="clip-card-body"><h3>{clip.title}</h3><p className="micro">{clip.requestedFrames} REQUESTED FRAMES / {clip.nativeFrames} ORIGINALS · 24 FPS</p><p className="small-copy muted">Source preview starts at 50% volume. Sequence soundtrack choices are saved per edit below.</p>{contexts.map(context=><ClipEditControls key={context.id} studio={studio} song={song} arrangement={arrangement} clip={clip} context={context} onContinue={onContinue} />)}{!contexts.length&&<div className="other-song-continuations">{studio.snapshot!.editContexts.filter(c=>c.clipId===clip.id).map(context=>{const referenced=studio.snapshot!.songs.find(s=>s.id===context.songId);return <div key={context.id}><p className="small-copy muted">Saved edit on {referenced?.title??'missing song'} · source {context.sourceStartFrame+1}–{context.sourceEndFrame} · end {context.sourceOriginFrame+context.sourceEndFrame} frames{context.placementId?'':' · unplaced'}</p>{referenced?<button className="button secondary small" disabled={studio.busy} onClick={()=>void onContinue(context)}>Continue From End on {referenced.title} ↑</button>:<p className="warning">Referenced song is unavailable. This edit cannot be silently continued against another song.</p>}</div>;})}</div>}{!contexts.length&&<button className="button secondary small" disabled={studio.busy} onClick={()=>void studio.perform(async()=>{const next=clipSuggestion(song,arrangement.placements,studio.snapshot!.reservations);const startFrame=next?.startFrame??Math.max(0,...arrangement.placements.map(p=>p.endFrame));await request(`/api/projects/${song.projectId}/songs/${song.id}/placements`,{revision:arrangement.revision,clipId:clip.id,startFrame});},'Clip placed in the selected song sequence.')}>Place in sequence</button>}<details><summary>Preserved original frames</summary><p className="small-copy">All {clip.rawFrames.length} decoded PNGs are retained before lossy video encoding; native extra frames are not automatically placed.</p><div className="raw-frame-links">{clip.rawFrames.map(f=><a key={f.index} href={asset(f.assetId)} target="_blank" rel="noreferrer" title={`SHA256 ${f.sha256}`}>{f.index}</a>)}</div></details></div></article>;})}
+  <div className="clip-shelf">{entries.map(entry=>{if(entry.kind==='attempt'){const a=entry.attempt;return <article className={`clip-card clip-pending ${attemptIsActive(a.state)?'working':''}`} key={entry.id} data-start-frame={entry.startFrame}><span className="eyebrow">H3 / {a.state.replaceAll('_',' ').toUpperCase()}</span><h3>{a.input.clipPrompt}</h3><p className="small-copy">{a.stage}</p><span className="micro">{a.input.startFrame} → {a.input.endFrame} / {a.input.songId===song.id?'THIS SONG':'OTHER SONG'}</span>{a.error&&<details><summary className="warning">Failure details</summary><pre>{a.error}</pre></details>}<GenerationActions studio={studio} attempt={a} onRestore={()=>onRestore(a)}/></article>;} const clip=entry.clip;const contexts=studio.snapshot!.editContexts.filter(c=>c.clipId===clip.id&&c.songId===song.id).sort((a,b)=>(a.sourceOriginFrame+a.sourceStartFrame)-(b.sourceOriginFrame+b.sourceStartFrame));return <article className="clip-card" key={entry.id} data-start-frame={entry.startFrame??undefined}><PreviewVideo controls preload="none" src={asset(clip.assetId)} poster={clip.rawFrames[0]?asset(clip.rawFrames[0].assetId):undefined} aria-label={`Preview clip ${clip.title}`} /><div className="clip-card-body"><h3>{clip.title}</h3>{(()=>{const original=attempts.find(a=>a.id===clip.attemptId);return original?<GenerationActions studio={studio} attempt={original} onRestore={()=>onRestore(original)}/>:null;})()}<p className="micro">{clip.requestedFrames} REQUESTED FRAMES / {clip.nativeFrames} ORIGINALS · 24 FPS</p><p className="small-copy muted">Source preview starts at 50% volume. Sequence soundtrack choices are saved per edit below.</p>{contexts.map(context=><ClipEditControls key={context.id} studio={studio} song={song} arrangement={arrangement} clip={clip} context={context} onContinue={onContinue} />)}{!contexts.length&&<div className="other-song-continuations">{studio.snapshot!.editContexts.filter(c=>c.clipId===clip.id).map(context=>{const referenced=studio.snapshot!.songs.find(s=>s.id===context.songId);return <div key={context.id}><p className="small-copy muted">Saved edit on {referenced?.title??'missing song'} · source {context.sourceStartFrame+1}–{context.sourceEndFrame} · end {context.sourceOriginFrame+context.sourceEndFrame} frames{context.placementId?'':' · unplaced'}</p>{referenced?<button className="button secondary small" disabled={studio.busy} onClick={()=>void onContinue(context)}>Continue From End on {referenced.title} ↑</button>:<p className="warning">Referenced song is unavailable. This edit cannot be silently continued against another song.</p>}</div>;})}</div>}{!contexts.length&&<button className="button secondary small" disabled={studio.busy} onClick={()=>void studio.perform(async()=>{const next=clipSuggestion(song,arrangement.placements,studio.snapshot!.reservations);const startFrame=next?.startFrame??Math.max(0,...arrangement.placements.map(p=>p.endFrame));await request(`/api/projects/${song.projectId}/songs/${song.id}/placements`,{revision:arrangement.revision,clipId:clip.id,startFrame});},'Clip placed in the selected song sequence.')}>Place in sequence</button>}<details><summary>Preserved original frames</summary><p className="small-copy">All {clip.rawFrames.length} decoded PNGs are retained before lossy video encoding; native extra frames are not automatically placed.</p><div className="raw-frame-links">{clip.rawFrames.map(f=><a key={f.index} href={asset(f.assetId)} target="_blank" rel="noreferrer" title={`SHA256 ${f.sha256}`}>{f.index}</a>)}</div></details></div></article>;})}
   </div>
  </section>;
 }
@@ -40,7 +43,7 @@ function Preview({studio,song,arrangement}:{studio:Studio;song:StudioSong;arrang
 }
 export function VideoStudio({studio}:{studio:Studio}) {
  const snapshot=studio.snapshot!,song=snapshot.songs.find(s=>s.id===snapshot.project.selectedSongId);
- if(!song)return <section className="video-workspace empty-video"><span className="section-code">03 / DIRECT</span><h2>A soundtrack opens the picture.</h2><p>Create or select a song above to describe clips, arrange a sequence and export your music video.</p></section>;
+ if(!song)return <><section className="video-workspace empty-video"><span className="section-code">03 / DIRECT</span><h2>A soundtrack opens the picture.</h2><p>Create or select a song above to describe clips, arrange a sequence and export your music video.</p></section><CreativeHistory studio={studio}/></>;
  const arrangement=snapshot.arrangements.find(a=>a.songId===song.id)??{songId:song.id,projectId:song.projectId,revision:0,placements:[]};
  return <VideoWorkspace key={song.id} studio={studio} song={song} arrangement={arrangement} />;
 }
@@ -63,5 +66,28 @@ function VideoWorkspace({studio,song,arrangement}:{studio:Studio;song:StudioSong
   const prompt=document.getElementById('clip-prompt');prompt?.focus({preventScroll:true});prompt?.scrollIntoView({block:'center',behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});
  };
 
- return <div className="video-workspace"><ClipForm studio={studio} song={song} draft={draft}/><VideoTimeline studio={studio} song={song} arrangement={arrangement} draft={draft}/><ClipLibrary studio={studio} song={song} arrangement={arrangement} onContinue={continueFrom}/><Preview studio={studio} song={song} arrangement={arrangement}/></div>;
+ const restoreParameters=async(attempt:VideoAttempt)=>{
+  if((studio.dirty||draft.persistence.dirty)&&!window.confirm('Replace the editable generation inputs with this attempt’s original description, style and timing? Cancel keeps your current draft.'))return;
+  const observedTarget=studio.snapshot?.clipDrafts.find(d=>d.songId===attempt.input.songId);
+  const key=clipSessionKey(attempt.projectId,attempt.input.songId,'draft'),observed=readSession(key),writer=draftWriter(key);
+  const ok=await studio.performImmediate(async()=>{
+   if(studio.conflict||draft.persistence.conflict)throw new Error('Resolve the existing draft conflict before restoring generation parameters.');
+   await restoreVideoParameters({attempt,projectId:song.projectId,selectedSongId:song.id,observedTarget,
+    saveProject:studio.saveProjectForRestore,saveClip:draft.persistence.save,post:request,
+    accept:(result,target,beforeProjectDraft)=>{
+     // Update tab recovery before selecting a different song and mounting it.
+     if(result.draft){
+      if(target.songId===song.id)draft.persistence.acceptRestored(result.draft,clipDraftValues(target));
+      else{
+       const acknowledged=preparedClipRecovery(target,result.draft,observed,readSession(key));
+       if(acknowledged!==null&&writer.claimIfUnchanged())writeSession(key,acknowledged);
+      }
+     }
+     studio.acceptRestoredProject(result.project,beforeProjectDraft,result.draft);
+    }});
+  },'Video parameters restored to their original song. No generation started; review the style, description, image and timing, then Generate a new variation.');
+  if(ok){const prompt=document.getElementById('clip-prompt');prompt?.focus({preventScroll:true});prompt?.scrollIntoView({block:'center',behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});}
+ };
+
+ return <><div className="video-workspace"><ClipForm studio={studio} song={song} draft={draft}/><VideoTimeline studio={studio} song={song} arrangement={arrangement} draft={draft}/><ClipLibrary studio={studio} song={song} arrangement={arrangement} onContinue={continueFrom} onRestore={restoreParameters}/><Preview studio={studio} song={song} arrangement={arrangement}/></div><CreativeHistory studio={studio} onRestoreVideo={restoreParameters}/></>;
 }

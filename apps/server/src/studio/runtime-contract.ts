@@ -1,6 +1,9 @@
-import type { MusicAttempt, MusicInput, Provider, ProviderStatus, SetupJob, StudioOverview, ToolId, VideoInput, VideoAttempt, StudioRender } from '../../../../packages/core/src/contracts/studio.ts';
+import type { MusicAttempt, MusicInput, Provider, ProviderStatus, SetupJob, StudioOverview, ToolId, VideoInput, VideoAttempt, StudioRender, StudioAttempt } from '../../../../packages/core/src/contracts/studio.ts';
 export interface StudioRuntime {
   overview(): StudioOverview;
+  hasActiveWork(): boolean;
+  cancelAttempt(id: string): Promise<StudioAttempt>;
+  recoverAttempt(id: string, mode: 'retry' | 'restart', idempotencyKey: string): Promise<StudioAttempt>;
   selectProvider(provider: Provider): Promise<ProviderStatus>;
   checkProvider(): Promise<ProviderStatus>;
   setup(tool: ToolId | 'all'): SetupJob[];

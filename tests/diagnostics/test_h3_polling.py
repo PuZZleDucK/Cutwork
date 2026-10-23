@@ -25,8 +25,9 @@ spec.loader.exec_module(runner)
 
 
 class Harness:
-    def __init__(self, root, history=None, queue=None, budget=40):
+    def __init__(self, root, history=None, queue=None, budget=40, fixture=False):
         self.root, self.history, self.queue = root, list(history or ['done']), list(queue or ['empty'])
+        self.fixture = fixture
         self.now, self.calls, self.handlers = 100.0, [], {}
         self.alarm_at = None
         self.budget, self.exited, self.post_error, self.stop_on_error = budget, False, False, None
@@ -54,6 +55,7 @@ class Harness:
 
     def popen(self, command, **_):
         self.command = command
+        self.receipted_command_before_launch = json.loads((self.run/'receipt.json').read_text())['command']
         return self.proc
 
     def prepare(self, _song, _plan, directory):
@@ -70,8 +72,10 @@ class Harness:
         route = url.split(':8198/')[1]
         self.calls.append((method,route,timeout,self.now))
         if route=='system_stats':
-            value={'system':{'argv':self.command[2:],'comfyui_version':'fixture'},'devices':[{'type':'cuda'}]}
-        elif route=='object_info': value={n['class_type']:{} for n in runner.workflow.h3_graph(prompt='x',seed='1',frames=56,audio_filename='conditioning.wav',first_frame_filename='continuation.png' if 'firstFrame' in json.loads(self.request.read_text()) else None).values()}
+            value={'system':{'argv':self.command[2:],'comfyui_version':'fixture'},'devices':[{'type':'cpu' if self.fixture else 'cuda'}]}
+        elif route=='object_info':
+            graph = runner.workflow.synthetic_graph('conditioning.wav') if self.fixture else runner.workflow.h3_graph(prompt='x',seed='1',frames=56,audio_filename='conditioning.wav',first_frame_filename='continuation.png' if 'firstFrame' in json.loads(self.request.read_text()) else None)
+            value={n['class_type']:{} for n in graph.values()}
         elif route=='prompt':
             self.graph=json.loads(request.data)['prompt']
             if self.post_error: raise TimeoutError('submission timed out')
@@ -125,7 +129,7 @@ class Harness:
             with ExitStack() as stack:
                 def patcher(obj,name,**kw): return stack.enter_context(patch.object(obj,name,**kw))
                 stack.enter_context(patch.dict(os.environ,{'STUDIO_DATA_ROOT':str(self.root)}))
-                patcher(runner.sys,'argv',new=['generate.py','--request',str(self.request),'--run','--timeout-seconds',str(self.budget)])
+                patcher(runner.sys,'argv',new=['generate.py','--request',str(self.request),'--run','--timeout-seconds',str(self.budget)]+(['--fixture'] if self.fixture else []))
                 patcher(runner,'verify_installation',return_value=(self.tool,{'source':{'revision':'fixture','version':'fixture'}},{}))
                 patcher(runner,'verify_models',return_value=self.root/'models')
                 patcher(runner,'process_identity',return_value=identity)
@@ -156,6 +160,33 @@ class PollingTest(unittest.TestCase):
 
     def assert_single_submission(self,h):
         self.assertEqual(sum(m=='POST' for m,_,_,_ in h.calls),1)
+
+    def assert_conservative_owned_command(self,h,receipt):
+        # Test the argv actually delivered to Popen and retained before execution,
+        # not an unrelated default constant or an agent's prose.
+        self.assertEqual(receipt['command'],h.command)
+        self.assertEqual(h.receipted_command_before_launch,h.command)
+        for flag in ['--disable-pinned-memory','--disable-async-offload','--fast-disk']:
+            self.assertEqual(h.command.count(flag),1,flag)
+        self.assertEqual(h.command[:3],[str(h.tool/'venv/bin/python'),'-s',str(h.tool/'source/main.py')])
+        self.assertEqual(h.command[h.command.index('--listen')+1],'127.0.0.1')
+        self.assertEqual(h.command[h.command.index('--base-directory')+1],str(h.run/'comfy-base'))
+        for flag in ['--high-ram','--async-offload','--disable-fast-disk','--lowvram','--novram']:
+            self.assertNotIn(flag,h.command)
+
+    def test_gpu_owned_launch_and_receipt_capture_conservative_host_memory_flags(self):
+        h=self.run_fixture();before=h.request.read_bytes();code,r=h.execute()
+        self.assertEqual(code,0,r);self.assert_conservative_owned_command(h,r)
+        self.assertNotIn('--cpu',h.command)
+        self.assertEqual(h.command[h.command.index('--models-directory')+1],str(h.root/'models'))
+        self.assertEqual(r['actualSeeds'],{'h3':'11187851132846900587'})
+        self.assertEqual(h.request.read_bytes(),before);self.assert_single_submission(h)
+
+    def test_explicit_cpu_fixture_keeps_same_owned_memory_policy_without_model_loading(self):
+        h=self.run_fixture(fixture=True);code,r=h.execute()
+        self.assertEqual(code,0,r);self.assert_conservative_owned_command(h,r)
+        self.assertIn('--cpu',h.command);self.assertNotIn('--models-directory',h.command)
+        self.assertTrue(r['synthetic']);self.assert_single_submission(h)
 
     def test_image_snapshot_is_copied_and_both_modalities_are_submitted_once(self):
         h=self.run_fixture();request=json.loads(h.request.read_text())

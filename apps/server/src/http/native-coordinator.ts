@@ -15,6 +15,7 @@ export async function startNativeCoordinator(options: {
   allowedHosts: string[]; pollMs?: number;
   validateSubmission: NativeApiOptions['validateSubmission'];
   hasAttempt: NativeApiOptions['hasAttempt'];
+  cancelAttempt?: NativeApiOptions['cancelAttempt'];
   /** Trusted application composition, before listening; never a browser hook. */
   configure?: (app: FastifyInstance, queue: GpuQueue) => Promise<void> | void;
 }) {
@@ -25,7 +26,8 @@ export async function startNativeCoordinator(options: {
   let app;
   try {
     app = createNativeApi({ queue, allowedHosts: options.allowedHosts,
-      validateSubmission: options.validateSubmission, hasAttempt: options.hasAttempt });
+      validateSubmission: options.validateSubmission, hasAttempt: options.hasAttempt,
+      ...(options.cancelAttempt ? {cancelAttempt:options.cancelAttempt} : {}) });
   } catch (error) { queue.close(); throw error; }
   const workerId = `server-${randomUUID()}`;
   const worker = new GpuWorker(queue, options.adapter, { workerId });

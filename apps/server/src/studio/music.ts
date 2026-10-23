@@ -1,4 +1,7 @@
 import assert from 'node:assert/strict';
+import {captureExecutionSource,fileHash,verifyExecutionSource,type ExecutionSource} from './execution-snapshot.ts';
+import {settleCancellation} from './cancellation.ts';
+import {runReplayCall,type ReplayCall} from './replay.ts';
 import { createHash, randomUUID } from 'node:crypto';
 import { createReadStream } from 'node:fs';
 import { mkdir, open, readFile, realpath, stat, writeFile } from 'node:fs/promises';
@@ -10,12 +13,13 @@ import { executeSetupCommand, type SetupExecutor } from './setup.ts';
 import type { StudioStore } from './store-contract.ts';
 import type { MusicAttempt, SongAnalysis } from '../../../../packages/core/src/contracts/studio.ts';
 
-interface MusicOptions { runtime: string; source: string; origin: string; attempt: MusicAttempt }
+interface MusicOptions { runtime: string; source: string; origin: string; attempt: MusicAttempt; signal?: AbortSignal }
 interface RunOptions extends MusicOptions { store: StudioStore; queue: GpuQueue; signal?: AbortSignal }
 export interface MusicTaskDependencies { provider?: typeof runProvider; execute?: SetupExecutor }
 interface Guidance { name: string; sourcePath: string; sha256: string; text: string }
 type CapturedAttempt = Pick<MusicAttempt, 'id' | 'nativeCallId' | 'projectId' | 'provider' | 'model' | 'input' | 'seeds'>;
-interface MusicPlan {
+export interface MusicPlan {
+  executionSource?: ExecutionSource; replayCall?: ReplayCall;
   schemaVersion: 1; runtime: string; source: string; origin: string; attempt: CapturedAttempt;
   guidance: Guidance[]; launch: ProviderLaunch; helperSha256: string; modelManifestSha256: string;
   paths: { planPath: string; nativeRequest: string; nativeReceipt: string; agentRequest: string;
@@ -76,8 +80,8 @@ async function outputTail(path: string) {
 }
 
 /** The immutable task exists before dispatch; runProvider alone creates its run directory. */
-export async function prepareMusicTask(options: MusicOptions): Promise<{ planPath: string }> {
-  validateOptions(options); const { runtime, source, origin, attempt } = options;
+export async function prepareMusicTask(options: MusicOptions): Promise<{ planPath: string; planSha256?: string }> {
+  options.signal?.throwIfAborted();validateOptions(options); const { runtime, source, origin, attempt } = options;
   const pins = await json(join(source, 'integrations/tool-manifest.json'));
   const providers = record(pins.providers), codex = record(providers.codex), claude = record(providers.claude), node = record(pins.node);
   assert.equal(record(providers[attempt.provider]).model, attempt.model);
@@ -113,9 +117,12 @@ export async function prepareMusicTask(options: MusicOptions): Promise<{ planPat
     helperSha256: await shaFile(join(source, 'integrations/yue2/generate.py')), modelManifestSha256: await shaFile(join(source, 'integrations/yue2/models.json')) };
   await mkdir(join(runtime, 'projects', attempt.projectId, 'inputs'), { recursive: true, mode: 0o700 });
   await mkdir(join(paths.planPath, '..'), { mode: 0o700 });
+  plan.executionSource = await captureExecutionSource(source, join(paths.planPath, '..', 'execution-source'), 'yue2');
+  assert.equal(await fileHash(join(plan.executionSource.root,'integrations/yue2/generate.py')),plan.helperSha256,'Helper changed during capture');
+  assert.equal(await fileHash(join(plan.executionSource.root,'integrations/yue2/models.json')),plan.modelManifestSha256,'Model manifest changed during capture');
   await mkdir(launch.cwd, { recursive: true, mode: 0o700 });
   await writeFile(paths.planPath, JSON.stringify(plan, null, 2) + '\n', { mode: 0o600, flag: 'wx' });
-  return { planPath: paths.planPath };
+  return { planPath: paths.planPath, planSha256: await fileHash(paths.planPath) };
 }
 
 async function verifyRelease(call: GpuCall, queue: GpuQueue, runtime: string) {
@@ -202,14 +209,16 @@ function mapAnalysis(result: RecordValue, plan: MusicPlan, audio: { audioPath: s
 /** Provider exit, native release, file evidence and full decoding all precede ingestion. */
 export async function runMusicTask(options: RunOptions, dependencies: MusicTaskDependencies = {}): Promise<void> {
   const { store, queue, attempt, runtime, source, origin } = options, provider = dependencies.provider ?? runProvider, execute = dependencies.execute ?? executeSetupCommand;
-  let dispatched = false, providerKnownStopped = false, ingested = false;
+  let dispatched = false, nativeDispatched = false, providerKnownStopped = false, ingested = false;
   let activePlan: MusicPlan | undefined;
   let details: RecordValue = { ...(store.attempt(attempt.id)?.details ?? {}), planPath: planPath(options) };
   try {
     options.signal?.throwIfAborted();
     validateOptions(options); const raw = await json(planPath(options)); const plan = raw as unknown as MusicPlan;
     activePlan = plan;
-    assert.equal(plan.schemaVersion, 1); assert.equal(plan.runtime, runtime); assert.equal(plan.source, source); assert.equal(plan.origin, origin);
+    if (attempt.details.planSha256) assert.equal(await fileHash(planPath(options)), attempt.details.planSha256, 'Captured task hash changed');
+    if (plan.executionSource) await verifyExecutionSource(plan.executionSource);
+    assert.equal(plan.schemaVersion, 1); assert.equal(plan.runtime, runtime); if (!plan.executionSource) assert.equal(plan.source, source); assert.equal(plan.origin, origin);
     const expectedAttempt = captured(attempt);
     // Already-prepared v1 tasks retain their exact historical inputs and prompt.
     // Compare the whole old input, including visual style, rather than stripping
@@ -220,7 +229,12 @@ export async function runMusicTask(options: RunOptions, dependencies: MusicTaskD
     assert.equal(plan.launch.runDirectory, join(plan.launch.cwd, 'runs', attempt.id));
     details = { ...details, guidance: plan.guidance.map(g => ({ name: g.name, sourcePath: g.sourcePath, sha256: g.sha256 })), capturedProvider: attempt.provider, capturedModel: attempt.model, seedEncoding: 'Exact decimal strings; unsafe native JSON integers retained from original lexical text', analysisReceiptPath: plan.paths.analysisReceipt };
     options.signal?.throwIfAborted();
-    store.patchAttempt(attempt.id, { state: 'running', stage: 'Creative agent translating music brief', details });
+    store.patchAttempt(attempt.id, { state: 'running', stage: plan.replayCall ? 'Replaying exact captured native song request' : 'Creative agent translating music brief', details });
+    if (plan.replayCall) {
+      nativeDispatched = true; providerKnownStopped = true;
+      details.recovery = { ...plan.replayCall, providerInvoked: false };
+      await runReplayCall({ plan: plan.replayCall, attempt, queue, ...(options.signal ? { signal: options.signal } : {}) });
+    } else {
     dispatched = true; const outcome = await provider(plan.launch, options.signal ? { signal: options.signal } : {}); const receiptPath = join(plan.launch.runDirectory, 'provider-receipt.json');
     assert.equal(outcome.receiptPath, receiptPath); const providerReceipt = await json(receiptPath);
     providerKnownStopped = ['exited', 'failed'].includes(String(providerReceipt.state)) && (typeof providerReceipt.code === 'number' || typeof providerReceipt.signal === 'string');
@@ -230,6 +244,8 @@ export async function runMusicTask(options: RunOptions, dependencies: MusicTaskD
     assert.ok(outcome.succeeded && outcome.code === 0 && outcome.signal === null && outcome.inputDelivered, 'Creative provider did not complete successfully');
     assert.equal(providerReceipt.state, 'exited'); assert.equal(providerReceipt.succeeded, true); assert.equal(providerReceipt.code, 0); assert.equal(providerReceipt.inputDelivered, true);
     assert.equal(providerReceipt.executable, plan.launch.executable); assert.deepEqual(providerReceipt.argv, plan.launch.argv); assert.equal(providerReceipt.cwd, plan.launch.cwd);
+    }
+    options.signal?.throwIfAborted();
     const call = queue.get(attempt.nativeCallId); assert.ok(call, 'Provider completed without the registered native song call');
     await verifyRelease(call, queue, runtime);
     const audio = await verifySong(plan, call, execute, options.signal);
@@ -257,7 +273,7 @@ export async function runMusicTask(options: RunOptions, dependencies: MusicTaskD
     finally { store.patchTool('analysis', { active: false }); }
   } catch (error) {
     if (ingested) throw error; // Do not rewrite a committed song as failed.
-    if (options.signal?.aborted && !dispatched) {
+    if (options.signal?.aborted && !dispatched && !nativeDispatched && !store.attempt(attempt.id)?.cancellation) {
       const current = store.attempt(attempt.id);
       if (current && !['succeeded', 'failed', 'reconciling'].includes(current.state)) store.patchAttempt(attempt.id, { state: 'queued', stage: 'Queued; studio stopped before provider dispatch', error: null, details });
       return;
@@ -272,6 +288,7 @@ export async function runMusicTask(options: RunOptions, dependencies: MusicTaskD
         details.providerFinalProse = await outputTail(join(activePlan.launch.runDirectory, 'provider.stdout.log'));
       } catch { /* Missing or incomplete provider evidence remains uncertain. */ }
     }
+    if (store.attempt(attempt.id)?.cancellation) { await settleCancellation({store,queue,runtime,attemptId:attempt.id,providerStopped:!dispatched||providerKnownStopped,details}); return; }
     const call = queue.get(attempt.nativeCallId); let uncertain = dispatched && !providerKnownStopped;
     if (call) {
       if (!['succeeded', 'failed', 'cancelled'].includes(call.state) || queue.heldLease()?.callId === call.id) { uncertain = true; queue.cancelAttempt(attempt.id); }

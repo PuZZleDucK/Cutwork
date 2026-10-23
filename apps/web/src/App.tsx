@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { MusicAttempt, StudioSong, ToolId, ToolStatus } from '../../../packages/core/src/contracts/studio.ts';
 import { useStudio } from './useStudio.ts';
 import { VideoStudio } from './VideoStudio.tsx';
-import { CreativeHistory } from './CreativeHistory.tsx';
+import { DebugControl } from './DebugControl.tsx';
+import { GenerationActions } from './GenerationActions.tsx';
 import { orderedToolIndicators } from './feedback-state.ts';
 import { NoticeCenter, type Notification } from './NoticeCenter.tsx';
 import { overviewNotice, workspaceNotices } from './notifications.ts';
@@ -17,7 +18,7 @@ const descriptions: Record<ToolId, string> = { agent:'Your creative interpreter.
 const toolOrder: ToolId[] = ['agent','yue2','comfyui','h3','analysis'];
 const errorState = (t: ToolStatus) => ['error','reconciling'].includes(t.state);
 
-function ProviderPanel({studio, compact = false, close}: {studio: Studio; compact?: boolean; close?: (() => void) | undefined}) {
+function ProviderPanel({studio, compact = false, close,onDebugOpen}: {studio: Studio; compact?: boolean; close?: (() => void) | undefined;onDebugOpen?:(tool:ToolId,open:boolean)=>void}) {
   const p = studio.overview!.provider;
   return <section className={`provider-panel ${compact ? 'compact' : ''}`} aria-label="Creative agent configuration">
     <div className="section-top"><div><span className="eyebrow">CREATIVE AGENT</span><h3>Ideas in. Instructions out.</h3></div>{close && <button className="icon-button" onClick={close} aria-label="Close agent configuration">×</button>}</div>
@@ -26,20 +27,24 @@ function ProviderPanel({studio, compact = false, close}: {studio: Studio; compac
     <div className={`provider-status ${p.auth === 'sign-in-required' ? 'warning' : ''}`}><span className={`status-dot ${p.auth === 'signed-in' ? 'ready' : 'warning'}`} /><span>{p.auth === 'signed-in' ? 'Signed in' : p.auth === 'sign-in-required' ? 'Sign-in required' : 'Sign-in not checked'} · {p.detail}</span></div>
     {p.auth !== 'signed-in' && <div className="sign-in"><p>On the studio server, sign in with:</p><code>{p.signInCommand || 'No sign-in command reported yet.'}</code><p>Your own provider account stays on the server. There are no API keys to enter here.</p></div>}
     <div className="row-actions">{!p.installed && <button className="button primary" disabled={studio.busy} onClick={() => void studio.setup('agent')}>Set up agent <Icon name="arrow" /></button>}<button className="button secondary" disabled={studio.busy || !p.installed} onClick={() => void studio.checkProvider()}>Check sign-in</button><span className="micro">{p.model}</span></div>
+    {studio.overview?.tools.find(t=>t.id==='agent')&&<DebugControl tool={studio.overview.tools.find(t=>t.id==='agent')!} studio={studio} onOpenChange={onDebugOpen}/>}
   </section>;
 }
-function ToolPanel({tool, studio, number, retiring = false}: {tool: ToolStatus; studio: Studio; number: number; retiring?: boolean}) {
+function ToolPanel({tool, studio, number, retiring = false,onDebugOpen}: {tool: ToolStatus; studio: Studio; number: number; retiring?: boolean;onDebugOpen?:(tool:ToolId,open:boolean)=>void}) {
   const working = tool.active || ['checking','queued','installing'].includes(tool.state);
   return <article className={`tool-panel ${working ? 'working' : ''} ${errorState(tool) ? 'has-error' : ''} ${retiring ? 'retiring' : ''}`}>
     <div className="tool-heading"><span className="number">{String(number).padStart(2,'0')}</span><span className={`status-label ${errorState(tool) ? 'warning' : ''}`}>{working && <span className="pulse-dot" />}{stateLabel(tool.state)}</span></div>
     <h3>{tool.label}</h3><p className="muted tool-description">{descriptions[tool.id]}</p>
     <p className="tool-detail">{tool.detail}</p>
     <div className="tool-bottom"><button className="button secondary small" disabled={retiring || studio.busy || working || !studio.overview?.provider.installed || (tool.id !== 'agent' && studio.overview.provider.auth !== 'signed-in')} onClick={() => void studio.setup(tool.id)}>{errorState(tool) ? 'Retry setup' : tool.installed ? 'Verify setup' : 'Set up'}<Icon name="arrow" size={14} /></button><span className="micro">{tool.queued > 0 ? `${tool.queued} queued` : 'LOCAL'}</span></div>
+    <DebugControl tool={tool} studio={studio} onOpenChange={onDebugOpen}/>
     {(tool.log || errorState(tool)) && <details className="tool-log"><summary>Setup details</summary><pre>{tool.log || tool.detail}</pre></details>}
   </article>;
 }
 function SharedSetup({studio, config, agentOpen, closeAgent}: {studio: Studio; config: boolean; agentOpen: boolean; closeAgent: () => void}) {
   const overview = studio.overview!;
+  const [debugOpen,setDebugOpen]=useState<Set<ToolId>>(()=>new Set());
+  const onDebugOpen=useCallback((tool:ToolId,open:boolean)=>setDebugOpen(before=>{if(before.has(tool)===open)return before;const next=new Set(before);if(open)next.add(tool);else next.delete(tool);return next;}),[]);
   const previousTools = useRef(overview.tools);
   const [retiring, setRetiring] = useState<ToolStatus[]>([]);
   useEffect(() => {
@@ -50,16 +55,16 @@ function SharedSetup({studio, config, agentOpen, closeAgent}: {studio: Studio; c
     const timer = setTimeout(() => setRetiring([]), 420);
     return () => { clearTimeout(timer); setRetiring([]); };
   }, [overview.tools]);
-  const unfinished = overview.tools.filter(t => t.id !== 'agent' && (!t.installed || t.state !== 'ready'));
+  const unfinished = overview.tools.filter(t => t.id !== 'agent' && (!t.installed || t.state !== 'ready' || debugOpen.has(t.id)));
   for (const tool of retiring) if (!unfinished.some(t => t.id === tool.id)) unfinished.push(tool);
   const tools = (config ? overview.tools.filter(t => t.id !== 'agent') : unfinished).sort((a,b) => toolOrder.indexOf(a.id) - toolOrder.indexOf(b.id));
   const agentTool = overview.tools.find(t => t.id === 'agent');
-  const needAgent = !overview.provider.installed || overview.provider.auth !== 'signed-in' || !!agentTool && !agentTool.installed;
+  const needAgent = debugOpen.has('agent') || !overview.provider.installed || overview.provider.auth !== 'signed-in' || !!agentTool && !agentTool.installed;
   if (!config && !agentOpen && !needAgent && !tools.length) return null;
   return <section className="setup-area" aria-label="Shared tool setup">
     <div className="setup-title"><div><span className="eyebrow">{config ? 'CONFIGURATION' : 'SHARED WORKBENCH'}</span><h2>{config ? 'One toolchain. Every project.' : 'Ready your tools.'}</h2></div>{tools.some(t => !t.installed) && <button className="button secondary" disabled={studio.busy || overview.tools.some(t => ['queued','installing','checking'].includes(t.state))} onClick={() => void studio.setup('all')}>Install all <Icon name="arrow" /></button>}</div>
-    {(needAgent || agentOpen || config) && <ProviderPanel studio={studio} compact close={agentOpen && !needAgent && !config ? closeAgent : undefined} />}
-    {tools.length > 0 && <div className="setup-grid">{tools.map(tool => <ToolPanel key={tool.id} tool={tool} studio={studio} number={toolOrder.indexOf(tool.id) + 1} retiring={!config && retiring.some(t => t.id === tool.id)} />)}</div>}
+    {(needAgent || agentOpen || config) && <ProviderPanel studio={studio} compact onDebugOpen={onDebugOpen} close={agentOpen && !needAgent && !config ? closeAgent : undefined} />}
+    {tools.length > 0 && <div className="setup-grid">{tools.map(tool => <ToolPanel key={tool.id} tool={tool} studio={studio} number={toolOrder.indexOf(tool.id) + 1} onDebugOpen={onDebugOpen} retiring={!config && !debugOpen.has(tool.id) && retiring.some(t => t.id === tool.id)} />)}</div>}
     {config && <p className="config-note">Tools and agent configuration are shared across projects. Music, creative inputs and generation history are not. Installation and generation keep running when you leave this page.</p>}
   </section>;
 }
@@ -106,16 +111,17 @@ function Waveform({song}: {song: StudioSong}) {
     <div className="wave-ruler"><span>0:00</span><span>{formatDuration(song.durationSeconds / 2)}</span><span>{formatDuration(song.durationSeconds)}</span></div>
   </div>;
 }
-function AttemptPlaceholder({attempt}: {attempt: MusicAttempt}) {
-  return <div className={`attempt-placeholder ${attemptIsActive(attempt.state) ? 'working' : 'has-error'}`}><div className="attempt-symbol"><Icon name={attemptIsActive(attempt.state) ? 'wave' : 'alert'} size={22} /></div><div><strong>{stateLabel(attempt.state)}</strong><p>{attempt.stage || (attempt.state === 'queued' ? 'Your music is in the queue.' : 'Waiting for the next update.')}</p>{attempt.error && <p className="warning">{attempt.error}</p>}<span className="micro">{attempt.provider.toUpperCase()} / ATTEMPT {attempt.sequence.toString().padStart(2,'0')}</span></div></div>;
+function AttemptPlaceholder({attempt,studio}: {attempt: MusicAttempt;studio:Studio}) {
+  return <div className={`attempt-placeholder ${attemptIsActive(attempt.state) ? 'working' : 'has-error'}`}><div className="attempt-symbol"><Icon name={attemptIsActive(attempt.state) ? 'wave' : 'alert'} size={22} /></div><div><strong>{stateLabel(attempt.state)}</strong><p>{attempt.stage || (attempt.state === 'queued' ? 'Your music is in the queue.' : 'Waiting for the next update.')}</p>{attempt.error && <details><summary className="warning">Failure details</summary><pre>{attempt.error}</pre></details>}<span className="micro">{attempt.provider.toUpperCase()} / ATTEMPT {attempt.sequence.toString().padStart(2,'0')}</span><GenerationActions studio={studio} attempt={attempt} onRestore={()=>studio.restoreMusic(attempt.id)}/></div></div>;
 }
 function Soundtrack({studio}: {studio: Studio}) {
   const songs = studio.snapshot!.songs;
   const selected = songs.find(s => s.id === studio.snapshot!.project.selectedSongId);
-  const pending = studio.snapshot!.attempts.filter(a => attemptIsActive(a.state) || a.state === 'reconciling');
+  const pending = studio.snapshot!.attempts.filter(a => a.state!=='succeeded'&&!a.placeholderDiscardedAt);
+  const selectedAttempt=selected?studio.snapshot!.attempts.find(a=>a.id===selected.attemptId):undefined;
   return <section className="panel soundtrack-panel"><div className="panel-heading"><div><span className="eyebrow">02 / LISTEN</span><h2>Your soundtrack.</h2></div><span className="count">{songs.length.toString().padStart(2,'0')}</span></div>
     {selected ? <div className="selected-song"><div className="song-name-row"><div><span className="selected-tag"><span className="status-dot ready" /> SELECTED SONG</span><h3>{selected.title}</h3></div><span className="duration">{formatDuration(selected.durationSeconds)}</span></div><Waveform song={selected} /><audio key={selected.assetId} controls preload="metadata" src={`/api/assets/${encodeURIComponent(selected.assetId)}`} aria-label={`Listen to ${selected.title}`} /><div className="audio-stats"><span><strong>{selected.analysis.estimatedBpm !== null ? selected.analysis.estimatedBpm.toFixed(1) : '—'}</strong> EST. BPM</span><span><strong>{selected.sampleRate / 1000}</strong> kHz</span><span><strong>{selected.channels === 2 ? 'Stereo' : `${selected.channels} ch`}</strong> SOURCE AUDIO</span></div></div> : <div className="sound-empty"><div className="empty-record"><span /><span /><Icon name="wave" size={32} /></div><h3>{songs.length ? 'Choose a soundtrack.' : 'Your first track starts here.'}</h3><p>{songs.length ? 'Select a generated song below to hear it.' : 'Write an idea on the left. When it becomes a song, you can listen, compare takes and find your direction here.'}</p><span className="micro">NO PRESETS. YOUR IDEA.</span></div>}
-    {pending.map(attempt => <AttemptPlaceholder key={attempt.id} attempt={attempt} />)}
+    {selectedAttempt&&<GenerationActions studio={studio} attempt={selectedAttempt} onRestore={()=>studio.restoreMusic(selectedAttempt.id)}/>}{pending.map(attempt => <AttemptPlaceholder key={attempt.id} attempt={attempt} studio={studio} />)}
     {songs.length > 0 && <div className="song-library"><div className="list-heading"><span className="eyebrow">GENERATED SONGS</span><span className="micro">Select a take to listen</span></div>{[...songs].reverse().map((song) => <button disabled={studio.busy || studio.conflict} key={song.id} className={`song-row ${selected?.id === song.id ? 'is-selected' : ''}`} onClick={() => { if (selected?.id !== song.id) void studio.selectSong(song.id); }} aria-pressed={selected?.id === song.id}><span className="song-mini-icon"><Icon name={selected?.id === song.id ? 'wave' : 'music'} /></span><span className="song-row-copy"><strong>{song.title}</strong><small>{new Date(song.createdAt).toLocaleString(undefined, {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'})}{song.truncated ? ' · Token limit reached' : ''}</small></span><span className="micro">{formatDuration(song.durationSeconds)}</span>{selected?.id === song.id && <Icon name="check" size={16} />}</button>)}</div>}
   </section>;
 }
@@ -132,7 +138,7 @@ export function App() {
   const activity = studio.overview ? agentActivity(studio.overview.tools) : null;
   return <><a className="skip-link" href="#workspace">Skip to workspace</a><header className="topbar"><a className="brand" href="#" onClick={event => {event.preventDefault();setView('projects');}} aria-label="Assembly studio home"><span className="brand-symbol"><i /><i /><i /></span><span>ASSEMBLY<small>MUSIC VIDEO STUDIO</small></span></a><nav aria-label="Main navigation"><button className={view === 'projects' ? 'nav-active' : ''} onClick={() => setView('projects')} aria-current={view === 'projects' ? 'page' : undefined}><Icon name="folder" />Projects</button><button className={view === 'config' ? 'nav-active' : ''} onClick={() => setView('config')} aria-current={view === 'config' ? 'page' : undefined}><Icon name="settings" />Config</button></nav><div className="tool-indicators" aria-label="Shared tool status">{studio.overview && <><div className="agent-indicator-wrap"><button className={`tool-indicator ${studio.overview.provider.auth === 'sign-in-required' ? 'indicator-error' : ''}`} onClick={() => setAgentOpen(!agentOpen)} aria-expanded={agentOpen} aria-describedby="provider-tip"><span className={`status-dot ${studio.overview.provider.auth !== 'signed-in' ? 'warning' : agentTool?.active ? 'active' : 'ready'}`} /><strong>{studio.overview.provider.provider === 'codex' ? 'Codex' : 'Claude'}</strong>{activity && <small className="agent-activity">{activity}</small>}<Icon name="chevron" size={11} /></button><div className="provider-tooltip" id="provider-tip" role="tooltip"><span>Selected provider: {studio.overview.provider.provider === 'codex' ? 'Codex' : 'Claude'}. {studio.overview.provider.detail}</span>{activity && <p>Shared agent work: {activity}</p>}{studio.overview.provider.auth !== 'signed-in' && <code>{studio.overview.provider.signInCommand}</code>}</div></div>{orderedToolIndicators(studio.overview.tools).map(t => <button key={t.id} className={`tool-indicator ${errorState(t) ? 'indicator-error' : ''}`} onClick={() => setView('config')} title={`${t.label}: ${t.detail}`}><span className={`status-dot ${t.active ? 'active' : errorState(t) ? 'warning' : 'idle'}`} /><span>{t.label}</span><small>{t.active ? 'Active' : 'Idle'}{t.queued > 0 ? ` · ${t.queued} queued` : ''}</small></button>)}</>}</div></header>
     <div className="app-shell"><ProjectRail studio={studio} /><main id="workspace" tabIndex={-1}>
-      {!studio.overview ? <div className="connecting"><span className="eyebrow">CONNECTING TO YOUR WORKBENCH</span><h1>Good things start with a signal.</h1><p>{studio.connection ? 'The server is not reachable yet. We’ll keep trying.' : 'Reading your projects and local tool status…'}</p><div className="connecting-track" /></div> : <><SharedSetup studio={studio} config={view === 'config'} agentOpen={agentOpen} closeAgent={() => setAgentOpen(false)} />{view === 'projects' && (selected ? <><section className="workspace-title"><div><div className="eyebrow breadcrumbs">PROJECT / <span>SOUND + PICTURE</span></div><h1>{selected.name}</h1><p>Every good picture starts with something you can feel.</p></div><div className="workspace-stamp"><span>WORKSPACE</span><strong>24 <i>/</i> FRAMES PER SECOND</strong></div></section><div className="studio-grid"><MusicForm studio={studio} /><Soundtrack studio={studio} /></div><VideoStudio studio={studio} /><CreativeHistory studio={studio} /></> : <section className="welcome"><span className="eyebrow">AN IDEA IS ENOUGH TO BEGIN</span><h1>From a feeling<br />to a first take.</h1><p>A creative workbench for music and moving images.<br />Start a project, describe your sound, and let your tools take it from there.</p><div className="welcome-rule" /><span className="welcome-instruction"><Icon name="plus" /> Create a project in the sidebar to begin.</span></section>)}</>}
+      {!studio.overview ? <div className="connecting"><span className="eyebrow">CONNECTING TO YOUR WORKBENCH</span><h1>Good things start with a signal.</h1><p>{studio.connection ? 'The server is not reachable yet. We’ll keep trying.' : 'Reading your projects and local tool status…'}</p><div className="connecting-track" /></div> : <><SharedSetup studio={studio} config={view === 'config'} agentOpen={agentOpen} closeAgent={() => setAgentOpen(false)} />{view === 'projects' && (selected ? <><section className="workspace-title"><div><div className="eyebrow breadcrumbs">PROJECT / <span>SOUND + PICTURE</span></div><h1>{selected.name}</h1><p>Every good picture starts with something you can feel.</p></div><div className="workspace-stamp"><span>WORKSPACE</span><strong>24 <i>/</i> FRAMES PER SECOND</strong></div></section><div className="studio-grid"><MusicForm studio={studio} /><Soundtrack studio={studio} /></div><VideoStudio studio={studio} /></> : <section className="welcome"><span className="eyebrow">AN IDEA IS ENOUGH TO BEGIN</span><h1>From a feeling<br />to a first take.</h1><p>A creative workbench for music and moving images.<br />Start a project, describe your sound, and let your tools take it from there.</p><div className="welcome-rule" /><span className="welcome-instruction"><Icon name="plus" /> Create a project in the sidebar to begin.</span></section>)}</>}
       <footer className="workspace-footer"><span>ASSEMBLY / LOCAL CREATIVE WORKBENCH</span><span>YOUR PROJECTS. YOUR TOOLS. YOUR DIRECTION.</span></footer>
     </main></div><NoticeCenter notices={notices} /></>;
 }

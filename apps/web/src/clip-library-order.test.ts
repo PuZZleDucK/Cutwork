@@ -22,3 +22,9 @@ it('returns an empty library without results and does not show a duplicate succe
  expect(orderedClipLibrary([],[],[])).toEqual([]);
  expect(orderedClipLibrary([clip('one')],[attempt('one',0)],[])).toHaveLength(1);
 });
+it('hides discarded placeholders without mutating their history or completed clips',()=>{
+ const kept=attempt('kept',0,'cancelled'),hidden={...attempt('hidden',24,'failed'),placeholderDiscardedAt:'2026-10-23T00:00:00Z'};
+ const attempts=[kept,hidden,attempt('result',48)];const before=JSON.stringify(attempts);
+ expect(orderedClipLibrary([clip('result')],attempts,[]).map(e=>e.id)).toEqual(['attempt:a-kept','clip:result']);
+ expect(JSON.stringify(attempts)).toBe(before);
+});

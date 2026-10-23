@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
-import type { MusicAttempt, MusicDraft, ProjectSnapshot, StudioOverview, StudioProject, ToolId, Provider } from '../../../packages/core/src/contracts/studio.ts';
+import type { ClipDraft, MusicAttempt, MusicDraft, ProjectSnapshot, StudioOverview, StudioProject, ToolId, Provider } from '../../../packages/core/src/contracts/studio.ts';
+import { acknowledgeRecoverySnapshot, cancellationFlights, restoredProjectState } from './generation-recovery.ts';
+import { restoredSnapshot } from './restore-video.ts';
 import { prepareMusicSubmission, clearMusicSubmission } from './music-session.ts';
 import { errorNoticeReducer } from './notifications.ts';
 import { ApiError, request } from './api.ts';
@@ -13,6 +15,8 @@ export function useStudio() {
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [cancelling, setCancelling] = useState<ReadonlySet<string>>(()=>new Set());
+  const cancelFlights = useRef(cancellationFlights());
   const [errorNotice, dispatchError] = useReducer(errorNoticeReducer, {text:null,occurrence:0});
   const error = errorNotice.text;
   const [connection, setConnection] = useState<string | null>(null);
@@ -20,7 +24,7 @@ export function useStudio() {
   const [messageVersion, setMessageVersion] = useState(0);
   const [notice, setNotice] = useState<string | null>(null);
   const current = useRef<{project: StudioProject | null; draft: MusicDraft; dirty: boolean; conflict: boolean}>({ project: null, draft: emptyDraft, dirty: false, conflict: false });
-  const saveFlight = useRef<Promise<void> | null>(null);
+  const saveFlight = useRef<Promise<StudioProject | null> | null>(null);
   const actionFlight = useRef(false);
   const mounted = useRef(true);
   const reads = useRef(latestReadGuard());
@@ -29,6 +33,7 @@ export function useStudio() {
     const c = current.current;
     if (!reset && c.project?.id !== next.project.id) return;
     if (!reset && c.project && next.project.revision < c.project.revision) return;
+    acknowledgeRecoverySnapshot(next);
     setSnapshot(next);
     if (reset || (!c.dirty && !c.conflict && !saveFlight.current)) {
       c.project = next.project; c.draft = next.project.draft; c.dirty = false; c.conflict = false;
@@ -68,22 +73,27 @@ export function useStudio() {
     current.current.draft = value; current.current.dirty = true;
     setDraft(value); setDirty(true); setNotice(null);
   }, []);
-  const save = useCallback(async (): Promise<void> => {
+  const save = useCallback(async (): Promise<StudioProject | null> => {
     if (saveFlight.current) return saveFlight.current;
     if (current.current.conflict) throw new Error('Resolve the draft conflict before continuing. Your inputs have been kept.');
     const work = async () => {
+      // Capture the clean click-time project; polling cannot donate a newer
+      // remote revision to an already-authorized restore. Dirty saves replace
+      // this only with their own accepted response.
+      let accepted = current.current.project;
       setSaving(true);
       try {
         while (current.current.dirty && current.current.project) {
           const project = current.current.project;
           const submitted = { ...current.current.draft };
           const saved = await request<StudioProject>(`/api/projects/${encodeURIComponent(project.id)}/draft`, { revision: project.revision, draft: submitted }, 'PUT');
+          accepted = saved;
           const merged = mergeSavedDraft(current.current.draft, submitted, saved.draft);
           current.current.project = saved; current.current.draft = merged.draft; current.current.dirty = merged.dirty;
           setDraft(merged.draft); setDirty(merged.dirty);
           setSnapshot(old => old?.project.id === saved.id ? { ...old, project: saved } : old);
         }
-        dispatchError({type:'clear-save'});
+        dispatchError({type:'clear-save'}); return accepted;
       } catch (e) {
         if (e instanceof ApiError && e.status === 409) {
           current.current.conflict = true; setConflict(true);
@@ -93,7 +103,7 @@ export function useStudio() {
       } finally { setSaving(false); }
     };
     const promise = work(); saveFlight.current = promise;
-    try { await promise; } finally { saveFlight.current = null; }
+    try { return await promise; } finally { saveFlight.current = null; }
   }, []);
   useEffect(() => {
     if (!dirty || conflict) return;
@@ -163,8 +173,43 @@ export function useStudio() {
     await save(); await operation(); reads.current.begin(); setNotice(success);
     await refresh().catch(e => setConnection(e instanceof Error ? e.message : 'Waiting for the next studio update.'));
   });
+  // Non-form actions need not save inputs, but retain the ordinary action lock.
+  const performImmediate = (operation: () => Promise<void>, success: string) => act(async () => {
+    await operation(); reads.current.begin(); setNotice(success);
+    await refresh().catch(e => setConnection(e instanceof Error ? e.message : 'Waiting for the next studio update.'));
+  });
+  const performCancellation = async (attemptId:string,operation:()=>Promise<void>,success:string):Promise<boolean> => {
+    if(cancelFlights.current.has(attemptId))return false;
+    setCancelling(previous=>new Set([...previous,attemptId]));
+    setMessageVersion(version=>version+1);dispatchError({type:'clear'});setNotice(null);
+    try{return await cancelFlights.current.run(attemptId,async()=>{
+      await operation();reads.current.begin();setNotice(success);
+      await refresh().catch(e=>setConnection(e instanceof Error?e.message:'Waiting for the next studio update.'));
+    });}catch(e){dispatchError({type:'raise',text:e instanceof Error?e.message:'The cancellation could not be completed.'});return false;}
+    finally{setCancelling(previous=>{const next=new Set(previous);next.delete(attemptId);return next;});}
+  };
+  const saveProjectForRestore = async ():Promise<StudioProject> => {
+    const project=await save();if(!project)throw new Error('Select the original project first.');return project;
+  };
+  const acceptRestoredProject = (result:StudioProject,beforeDraft:MusicDraft,clipDraft?:ClipDraft|null):boolean => {
+    const merged=restoredProjectState(current.current,result,beforeDraft);if(!merged)return false;
+    current.current.project=merged.project;current.current.draft=merged.draft;current.current.dirty=merged.dirty;
+    setDraft(merged.draft);setDirty(merged.dirty);
+    setSnapshot(old=>restoredSnapshot(old,result,clipDraft));return true;
+  };
+  const restoreMusic = async (attemptId:string):Promise<boolean> => {
+    if(current.current.conflict){dispatchError({type:'raise',text:'Resolve the music draft conflict before replacing its inputs.'});return false;}
+    if(current.current.dirty&&!window.confirm('Replace your unsaved music description and lyrics with this generation’s original inputs? Cancel keeps your current draft.'))return false;
+    return act(async()=>{
+      const project=await saveProjectForRestore(),beforeDraft={...current.current.draft};
+      const result=await request<{project:StudioProject}>(`/api/projects/${project.id}/attempts/${attemptId}/restore-parameters`,{projectRevision:project.revision});
+      acceptRestoredProject(result.project,beforeDraft);reads.current.begin();
+      setNotice('Music inputs restored. Review the description and lyrics, then Generate for a new variation.');
+      await refresh().catch(e=>setConnection(e instanceof Error?e.message:'Waiting for the next studio update.'));
+    });
+  };
   const provider = (value: Provider) => act(async () => { await request('/api/provider', { provider: value }); await refresh(); });
   const checkProvider = () => act(async () => { await request('/api/provider/check', {}); await refresh(); });
   const setup = (tool: ToolId | 'all') => act(async () => { await request(`/api/setup/${tool}`, {}); await refresh(); });
-  return { overview, snapshot, draft, dirty, saving, busy, error, connection, conflict, notice, messageVersion, errorVersion: errorNotice.occurrence, edit, save, selectProject, createProject, resolveConflict, selectSong, generate, provider, checkProvider, setup, refresh, perform, clearError: () => dispatchError({type:'clear'}) };
+  return { overview, snapshot, draft, dirty, saving, busy, cancelling, error, connection, conflict, notice, messageVersion, errorVersion: errorNotice.occurrence, edit, save, selectProject, createProject, resolveConflict, selectSong, generate, provider, checkProvider, setup, refresh, perform, performImmediate, performCancellation, saveProjectForRestore, acceptRestoredProject, restoreMusic, clearError: () => dispatchError({type:'clear'}) };
 }

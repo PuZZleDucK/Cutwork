@@ -9,14 +9,14 @@ import type { ClipDraft } from './ClipComposer.tsx';
 import { timelinePercent } from './feedback-state.ts';
 type Studio=ReturnType<typeof useStudio>;
 const seconds=(frame:number)=>displayTime({numerator:BigInt(frame),denominator:24n});
-export function VideoTimeline({studio,song,arrangement,draft}:{studio:Studio;song:StudioSong;arrangement:SongArrangement;draft:ClipDraft}) {
+export function VideoTimeline({studio,song,arrangement,draft,onSelectClip}:{studio:Studio;song:StudioSong;arrangement:SongArrangement;draft:ClipDraft;onSelectClip?:(clipId:string,placementId:string)=>void}) {
  const coverage=songCoverage(song,arrangement.placements),pending=studio.snapshot!.reservations.filter(r=>r.songId===song.id);
  const timing=draft.timing;
  const total=Math.max(1,Math.ceil(song.durationSeconds*24),...arrangement.placements.map(p=>p.endFrame),...pending.map(p=>p.endFrame),timing.valid?timing.endFrame:0);
  const peaks=useMemo(()=>waveformEnvelope(song.analysis.peaks,320),[song.analysis.peaks]);
  const lanes=layoutIntervalLanes([
-  ...[...arrangement.placements].sort((a,b)=>a.startFrame-b.startFrame).map((p,i)=>({...p,label:`${String(i+1).padStart(2,'0')} / ${studio.snapshot!.clips.find(c=>c.id===p.clipId)?.title??'Clip'}`,reserved:false})),
-  ...pending.map(p=>({...p,id:`reservation:${p.attemptId}`,label:'Generating',reserved:true}))]);
+  ...[...arrangement.placements].sort((a,b)=>a.startFrame-b.startFrame).map((p,i)=>{const clipTitle=studio.snapshot!.clips.find(c=>c.id===p.clipId)?.title??'Clip';return {...p,clipTitle,label:`${String(i+1).padStart(2,'0')} / ${clipTitle}`,reserved:false as const};}),
+  ...pending.map(p=>({...p,id:`reservation:${p.attemptId}`,label:'Generating',reserved:true as const}))]);
  const markers=useMemo(()=>{
   const result:{id:string;label:string;time:Rational}[]=[{id:'zero',label:'Start · 0 seconds',time:{numerator:0n,denominator:1n}}];
   try{
@@ -54,7 +54,11 @@ export function VideoTimeline({studio,song,arrangement,draft}:{studio:Studio;son
    <div className="beat-pickers" aria-label="Selectable beat markers">{markers.map((m,i)=><button key={m.id} type="button" disabled={studio.busy} className={`beat-picker ${m.id==='zero'||m.id==='song-end'?'boundary-picker':''}`} style={{left:`${left(m.time)}%`}} aria-label={`Set ${draft.target} to ${m.label}`} title={`${m.label} · ${displayTime(m.time)} s`} onClick={()=>choose(m.time)}><i />{m.id==='zero'?'0':m.id==='song-end'?'END':i%4===1?m.label.replace('Beat ','').replace(' · after music','+'):''}</button>)}</div>
    <div className="draft-range-track" aria-label="Proposed generation range">{timing.valid?<div className="timeline-draft" data-start-frame={timing.startFrame} data-end-frame={timing.endFrame} style={{left:`${timing.startFrame/total*100}%`,width:`${(timing.endFrame-timing.startFrame)/total*100}%`}} title={`Next generation: ${timing.display.start.seconds}–${timing.display.end.seconds} seconds; not included until generated`}><span>NEXT SHOT · {timing.endFrame-timing.startFrame}f</span></div>:<span className="micro warning">Fix timing to see the proposed shot</span>}</div>
    <div className="coverage-track" aria-label="Uncovered music regions">{coverage.gaps.map(g=><span key={g.startFrame} className="uncovered-span" style={{left:`${g.startFrame/total*100}%`,width:`${(g.endFrame-g.startFrame)/total*100}%`}} title={`Black frames: ${g.startFrame}–${g.endFrame}`} />)}</div>
-   <div className="timeline-tracks" data-lane-count={lanes.laneCount}>{Array.from({length:lanes.laneCount},(_,lane)=><div className="timeline-lane" key={lane} aria-label={`Sequence lane ${lane+1}`}>{lanes.items.filter(p=>p.lane===lane).map(p=><div key={p.id} className={`timeline-span ${p.reserved?'reserved':''}`} data-interval-id={p.id} style={{left:`${p.startFrame/total*100}%`,width:`${(p.endFrame-p.startFrame)/total*100}%`}} title={`${p.label}: ${p.startFrame}–${p.endFrame}; ${p.reserved?'reserved, not coverage':'highest-priority overlapping placement is visible'}`}><span>{p.label}</span></div>)}</div>)}</div>
+   <div className="timeline-tracks" data-lane-count={lanes.laneCount}>{Array.from({length:lanes.laneCount},(_,lane)=><div className="timeline-lane" key={lane} aria-label={`Sequence lane ${lane+1}`}>{lanes.items.filter(p=>p.lane===lane).map(p=>{
+    const style={left:`${p.startFrame/total*100}%`,width:`${(p.endFrame-p.startFrame)/total*100}%`};
+    return p.reserved?<div key={p.id} className="timeline-span reserved" data-interval-id={p.id} style={style} title={`${p.label}: ${p.startFrame}–${p.endFrame}; reserved, not coverage`}><span>{p.label}</span></div>
+     :<button key={p.id} type="button" className="timeline-span" data-interval-id={p.id} style={style} aria-label={`Edit clip ${p.clipTitle}`} title={`${p.label}: ${p.startFrame}–${p.endFrame}; highest-priority overlapping placement is visible`} disabled={!onSelectClip} onClick={()=>onSelectClip?.(p.clipId,p.id)}><span>{p.label}</span></button>;
+   })}</div>)}</div>
   </div></div>
   <div className="timeline-legend"><span><i className="legend-draft" /> Next generation (not yet submitted)</span><span><i className="legend-solid" /> Included clip</span><span><i className="legend-hazard" /> Uncovered / black frames</span><span>Pending work reserves time, not coverage. Higher visual priority wins overlaps.</span></div>
  </section>;

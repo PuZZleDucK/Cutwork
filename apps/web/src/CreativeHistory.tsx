@@ -69,11 +69,11 @@ function Provenance({ attempt, tool }: { attempt: MusicAttempt | VideoAttempt; t
 function WorkDetails({ details, error }: { details: Record<string, unknown>; error: string | null }) {
   return <><details><summary>Agent work, actual tool settings & logs</summary><pre>{Object.keys(details).length ? json(details) : 'No details reported yet.'}</pre></details>{error && <p className="error-copy">{error}</p>}</>;
 }
-export function CreativeHistory({ studio,onRestoreVideo }: { studio: Studio;onRestoreVideo?:(attempt:VideoAttempt)=>Promise<unknown> }) {
+export function CreativeHistory({ studio,onRestoreVideo,onRestoreMusic }: { studio: Studio;onRestoreMusic?:()=>void;onRestoreVideo?:(attempt:VideoAttempt)=>Promise<unknown> }) {
   const snapshot = studio.snapshot;
   if (!snapshot) return null;
   const rows = creativeHistoryRows(snapshot);
-  const restore = async (attempt:MusicAttempt) => { if(await studio.restoreMusic(attempt.id))document.getElementById('music-prompt')?.focus(); };
+  const restore = async (attempt:MusicAttempt) => { if(await studio.restoreMusic(attempt.id)){if(onRestoreMusic)onRestoreMusic();else document.getElementById('music-prompt')?.focus();} };
   return <section className="panel history-panel creative-history" aria-label="Combined creative history"><div className="panel-heading"><div><span className="eyebrow">THE CREATIVE RECORD</span><h2>One project. Every step.</h2></div><span className="micro">NEWEST FIRST</span></div>
     <p className="panel-intro">Music, visuals, saved direction and sequence edits together. Your inputs, the agent’s settings and generated outputs stay expandable.</p>
     <p className="small-copy muted history-provenance-note">Generation times come from their original records. Saved project edits are recorded from this version onward; earlier edits were not recorded and are not reconstructed.</p>

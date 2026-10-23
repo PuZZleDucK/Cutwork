@@ -78,6 +78,8 @@ Data root: `${XDG_DATA_HOME:-$HOME/.local/share}/music-video-studio/`; tools und
 
 ## Look and Feel
 
+**23 October workspace refinement:** use a compact project selector and explicit Music / Video / Archive / History navigation rather than a long stack of cards. Keep video direction, preview and sequence together on desktop; stack them on narrow screens. Continue From End and Place/Remove are visible per-clip actions, with separately labelled Timing & audio controls. Clicking a placed timeline clip opens its exact saved edit, including repeated uses of one clip. Section changes preserve drafts, and parameter reuse opens/focuses the appropriate editor. This changes presentation and reachability, not generation, timing, archival or agent-authority rules.
+
 Carry forward `prd.md > Look and Feel` and `Screens and Layout`: Projects/Config navigation; shared setup strip above project work; music, video generation, waveform timeline, library, preview/export, archive and expandable history.
 
 Use Kirsty for top-level titles **once the specific asset's web embedding and redistribution terms are verified**; use a system sans-serif for ordinary UI and a system monospace for times/logs. Do not call an unbundled local fallback a verified Kirsty rendering. [The official Kirsty page](https://typodermicfonts.com/kirsty/) identifies the font; downloading or assuming a permissive licence is not part of this planning work.

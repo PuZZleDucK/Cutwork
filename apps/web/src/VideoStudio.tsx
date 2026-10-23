@@ -18,22 +18,23 @@ import {activeArtifacts,artifactState,renderMediaAvailable} from './artifact-lif
 import {ArtifactControls,ArchivedMedia,RetargetClipContext} from './ArtifactControls.tsx';
 import { GenerationActions } from './GenerationActions.tsx';
 import './video.css';
+import {WorkspacePane,openWorkspaceInput,type WorkspacePanel} from './WorkspaceNavigation.tsx';
 type Studio = ReturnType<typeof useStudio>;
 const asset = (id:string) => `/api/assets/${encodeURIComponent(id)}`;
 export function ClipLibrary({studio,song,arrangement,onContinue,onRestore}:{studio:Studio;song:StudioSong|null;arrangement:SongArrangement|null;onContinue?:(context:ClipEditContext)=>Promise<void>;onRestore?:(attempt:VideoAttempt)=>Promise<unknown>}){
  const snapshot=studio.snapshot!,clips=activeArtifacts(snapshot,'clip',snapshot.clips),attempts=snapshot.videoAttempts;
  const entries=orderedClipLibrary(clips,attempts,arrangement?.placements??[]);
- return <section className="clip-library" aria-label="Generated clip library"><div className="video-section-heading"><h2>Your takes.</h2><span className="micro">{clips.length} CLIPS / PROJECT LIBRARY</span></div>
+ return <section className="clip-library" id="clip-library" tabIndex={-1} aria-label="Generated clip library"><div className="video-section-heading"><h2>Clip library</h2><span className="micro">{clips.length} CLIPS / PROJECT LIBRARY</span></div>
   {!entries.length&&<p className="empty-video">No active clips yet. Describe a shot; its successful result will join the sequence automatically. Archived clips remain available below.</p>}
   <div className="clip-shelf">{entries.map(entry=>{
    if(entry.kind==='attempt'){const a=entry.attempt;return <article className={`clip-card clip-pending ${attemptIsActive(a.state)?'working':''}`} key={entry.id} data-start-frame={entry.startFrame}><span className="eyebrow">H3 / {a.state.replaceAll('_',' ').toUpperCase()}</span><h3>{a.input.clipPrompt}</h3><p className="small-copy">{a.stage}</p><span className="micro">{a.input.startFrame} → {a.input.endFrame} / {a.input.songId===song?.id?'THIS SONG':'OTHER SONG'}</span>{a.error&&<details><summary className="warning">Failure details</summary><pre>{a.error}</pre></details>}<GenerationActions studio={studio} attempt={a} onRestore={onRestore?()=>onRestore(a):undefined}/></article>;}
    const clip=entry.clip,allContexts=snapshot.editContexts.filter(c=>c.clipId===clip.id),contexts=allContexts.filter(c=>c.songId===song?.id).sort((a,b)=>(a.sourceOriginFrame+a.sourceStartFrame)-(b.sourceOriginFrame+b.sourceStartFrame));
    const missingContext=allContexts.some(c=>!snapshot.songs.some(s=>s.id===c.songId)||['deleting','deleted'].includes(artifactState(snapshot,{kind:'song',id:c.songId})));
-   return <article className="clip-card" key={entry.id} data-start-frame={entry.startFrame??undefined}>
+   return <article className="clip-card" id={`clip-library-${clip.id}`} tabIndex={-1} key={entry.id} data-start-frame={entry.startFrame??undefined}>
     <PreviewVideo controls preload="none" src={asset(clip.assetId)} poster={clip.rawFrames[0]?asset(clip.rawFrames[0].assetId):undefined} aria-label={`Preview clip ${clip.title}`} />
     <div className="clip-card-body"><h3>{clip.title}</h3><ArtifactControls studio={studio} refValue={{kind:'clip',id:clip.id}} title={clip.title}/>
      {(()=>{const original=attempts.find(a=>a.id===clip.attemptId);return original&&onRestore?<GenerationActions studio={studio} attempt={original} onRestore={()=>onRestore(original)}/>:null;})()}
-     <p className="micro">{clip.requestedFrames} REQUESTED FRAMES / {clip.nativeFrames} ORIGINALS · 24 FPS</p><p className="small-copy muted">Source preview starts at 50% volume. Sequence soundtrack choices are saved per edit below.</p>
+     <p className="micro">{clip.requestedFrames} REQUESTED FRAMES / {clip.nativeFrames} ORIGINALS · 24 FPS</p>
      {song&&arrangement&&onContinue&&contexts.map(context=><ClipEditControls key={context.id} studio={studio} song={song} arrangement={arrangement} clip={clip} context={context} onContinue={onContinue} />)}
      {!contexts.length&&<div className="other-song-continuations">{allContexts.map(context=>{
       const referenced=snapshot.songs.find(s=>s.id===context.songId),state=artifactState(snapshot,{kind:'song',id:context.songId});
@@ -60,16 +61,16 @@ function Preview({studio,song,arrangement}:{studio:Studio;song:StudioSong;arrang
  };
  // Once requested, debounce regeneration after an edit. Never auto-retry failures.
  useEffect(()=>{const key=`${song.id}:${arrangement.revision}`;if(!automaticRenderAllowed(auto,!!current,studio.busy,studio.connection,key,flight.current))return;const timer=setTimeout(()=>{flight.current=key;void render();},1000);return()=>clearTimeout(timer);},[auto,current?.id,song.id,arrangement.revision,studio.busy,studio.connection]);
- return <section className="video-preview" aria-label="Preview and export"><div className="video-section-heading"><div><span className="section-code">05 / SCREEN</span><h2>Watch it come together.</h2></div><span className="micro">640 × 480 / 24 FPS / H.264 + AAC</span></div><div className="screen-and-controls"><div className="screen">{playable?.assetId?<PreviewVideo key={playable.id} controls preload="metadata" src={asset(playable.assetId)} aria-label="Assembled music video preview" />:<div className="screen-empty"><span>ASSEMBLY / SCREENING ROOM</span><strong>Your first cut goes here.</strong><p>Render the sequence with its selected soundtrack sources.</p></div>}</div><div className="render-controls">{stale&&<p className="warning" role="status">Previous revision — this preview is stale and cannot be exported as the current edit.</p>}<p className="small-copy muted">Black frames fill uncovered time. The full song is kept; placed clips can extend the video beyond it. Preview and export use the same verified file.</p><button className="button primary" disabled={studio.busy||['queued','running'].includes(current?.state??'')} onClick={()=>void render()}>{current?.state==='succeeded'?'Render current preview':current?.state==='failed'?'Retry preview render':'Render preview'}</button>{current&&<div className="render-status" role="status"><strong>{current.state.toUpperCase()}</strong><p>{current.stage}</p>{current.error&&<details><summary className="warning">Render details</summary><pre>{current.error}</pre></details>}</div>}{current?.state==='succeeded'&&current.assetId&&<a className="button secondary" href={`/api/projects/${song.projectId}/renders/${current.id}/download`} download>Download MP4 ↓</a>}<label className="auto-render"><input type="checkbox" checked={auto} onChange={e=>setAuto(e.target.checked)} /> Update preview after edits</label><span className="micro">ARRANGEMENT REVISION {arrangement.revision}</span></div></div></section>;
+ return <section className="video-preview" aria-label="Preview and export"><div className="video-section-heading"><div><span className="section-code">05 / SCREEN</span><h2>Preview / export</h2></div><span className="micro">640 × 480 / 24 FPS / H.264 + AAC</span></div><div className="screen-and-controls"><div className="screen">{playable?.assetId?<PreviewVideo key={playable.id} controls preload="metadata" src={asset(playable.assetId)} aria-label="Assembled music video preview" />:<div className="screen-empty"><span>ASSEMBLY / SCREENING ROOM</span><strong>Your first cut goes here.</strong><p>Render the sequence with its selected soundtrack sources.</p></div>}</div><div className="render-controls">{stale&&<p className="warning" role="status">Previous revision — this preview is stale and cannot be exported as the current edit.</p>}<p className="small-copy muted">Black frames fill uncovered time. The full song is kept; placed clips can extend the video beyond it. Preview and export use the same verified file.</p><button className="button primary" disabled={studio.busy||['queued','running'].includes(current?.state??'')} onClick={()=>void render()}>{current?.state==='succeeded'?'Render current preview':current?.state==='failed'?'Retry preview render':'Render preview'}</button>{current&&<div className="render-status" role="status"><strong>{current.state.toUpperCase()}</strong><p>{current.stage}</p>{current.error&&<details><summary className="warning">Render details</summary><pre>{current.error}</pre></details>}</div>}{current?.state==='succeeded'&&current.assetId&&<a className="button secondary" href={`/api/projects/${song.projectId}/renders/${current.id}/download`} download>Download MP4 ↓</a>}<label className="auto-render"><input type="checkbox" checked={auto} onChange={e=>setAuto(e.target.checked)} /> Update preview after edits</label><span className="micro">ARRANGEMENT REVISION {arrangement.revision}</span></div></div></section>;
 }
-export function VideoStudio({studio}:{studio:Studio}) {
+export function VideoStudio({studio,panel='video',onRequestPanel}:{studio:Studio;panel?:WorkspacePanel;onRequestPanel?:(panel:WorkspacePanel)=>void}) {
  const snapshot=studio.snapshot!,song=activeArtifacts(snapshot,'song',snapshot.songs).find(s=>s.id===snapshot.project.selectedSongId);
- if(!song)return <><section className="video-workspace empty-video"><span className="section-code">03 / DIRECT</span><h2>A soundtrack opens the picture.</h2><p>Create or select a song above to describe clips, arrange a sequence and export your music video.</p></section><ClipLibrary studio={studio} song={null} arrangement={null}/><ArchivedMedia studio={studio}/><CreativeHistory studio={studio}/></>;
+ if(!song)return <><WorkspacePane name="video" active={panel}><section className="empty-video"><h2>Select a soundtrack to edit video</h2><button className="button secondary" onClick={()=>openWorkspaceInput('music',onRequestPanel,'music-prompt')}>Open music</button></section><ClipLibrary studio={studio} song={null} arrangement={null}/></WorkspacePane><WorkspacePane name="archive" active={panel}><ArchivedMedia studio={studio}/></WorkspacePane><WorkspacePane name="history" active={panel}><CreativeHistory studio={studio} onRestoreMusic={()=>openWorkspaceInput('music',onRequestPanel,'music-prompt')}/></WorkspacePane></>;
  const savedArrangement=snapshot.arrangements.find(a=>a.songId===song.id)??{songId:song.id,projectId:song.projectId,revision:0,placements:[]};
  const arrangement={...savedArrangement,placements:savedArrangement.placements.filter(placement=>artifactState(snapshot,{kind:'clip',id:placement.clipId})==='active')};
- return <VideoWorkspace key={song.id} studio={studio} song={song} arrangement={arrangement} />;
+ return <VideoWorkspace key={song.id} studio={studio} song={song} arrangement={arrangement} panel={panel} onRequestPanel={onRequestPanel}/>;
 }
-function VideoWorkspace({studio,song,arrangement}:{studio:Studio;song:StudioSong;arrangement:SongArrangement}) {
+function VideoWorkspace({studio,song,arrangement,panel,onRequestPanel}:{studio:Studio;song:StudioSong;arrangement:SongArrangement;panel:WorkspacePanel;onRequestPanel:((panel:WorkspacePanel)=>void)|undefined}) {
  const draft=useClipDraft(studio,song,arrangement);
  const continueFrom=async(context:ClipEditContext)=>{
   const ok=await studio.perform(async()=>{
@@ -85,7 +86,7 @@ function VideoWorkspace({studio,song,arrangement}:{studio:Studio;song:StudioSong
   },'Continuation prepared from the saved final frame. Review the starting image and timing above, then click Generate.');
   if(!ok)return;
   if(context.songId!==song.id&&!await studio.selectSong(context.songId))return;
-  const prompt=document.getElementById('clip-prompt');prompt?.focus({preventScroll:true});prompt?.scrollIntoView({block:'center',behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});
+  openWorkspaceInput('video',onRequestPanel,'clip-prompt');
  };
 
  const restoreParameters=async(attempt:VideoAttempt)=>{
@@ -108,8 +109,12 @@ function VideoWorkspace({studio,song,arrangement}:{studio:Studio;song:StudioSong
      studio.acceptRestoredProject(result.project,beforeProjectDraft,result.draft);
     }});
   },'Video parameters restored to their original song. No generation started; review the style, description, image and timing, then Generate a new variation.');
-  if(ok){const prompt=document.getElementById('clip-prompt');prompt?.focus({preventScroll:true});prompt?.scrollIntoView({block:'center',behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});}
+  if(ok){openWorkspaceInput('video',onRequestPanel,'clip-prompt');}
  };
 
- return <><div className="video-workspace"><ClipForm studio={studio} song={song} draft={draft}/><VideoTimeline studio={studio} song={song} arrangement={arrangement} draft={draft}/><ClipLibrary studio={studio} song={song} arrangement={arrangement} onContinue={continueFrom} onRestore={restoreParameters}/><Preview studio={studio} song={song} arrangement={arrangement}/></div><ArchivedMedia studio={studio}/><CreativeHistory studio={studio} onRestoreVideo={restoreParameters}/></>;
+ const selectClip=(clipId:string,placementId:string)=>{
+  const row=document.getElementById(`clip-library-${clipId}`);const context=[...(row?.querySelectorAll<HTMLElement>('[data-placement-id]')??[])].find(element=>element.dataset.placementId===placementId);const editor=context?.querySelector<HTMLDetailsElement>('.clip-edit-details');if(editor)editor.open=true;
+  row?.focus({preventScroll:true});row?.scrollIntoView({block:'nearest',behavior:'auto'});
+ };
+ return <><WorkspacePane name="video" active={panel}><div className="video-workspace"><ClipForm studio={studio} song={song} draft={draft}/><Preview studio={studio} song={song} arrangement={arrangement}/><VideoTimeline studio={studio} song={song} arrangement={arrangement} draft={draft} onSelectClip={selectClip}/><ClipLibrary studio={studio} song={song} arrangement={arrangement} onContinue={continueFrom} onRestore={restoreParameters}/></div></WorkspacePane><WorkspacePane name="archive" active={panel}><ArchivedMedia studio={studio}/><button className="button secondary" onClick={()=>openWorkspaceInput('video',onRequestPanel,'clip-library')}>Open clip library to place restored clips →</button></WorkspacePane><WorkspacePane name="history" active={panel}><CreativeHistory studio={studio} onRestoreVideo={restoreParameters} onRestoreMusic={()=>openWorkspaceInput('music',onRequestPanel,'music-prompt')}/></WorkspacePane></>;
 }

@@ -82,6 +82,8 @@ Source: `scope.md > The POC Boundary` and `Later`; see also `Changes to the Appr
 
 ## Look and Feel
 
+**23 October workspace refinement:** use a compact project selector and explicit Music / Video / Archive / History navigation rather than a long stack of cards. Keep video direction, preview and sequence together on desktop; stack them on narrow screens. Continue From End and Place/Remove are visible per-clip actions, with separately labelled Timing & audio controls. Clicking a placed timeline clip opens its exact saved edit, including repeated uses of one clip. Section changes preserve drafts, and parameter reuse opens/focuses the appropriate editor. This changes presentation and reachability, not generation, timing, archival or agent-authority rules.
+
 - Functional, attractive industrial styling, not visual decoration at the expense of working controls.
 - Hazard stripes for unfinished work; the uncovered timeline spans are a natural application of that direction.
 - Animated hazard stripes for active work or the next essential step were requested as a visual preference, not a finished interaction design.

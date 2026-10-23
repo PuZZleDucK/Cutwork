@@ -26,11 +26,18 @@ export function ClipEditControls({studio,song,arrangement,clip,context,onContinu
  const edit=async(patch:Record<string,unknown>,notice:string)=>studio.perform(async()=>{const result=await request<EditResult>(path,{revision:base.revision,arrangementRevision:arrangement.revision,edit:patch},'PUT');reset(result.context);},notice);
  const mutatePlacement=()=>studio.perform(async()=>{const result=await request<EditResult>(path+'/placement',{revision:base.revision,arrangementRevision:arrangement.revision,placed:!base.placementId});reset(result.context);},base.placementId?'Removed from the sequence. Its saved trim, timing and audio choice are retained.':'Placed this saved edit in the sequence.');
  useEffect(()=>{if(!dirty)return;const warn=(event:BeforeUnloadEvent)=>{event.preventDefault();event.returnValue='';};window.addEventListener('beforeunload',warn);return()=>window.removeEventListener('beforeunload',warn);},[dirty]);
- const disabled=studio.busy||stale;
- return <details className="clip-edit" data-context-id={context.id}><summary><span>{context.placementId?'IN SEQUENCE':'UNPLACED EDIT'}</span><strong>Source {base.sourceStartFrame+1}–{base.sourceEndFrame}</strong><span>{start} → {end} · {base.audioSource==='clip'?'CLIP AUDIO':'SONG AUDIO'}</span></summary>
-  <div className="edit-context-body"><p className="small-copy muted">Apply saves timing changes. Leaving this song or project discards unapplied timing edits.</p><p className="micro">{song.title} / EDIT {context.id.slice(0,8)} · REV {base.revision}</p>
+ const disabled=studio.busy||stale,actionsDisabled=disabled||!!dirty;
+ return <div className="clip-edit" data-context-id={context.id} data-placement-id={context.placementId??undefined}>
+  <div className="clip-edit-overview"><span className="clip-placement-state">{base.placementId?'IN SEQUENCE':'UNPLACED'}</span><strong>Source {base.sourceStartFrame+1}–{base.sourceEndFrame}</strong><span>{start} → {end} · {base.audioSource==='clip'?'CLIP AUDIO':'SONG AUDIO'}</span></div>
+  <div className="clip-edit-actions" role="group" aria-label={`Actions for ${clip.title} on ${song.title}`}>
+   <button type="button" className="button secondary small continue-clip" disabled={actionsDisabled} onClick={()=>{if(!actionsDisabled)void onContinue(base);}}>Continue From End ↑</button>
+   <button type="button" className="button secondary small placement-action" disabled={actionsDisabled} onClick={()=>{if(!actionsDisabled)void mutatePlacement();}}>{base.placementId?'Remove from sequence':'Place in sequence'}</button>
+  </div>
   {stale&&<p className="warning" role="alert">This edit changed elsewhere. Your unsaved values are retained; load the latest edit before applying.</p>}
+  {dirty&&<p className="small-copy muted" role="status">Apply or discard timing edits before continuing or changing placement.</p>}
   {(dirty||stale)&&<button type="button" className="text-button" disabled={studio.busy} onClick={()=>reset(context)}>{stale?'Load latest edit':'Discard timing edits'}</button>}
+  <details className="clip-edit-details"><summary>Timing &amp; audio</summary>
+  <div className="edit-context-body"><p className="small-copy muted">Apply saves timing changes. Leaving this song or project discards unapplied timing edits.</p><p className="micro">{song.title} / EDIT {context.id.slice(0,8)} · REV {base.revision}</p>
   <fieldset disabled={disabled||dirty==='move'} className="source-trim"><legend>Trim retained footage</legend><p className="small-copy muted">Source frame numbers are inclusive. Beats and seconds are positions on this song; the end time is exclusive. Trimming leaves retained frames where they are.</p>
    <div className="trim-grid">{(['start','end'] as const).map(endpoint=>{const value=trim[endpoint],shown=trimEditDisplay(song,base,value,endpoint);return <div key={endpoint}><h4>{endpoint==='start'?'First retained':'Last retained'}</h4>{(['sourceFrames','beats','seconds'] as const).map(unit=>{
     const v=shown[unit];return <label key={unit}><span>{unit==='sourceFrames'?'Source frame · inclusive':unit==='beats'?`Song beat${endpoint==='end'?' · exclusive end':''}`:`Song seconds${endpoint==='end'?' · exclusive end':''}`}{v?.startsWith('≈ ')&&<abbr title="Approximate display only; exact intent is retained."> ≈</abbr>}</span><input aria-label={`Trim ${endpoint} ${unit} ${context.id}`} inputMode={unit==='sourceFrames'?'numeric':'decimal'} maxLength={1000} value={cleanDisplay(v)} disabled={unit==='beats'&&!hasBeats} placeholder={unit==='beats'?'No beat map':'—'} onChange={e=>{setDirty('trim');setTrim(old=>({...old,[endpoint]:{unit,value:e.target.value}}));}} /></label>;
@@ -49,9 +56,6 @@ export function ClipEditControls({studio,song,arrangement,clip,context,onContinu
    <p className="small-copy muted">Only while this clip is visible. Hidden clips never contribute audio. No mixing or fades.</p>
   </fieldset>
   {placement&&<fieldset disabled={disabled||!!dirty} className="overlap-controls"><legend>Visual priority</legend>{overlaps.length?overlaps.map(other=><button key={other.id} type="button" className="button secondary small" onClick={()=>void studio.perform(async()=>{await request(`/api/projects/${song.projectId}/songs/${song.id}/dominance`,{revision:arrangement.revision,firstPlacementId:placement.id,secondPlacementId:other.id});},'Visual priority swapped. Timing, coverage and each audio choice are unchanged.')} >{placement.priority>other.priority?'Send behind':'Bring ahead of'} {studio.snapshot!.clips.find(c=>c.id===other.clipId)?.title??'overlapping clip'} · {other.id.slice(0,6)}</button>):<p className="small-copy muted">No overlapping clips.</p>}</fieldset>}
-  <button type="button" className="button secondary small continue-clip" disabled={disabled||!!dirty} onClick={()=>void onContinue(base)}>Continue From End ↑</button>
-  {dirty&&<p className="small-copy muted">Apply or discard timing edits before preparing a continuation.</p>}
-  <button type="button" className="text-button" disabled={disabled||!!dirty} onClick={()=>void mutatePlacement()}>{base.placementId?'Remove from sequence':'Place this saved edit'}</button>
   </div>
- </details>;
+ </details></div>;
 }

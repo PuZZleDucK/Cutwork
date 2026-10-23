@@ -369,6 +369,8 @@ The next work is the prepared real-model lane verification; no slice/G4 gate is 
 
 ## Final Review
 
+- [ ] 23 October requested refinement: replace inefficient card layout with a dense workspace and make continuation/restored placement plainly reachable. Implementation and browser checks are recorded in `workbench-feedback.md`; learner retry remains open.
+
 - [ ] Final review complete — feedback resolved and learner confirms ready to ship
 
 Record actual observations here after the learner tries the final app. Add agreed fixes/refinements as unchecked items; verify, commit, and have affected behaviour retried before marking them complete. No feedback or passing test result is implied by this draft. A change to the approved boundary requires discussion and document reconciliation, not an automatic new feature.
@@ -386,6 +388,8 @@ Reflection: Not offered yet; any personal response belongs in the ignored learne
 Activity mode: Proposed focused planning/verification investigation suitable for an experienced developer; not yet performed.
 
 ## Revisions
+
+- **23 October — user reprioritised the editing workspace:** do not wait for duplicate cold downloads to develop the product. Audit showed Continue From End and restored placement existed but were hidden inside fine-edit disclosures. Implement direct actions, a compact project selector, separate workspace sections, integrated preview/sequence and exact timeline-to-editor selection using existing tools/media. No backend or generator change; cold-install evidence remains separate and incomplete.
 
 - **23 October — actual service-path repair and preservation:** real systemd rejected argument-style quotes around `WorkingDirectory`; a red regression and actual parser check now cover the corrected path syntax. The frozen repair passes the full 1,332-test suite, typecheck/build and 30 Python cases. Normal persistent service installation succeeds, and the final 55/55 audit preserves every original asset/creative/native/Debug record and unrelated service identity. The first failed activation and a separately reviewed asdf PATH observation mismatch remain in the evidence. Fresh-runtime tool installation continues separately; slice 9 and final acceptance stay unchecked.
 

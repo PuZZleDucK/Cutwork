@@ -36,6 +36,8 @@ export interface StudioProject {
 export interface ProjectSummary extends StudioProject { songCount: number; activeAttempts: number; coveragePercent: number | null }
 export type AttemptState = 'queued' | 'preparing' | 'waiting_gpu' | 'running' | 'validating' | 'succeeded' | 'failed' | 'reconciling' | 'cancel_requested' | 'cancelled';
 export interface AttemptLifecycle {
+  /** Captured at acceptance. Historical attempts omit this and retain legacy defaults. */
+  promptTemplate?: import('./prompt-templates.ts').CapturedPromptTemplate;
   /** Absent on historical records and work which was never cancelled. */
   cancellation?: { requestedAt: string; completedAt: string | null };
   recovery?: { parentAttemptId: string; action: 'retry' | 'restart' };

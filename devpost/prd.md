@@ -56,6 +56,8 @@ Source: `scope.md > The Core Loop` and `What "Working" Looks Like`.
 
 ## Screens and Layout
 
+**Second workspace refinement, 23 October:** project selection and five-second floating notification announcements live in the navbar. Tabs precede the project name and stay selected across project switches; hazard stripes guide Music then Video. Duration/BPM precede truncated soundtrack titles. Clip cards form a 4–5-column desktop library, distinguish placed clips, and expose trim/position/audio controls without disclosures. Technical frame/provenance and repeated timing prose move out of the working UI, not out of retained records. Priority is edited in the sequence: top lane wins; lower overlapping segments can swap with the placement above. Shared Config provides actual music/video agent templates with explicit Save/default restoration and revision-conflict handling. Each new attempt captures template instructions, preserving old queued/running/retry instructions. See `workbench-round-two.md` for verification.
+
 The learner described one main studio workspace with Projects and Config navigation, rather than a separate full-screen wizard for every generation step.
 
 - **Shared navbar and setup extension:** Projects and Config navigation sit alongside compact status indicators for installed tools. A related but visually distinct setup strip holds the tool panels while setup is still needed, with an Install all action. Music generation, ComfyUI, H3, and audio analysis were the requested panels; these names are candidate integrations, not verified independent installation units. Project selection changes neither installation state nor monitoring. Each successfully completed panel animates away and becomes the same tool's navbar indicator; the completed installation UI does not remain on screen. If no tools still need setup, the setup strip is no longer shown. Discovery stays out of the prototype; later it should integrate with this shared setup/configuration experience.
@@ -594,6 +596,8 @@ Replacement rather than layering, dominant-clip-only audio during overlaps, a no
 Source: `scope.md > The Core Loop` and the audio-finishing boundary in `Later`; explicit interview refinement of the requested clip-audio controls.
 
 ### Preview, Black Gaps, and Export
+
+**23 October refinement:** preview must be immediate, live and usable without rendering. Play/pause and scrub inspect current edits; no Render preview action or Update preview after edits checkbox. Export alone renders the full-quality file. Browser playback may be less exact than the exported render, but it follows the same clip, source-offset, audio-source, black-gap and post-song rules.
 
 Users can preview the assembled music video and export a playable video file. **Uncovered intervals are black frames in both preview and export.** Missing clip coverage is not itself an export-blocking error. The song continues through those intervals; the application does not silently shorten the music, freeze a neighbouring clip, loop it, or generate filler.
 

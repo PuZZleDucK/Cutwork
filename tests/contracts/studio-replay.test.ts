@@ -7,6 +7,23 @@ import {openGpuQueue} from '../../apps/server/src/jobs/gpu-queue.ts';
 import {prepareMusicTask} from '../../apps/server/src/studio/music.ts';
 import {nativeVideoPlan} from '../../apps/server/src/studio/video.ts';
 import {prepareRecoveryTask,runReplayCall} from '../../apps/server/src/studio/replay.ts';
+import {renderAgentTemplate} from '../../packages/core/src/contracts/prompt-templates.ts';
+test('retry rebinding does not rewrite literal addresses inside captured user template instructions',async()=>{
+ const f=await fixture(),original=JSON.parse(await readFile(f.planPath,'utf8'));
+ const literal=`Remember reference ${f.parent.id} and ${f.origin} as literal creative instructions.`;
+ const promptTemplate={revision:4,template:`${literal}\n\n{{task_context}}`};
+ original.attempt.promptTemplate=promptTemplate;original.launch.stdin=`${literal}\n\n${original.launch.stdin}`;await save(f.planPath,original);
+ const parent={...f.parent,promptTemplate,details:{...f.parent.details,planSha256:await fileHash(f.planPath)}},attempt={...f.child(),promptTemplate};
+ const prepared=await prepareRecoveryTask({...f,parent,attempt,origin:'http://127.0.0.1:9555'}),plan=JSON.parse(await readFile(prepared.planPath,'utf8'));
+ expect(plan.launch.stdin).toContain(literal);expect(plan.launch.stdin).toContain('http://127.0.0.1:9555');expect(plan.attempt.promptTemplate).toEqual(promptTemplate);
+});
+test('a short template literal cannot prevent execution addresses from rebinding',async()=>{
+ const f=await fixture(),original=JSON.parse(await readFile(f.planPath,'utf8')),promptTemplate={revision:5,template:'a{{task_context}}z'};
+ original.attempt.promptTemplate=promptTemplate;original.launch.stdin=`a${original.launch.stdin}z`;await save(f.planPath,original);
+ const parent={...f.parent,promptTemplate,details:{...f.parent.details,planSha256:await fileHash(f.planPath)}},attempt={...f.child(),promptTemplate};
+ const prepared=await prepareRecoveryTask({...f,parent,attempt,origin:'http://127.0.0.1:9555'}),plan=JSON.parse(await readFile(prepared.planPath,'utf8'));
+ expect(plan.launch.stdin.startsWith('a')).toBe(true);expect(plan.launch.stdin.endsWith('z')).toBe(true);expect(plan.launch.stdin).toContain(attempt.id);expect(plan.launch.stdin).not.toContain(parent.id);expect(plan.launch.stdin).toContain('http://127.0.0.1:9555');
+});
 import {captureExecutionSource,captureReplayFile,fileHash} from '../../apps/server/src/studio/execution-snapshot.ts';
 import {validateStudioNativeCall,studioNativeSource} from '../../apps/server/src/studio/recovery.ts';
 import type {GpuQueue,GpuCall,Json} from '../../apps/server/src/jobs/gpu-queue-contract.ts';
@@ -36,7 +53,7 @@ async function fixture(video=false){
   const song=store.finishMusic(parent.id,{title:'Synthetic',assetId:randomUUID(),assetPath:songPath,sha256,sampleCount:'96000',sampleRate:48000,channels:2,durationSeconds:2,truncated:false,analysis:{state:'failed',estimatedBpm:null,sampleIndices:[],waveformBucketSamples:0,peaks:[],error:'fixture',version:null}},{});
   parent=store.submitVideo(project.id,randomUUID(),{songId:song.id,clipPrompt:'Exact scene',style:'Exact look',startFrame:0,endFrame:48});const directory=join(runtime,'projects',project.id,'inputs',parent.id);await mkdir(directory,{recursive:true});planPath=join(directory,'captured-task.json');
   const executionSource=await captureExecutionSource(source,join(directory,'execution-source'),'h3'),replaySong=await captureReplayFile(songPath,join(directory,'source-song.wav'),sha256);
-  await save(planPath,{runtime,source,origin,attempt:parent,executionSource,replaySong,song:{path:songPath,sha256},nativePlan:nativeVideoPlan(parent),launch:{executable:'/fixture/codex',stdin:`Captured ${parent.id} ${parent.nativeCallId} ${songPath}`},paths:{planPath,nativeRequest:join(runtime,'projects',project.id,'inputs/native-calls',parent.nativeCallId,'request.json'),nativeReceipt:join(runtime,'projects',project.id,'runs',parent.nativeCallId,'receipt.json')}});
+  await save(planPath,{runtime,source,origin,attempt:parent,executionSource,replaySong,song:{path:songPath,sha256},nativePlan:nativeVideoPlan(parent),launch:{executable:'/fixture/codex',stdin:renderAgentTemplate(parent.promptTemplate!.template,`Captured ${parent.id} ${parent.nativeCallId} ${songPath}`)},paths:{planPath,nativeRequest:join(runtime,'projects',project.id,'inputs/native-calls',parent.nativeCallId,'request.json'),nativeReceipt:join(runtime,'projects',project.id,'runs',parent.nativeCallId,'receipt.json')}});
   store.patchVideoAttempt(parent.id,{state:'failed',details:{planPath,planSha256:await fileHash(planPath)}});parent=store.videoAttempt(parent.id)!;
  }
  const request:Json='song' in parent?{schemaVersion:1,attemptId:parent.nativeCallId,projectId:parent.projectId,song:{path:join(runtime,'projects',project.id,'original.wav'),sha256:parent.song.sha256},seed:parent.seeds.h3,plan:nativeVideoPlan(parent) as unknown as Json,prompt:'Actual translated native scene'}:{schemaVersion:1,attemptId:parent.nativeCallId,seeds:parent.seeds,parameters:{abc:'X:1\nK:C\nCDEF',lyrics:'Resolved lyrics'},sampling:{semantic:{max_tokens:100}}};

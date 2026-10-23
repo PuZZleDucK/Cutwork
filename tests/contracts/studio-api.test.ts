@@ -71,6 +71,15 @@ test('studio overview and project create/select/draft readback persist with revi
   const stale = await request('PUT', `/api/projects/${p.id}/draft`, { revision: p.revision, draft });
   expect(stale.statusCode).toBe(409); expect(stale.json().code).toBe('STUDIO_CONFLICT');
 });
+test('global prompt template API exposes effective defaults, validates edits and rejects stale saves',async()=>{
+ const {request}=await fixture();const initial=await request('GET','/api/config/prompt-templates');expect(initial.statusCode).toBe(200);
+ const {current,defaults}=initial.json();expect(current.revision).toBe(0);expect(current.music).toBe(defaults.music);
+ const templates={music:'Music direction\n{{task_context}}',video:'Video direction\n{{task_context}}'};
+ const saved=await request('PUT','/api/config/prompt-templates',{revision:0,templates});expect(saved.statusCode).toBe(200);expect(saved.json()).toEqual({revision:1,...templates});
+ expect((await request('PUT','/api/config/prompt-templates',{revision:0,templates})).statusCode).toBe(409);
+ expect((await request('PUT','/api/config/prompt-templates',{revision:1,templates:{...templates,music:'missing context'}})).statusCode).toBe(400);
+ expect((await request('GET','/api/config/prompt-templates')).json().current).toEqual(saved.json());
+});
 test('provider checks/switches and global setup delegate to runtime, including all tools', async () => {
   const { request, runtime } = await fixture();
   expect((await request('POST', '/api/provider', { provider: 'claude' })).json().provider).toBe('claude');

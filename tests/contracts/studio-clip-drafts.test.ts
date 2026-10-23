@@ -91,7 +91,7 @@ test.each([2, 3])('schema %i to current adds empty drafts without modifying exis
   const original = Object.fromEntries(tables.map(t => [t, before.prepare(`SELECT * FROM ${t}`).all()])), meta = before.prepare('SELECT provider,selected_project FROM studio_meta').get();
   before.exec(`DROP TABLE IF EXISTS studio_clip_drafts; ${version === 2 ? 'DROP TABLE studio_events;' : ''} UPDATE studio_meta SET version=${version}`); before.close();
   const reopened = open(path), check = new Database(path, { readonly: true });
-  expect(check.prepare('SELECT version FROM studio_meta').get()).toEqual({ version: 8 }); expect(check.prepare('SELECT provider,selected_project FROM studio_meta').get()).toEqual(meta);
+  expect(check.prepare('SELECT version FROM studio_meta').get()).toEqual({ version: 9 }); expect(check.prepare('SELECT provider,selected_project FROM studio_meta').get()).toEqual(meta);
   for (const t of tables) expect(check.prepare(`SELECT * FROM ${t}`).all(), t).toEqual(original[t]); check.close();
   expect(reopened.project(p.id).clipDrafts).toEqual([{ projectId: p.id, songId: audio.id, revision: 0, clipPrompt: '', timingIntent: null }]);
   expect(reopened.project(p.id).events.filter(e => e.kind === 'clip_draft.saved')).toEqual([]);

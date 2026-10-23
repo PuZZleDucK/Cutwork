@@ -5,6 +5,19 @@ import { mkdtemp, mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { prepareVideoTask, runVideoTask, type VideoTaskDependencies } from '../../apps/server/src/studio/video.ts';
+test('video planner uses captured editable instructions while retaining exact native context',async()=>{
+ const f=await fixture();f.attempt.promptTemplate={revision:7,template:'CUSTOM VIDEO DIRECTION\n{{task_context}}'};
+ const p=await prepareVideoTask(f.options),plan=JSON.parse(await readFile(p.planPath,'utf8'));
+ expect(plan.launch.stdin).toMatch(/^CUSTOM VIDEO DIRECTION/);expect(plan.launch.stdin).toContain(f.attempt.input.clipPrompt);
+ expect(plan.launch.stdin).toContain('scripts/native-call.ts');expect(plan.launch.stdin).toContain(f.attempt.seeds.h3);
+ expect(plan.attempt.promptTemplate).toEqual(f.attempt.promptTemplate);
+});
+test('pre-template queued video keeps legacy instruction order',async()=>{
+ const f=await fixture();delete f.attempt.promptTemplate;
+ const p=await prepareVideoTask(f.options),plan=JSON.parse(await readFile(p.planPath,'utf8')),prompt=plan.launch.stdin as string;
+ expect(prompt.indexOf('Use the existing helper')).toBeLessThan(prompt.indexOf('Keep the complete original pre-encode'));
+ expect(plan.attempt).not.toHaveProperty('promptTemplate');
+});
 import type { StudioStore } from '../../apps/server/src/studio/store-contract.ts';
 import type { VideoAttempt } from '../../packages/core/src/contracts/studio.ts';
 import type { GpuCall, GpuQueue } from '../../apps/server/src/jobs/gpu-queue-contract.ts';

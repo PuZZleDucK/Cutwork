@@ -14,40 +14,38 @@ function render(placed:boolean,busy=false){
  const studio={busy,snapshot:{videoAttempts:[{id:'attempt',input:{startFrame:24}}],clips:[clip]},perform:vi.fn()} as unknown as ReturnType<typeof useStudio>;
  return renderToStaticMarkup(createElement(ClipEditControls,{studio,song,arrangement,clip,context,onContinue:vi.fn()}));
 }
-function visibleBeforeFineControls(html:string){
- const disclosure=html.indexOf('<details');
- expect(disclosure).toBeGreaterThan(0);
- return html.slice(0,disclosure);
-}
-
-test('restored unplaced edit exposes continuation and explicit placement without opening fine controls',()=>{
- const html=render(false),visible=visibleBeforeFineControls(html);
- expect(visible).toContain('UNPLACED');
- expect(visible).toContain('Source 6–75');
- expect(visible).toContain('29 → 99');
- expect(visible).toMatch(/<button[^>]*>Continue From End ↑<\/button>/);
- expect(visible).toMatch(/<button[^>]*>Place in sequence<\/button>/);
- expect(visible).not.toContain('disabled');
- expect(html).toMatch(/<details[^>]*><summary>Timing &amp; audio<\/summary>/);
- expect(html).toContain('Trim retained footage');
- expect(html).toContain('Move on song');
- expect(html).toContain('Use this clip’s audio instead of the song');
+test('restored unplaced edit exposes continuation, placement and all fine controls directly',()=>{
+ const html=render(false);
+ expect(html).toContain('UNPLACED');
+ expect(html).toMatch(/<button[^>]*>Continue From End ↑<\/button>/);
+ expect(html).toMatch(/<button[^>]*>Place in sequence<\/button>/);
+ expect(html).not.toContain('<details');
+ expect(html).not.toContain('<summary');
+ expect(html).toContain('aria-label="Trim start sourceFrames saved-edit"');
+ expect(html).toContain('aria-label="Trim end seconds saved-edit"');
+ expect(html).toContain('aria-label="Move start beats saved-edit"');
+ expect(html).toContain('Use clip audio');
+ expect(html).not.toContain('Visual priority');
+ expect(html).not.toContain('No overlapping clips.');
+ expect(html).not.toContain('realised timeline');
+ expect(html).not.toContain('EDIT saved-ed');
 });
 
-test('placed edit exposes continuation and removal while fine controls remain collapsed',()=>{
- const html=render(true),visible=visibleBeforeFineControls(html);
- expect(visible).toContain('IN SEQUENCE');
- expect(visible).toContain('Continue From End ↑');
- expect(visible).toContain('Remove from sequence');
- expect(visible).not.toContain('Place in sequence');
+test('placed edit exposes removal and inline timing fields without duplicate explanatory copy',()=>{
+ const html=render(true);
+ expect(html).toContain('IN SEQUENCE');
+ expect(html).toContain('Continue From End ↑');
+ expect(html).toContain('Remove from sequence');
+ expect(html).not.toContain('Place in sequence');
  expect(html.match(/Continue From End/g)).toHaveLength(1);
- expect(html).not.toMatch(/<details[^>]*\bopen/);
+ expect(html).not.toContain('<details');
+ expect(html).toContain('title="');
 });
 
-test.each([true,false])('busy studio disables both visible actions (placed=%s)',placed=>{
- const visible=visibleBeforeFineControls(render(placed,true));
- expect(visible).toMatch(/<button[^>]*disabled=""[^>]*>Continue From End ↑<\/button>/);
- expect(visible).toMatch(new RegExp(`<button[^>]*disabled=""[^>]*>${placed?'Remove from sequence':'Place in sequence'}<\\/button>`));
+test.each([true,false])('busy studio disables both direct actions (placed=%s)',placed=>{
+ const html=render(placed,true);
+ expect(html).toMatch(/<button[^>]*disabled=""[^>]*>Continue From End ↑<\/button>/);
+ expect(html).toMatch(new RegExp(`<button[^>]*disabled=""[^>]*>${placed?'Remove from sequence':'Place in sequence'}<\\/button>`));
 });
 
 test('the inspector root identifies its exact saved context and placed use',()=>{

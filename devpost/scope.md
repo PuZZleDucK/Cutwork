@@ -65,6 +65,8 @@ Each clip has its own Continue From End control, using that card's edit context 
 
 H3 and Yue2 are learner-named candidates, with ComfyUI and audio analysis also requested in the setup experience. Prototype inspection has identified YuE2 and MiniMax H3 integrations and verified existing 24 fps media, but this is not a fresh installation or end-to-end test of the new product. Exact pinned versions, installation units, practical 16 GB VRAM compatibility, provider/model availability and invocation, provider authentication, cancellation, full original-frame access/storage, seed handling, precise timing, and applicable code/model/output/font terms still require verification. Approval selects the product behaviour, not untested implementation claims. If investigation undermines the baseline, explicitly revisit scope/requirements rather than silently substituting tools or weakening promises.
 
+The 23 October refinement adds editable shared music/video agent templates and immediate browser preview with explicit export. It supersedes the render-first preview compromise without adding another generator or changing agent authority.
+
 ## Later
 
 The PRD approval supersedes the original broad deferrals where it explicitly brings bounded features into the prototype. The following remain deferred:
@@ -78,7 +80,7 @@ The PRD approval supersedes the original broad deferrals where it explicitly bri
 - **Pre-song intros, a general-purpose intro/outro editor, and broader non-music-video workflows.** Continued post-song generation is the explicit approved exception to the earlier deferral of all beyond-song timelines.
 - **Automatic LAN discovery, arbitrary toolchain configuration, additional agent providers/model selection, and a headless agent API.** The reversible two-provider agent selector is the bounded prototype exception, not a general tool catalogue.
 - **Workflow sharing, generation replay, and a deep creative-history editor.** Bounded expandable generation provenance is now required; undo/redo is not the generation-revision mechanism. Optional deletion of retained history remains later; confirmed media deletion does not erase its provenance.
-- **Dedicated licensing/about UI and specialised fast-preview versus high-quality-export modes.** Dependency terms still require investigation even without a licensing screen.
+- **Dedicated licensing/about UI and additional proxy/export quality modes.** Dependency terms still require investigation even without a licensing screen.
 - **Selectable gap background colours/images.** Uncovered intervals remain black for the prototype.
 
 These deferrals preserve the wider vision without contradicting the bounded controls now approved in the PRD.

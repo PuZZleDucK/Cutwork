@@ -84,3 +84,36 @@ test('beat selection continues to edit the requested endpoint, independently of 
  expect(props.draft.change).toHaveBeenCalledWith({...props.draft.intent,end:{unit:'rational',value:{numerator:'1',denominator:'1'}}});
  expect(props.onSelectClip).not.toHaveBeenCalled();
 });
+
+test('priority controls swap the exact adjacent overlapping placements, not draft timing',()=>{
+ const props=fixture(),onSwapPriority=vi.fn(),nodes=elements(VideoTimeline({...props,onSwapPriority}));
+ const move=nodes.find(n=>n.props['data-priority-placement-id']==='first'&&n.props['data-priority-above-id']==='overlap');
+ expect(move?.type).toBe('button');
+ expect(move?.props['aria-label']).toBe('Move Alpha shot above Beta shot');
+ expect(move?.props.title).toContain('through all their overlaps');
+ expect(move?.props.disabled).toBe(false);
+ (move?.props.onClick as ()=>void)();
+ expect(onSwapPriority).toHaveBeenCalledExactlyOnceWith('first','overlap');
+ expect(props.draft.change).not.toHaveBeenCalled();
+ expect(props.onSelectClip).not.toHaveBeenCalled();
+ expect(nodes.some(n=>n.props['data-priority-placement-id']==='later')).toBe(false);
+ expect(nodes.some(n=>n.props['data-priority-placement-id']==='reservation:pending')).toBe(false);
+});
+
+test('busy or missing priority callback cannot change overlap priority',()=>{
+ const props=fixture(),onSwapPriority=vi.fn();props.studio.busy=true;
+ const busy=elements(VideoTimeline({...props,onSwapPriority})).find(n=>n.props['data-priority-placement-id']==='first');
+ expect(busy?.props.disabled).toBe(true);(busy?.props.onClick as ()=>void)();
+ expect(onSwapPriority).not.toHaveBeenCalled();
+ props.studio.busy=false;
+ const missing=elements(VideoTimeline(props)).find(n=>n.props['data-priority-placement-id']==='first');
+ expect(missing?.props.disabled).toBe(true);
+});
+
+test('timeline rows show saved dominance rather than earliest-start order',()=>{
+ const props=fixture(),nodes=elements(VideoTimeline(props));
+ const pieces=nodes.filter(n=>n.props['data-segment-start']!==undefined);
+ const overlap=pieces.filter(n=>n.props['data-segment-start']===24);
+ expect(overlap.map(n=>[n.props['data-segment-placement'],n.props['data-segment-lane']])).toEqual([['overlap',0],['first',1]]);
+ expect(pieces.find(n=>n.props['data-segment-placement']==='later')?.props['data-segment-lane']).toBe(0);
+});

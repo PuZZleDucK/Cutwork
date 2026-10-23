@@ -380,6 +380,8 @@ The next work is the prepared real-model lane verification; no slice/G4 gate is 
 
 ## Final Review
 
+- [ ] Second workspace refinement: navbar/project/notification layout, persistent guided tabs, editable captured agent templates, live preview, compact clip cards and sequence-only priority. Explicitly requested; implementation and verification tracked in `workbench-round-two.md`.
+
 - [ ] 23 October requested refinement: replace inefficient card layout with a dense workspace and make continuation/restored placement plainly reachable. Implementation and browser checks are recorded in `workbench-feedback.md`. The learner's visual response is positive ("that's looking a lot better"); final hands-on functional review remains open, not inferred from visual approval.
 
 - [ ] Final review complete — feedback resolved and learner confirms ready to ship

@@ -1,3 +1,4 @@
+import {DEFAULT_AGENT_TEMPLATES,renderAgentTemplate} from '../../../../packages/core/src/contracts/prompt-templates.ts';
 import assert from 'node:assert/strict';
 import {captureExecutionSource,fileHash,verifyExecutionSource,type ExecutionSource} from './execution-snapshot.ts';
 import {settleCancellation} from './cancellation.ts';
@@ -17,7 +18,7 @@ interface MusicOptions { runtime: string; source: string; origin: string; attemp
 interface RunOptions extends MusicOptions { store: StudioStore; queue: GpuQueue; signal?: AbortSignal }
 export interface MusicTaskDependencies { provider?: typeof runProvider; execute?: SetupExecutor }
 interface Guidance { name: string; sourcePath: string; sha256: string; text: string }
-type CapturedAttempt = Pick<MusicAttempt, 'id' | 'nativeCallId' | 'projectId' | 'provider' | 'model' | 'input' | 'seeds'>;
+type CapturedAttempt = Pick<MusicAttempt, 'id' | 'nativeCallId' | 'projectId' | 'provider' | 'model' | 'input' | 'seeds' | 'promptTemplate'>;
 export interface MusicPlan {
   executionSource?: ExecutionSource; replayCall?: ReplayCall;
   schemaVersion: 1; runtime: string; source: string; origin: string; attempt: CapturedAttempt;
@@ -34,7 +35,7 @@ const record = (v: unknown): RecordValue => { assert.ok(v && typeof v === 'objec
 // capture only music inputs, without mutating that historical attempt.
 const captured = (a: MusicAttempt): CapturedAttempt => structuredClone({ id: a.id, nativeCallId: a.nativeCallId,
   projectId: a.projectId, provider: a.provider, model: a.model,
-  input: { musicPrompt: a.input.musicPrompt, lyrics: a.input.lyrics }, seeds: a.seeds });
+  input: { musicPrompt: a.input.musicPrompt, lyrics: a.input.lyrics }, seeds: a.seeds, ...(a.promptTemplate?{promptTemplate:a.promptTemplate}:{}) });
 const pendingAnalysis = (): SongAnalysis => ({ state: 'pending', estimatedBpm: null, sampleIndices: [], waveformBucketSamples: 0, peaks: [], error: null, version: null });
 function validateOptions({ runtime, source, origin, attempt }: MusicOptions) {
   assert.ok(isAbsolute(runtime) && isAbsolute(source), 'Absolute runtime and source paths required');
@@ -99,6 +100,19 @@ export async function prepareMusicTask(options: MusicOptions): Promise<{ planPat
     return { name, sourcePath, text: bytes.toString('utf8'), sha256: hash(bytes) };
   }));
   const nativeClient = [join(runtime, `tools/runtime/node-v${node.version}-linux-x64/bin/node`), join(source, 'scripts/native-call.ts'), origin, attempt.projectId, attempt.id, 'yue2', paths.agentRequest].map(quote).join(' ');
+  launch.stdin = renderAgentTemplate(attempt.promptTemplate?.template??DEFAULT_AGENT_TEMPLATES.music, [
+    `Project: ${attempt.projectId}\nParent attempt: ${attempt.id}\nCaptured native YuE2 call ID: ${attempt.nativeCallId}\nProvider/model: ${attempt.provider}/${attempt.model}`,
+    `Music description:\n${attempt.input.musicPrompt}\n\nOptional user lyrics (preserve supplied words):\n${attempt.input.lyrics}`,
+    `Integration source: ${source}\nSTUDIO_DATA_ROOT: ${runtime}\nWorkspace: ${launch.cwd}\nRun directory: ${launch.runDirectory}`,
+    `Assigned exact decimal stage seeds: ${JSON.stringify(attempt.seeds)}. With generated planning use abc, semantic and nar; with a supplied score/planning off use semantic and nar. Do not allocate replacements or round seeds.`,
+    `Write the native request to ${paths.agentRequest}. It must have schemaVersion:1 and attemptId:${attempt.nativeCallId}. Submit it through the running studio coordinator using:\n${nativeClient}\nThe server captures the exact request and writes ${paths.nativeReceipt}. Save client output and inspect the actual receipt and stage artifacts.`,
+    'This cooperative helper registers native work with the shared GPU queue. It waits for owned process and CUDA release; a helper receipt alone is insufficient. Wait for client state succeeded. If failed, cancelled or reconciling, retain the evidence and explain; do not bypass a held lease or stop unrelated applications.',
+    ...guidance.map(g => `Product guidance ${g.sourcePath}; SHA256 ${g.sha256}:\n\n${g.text}`),
+  ].join('\n\n'));
+
+  // Historical queued requests predate editable templates. Keep their original
+  // prompt wording and order rather than applying a later global configuration.
+  if (!attempt.promptTemplate) {
   launch.stdin = [
     'Create one fresh song candidate for this music-only studio task. Perform the tool work, not merely propose a plan. No automatic variations or silent retries are requested.',
     'Use your normal capabilities, tools, research, relevant project context, scripts and score editing. The project workspace organises artifacts; it is not a filesystem sandbox. Reply naturally; no JSON answer schema is required.',
@@ -113,6 +127,7 @@ export async function prepareMusicTask(options: MusicOptions): Promise<{ planPat
     'Keep the original 48 kHz stereo float WAV. The studio independently validates and analyses it. This task does not request video generation, export, normalization or audio replacement. Report output paths, assumptions, failures and whether you actually listened. A natural-language success claim is not a validation result.',
     ...guidance.map(g => `Product guidance ${g.sourcePath}; SHA256 ${g.sha256}:\n\n${g.text}`),
   ].join('\n\n');
+  }
   const plan: MusicPlan = { schemaVersion: 1, runtime, source, origin, attempt: captured(attempt), guidance, launch, paths,
     helperSha256: await shaFile(join(source, 'integrations/yue2/generate.py')), modelManifestSha256: await shaFile(join(source, 'integrations/yue2/models.json')) };
   await mkdir(join(runtime, 'projects', attempt.projectId, 'inputs'), { recursive: true, mode: 0o700 });

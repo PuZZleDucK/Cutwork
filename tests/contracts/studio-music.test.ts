@@ -12,6 +12,24 @@ import type { GpuCall, GpuQueue, Json } from '../../apps/server/src/jobs/gpu-que
 const dirs:string[]=[], stores:StudioStore[]=[];
 afterEach(async()=>{for(const s of stores.splice(0))s.close();for(const d of dirs.splice(0))await rm(d,{recursive:true,force:true});});
 const hash=(value:string|Buffer)=>createHash('sha256').update(value).digest('hex');
+test('music planner uses the template accepted with the attempt, not later config edits',async()=>{
+ const f=await fixture();const settings=f.store.promptTemplates();
+ f.store.savePromptTemplates(settings.revision,{video:settings.video,music:'CUSTOM MUSIC DIRECTION\n{{task_context}}'});
+ const attempt=f.store.submitMusic(f.attempt.projectId,randomUUID(),f.attempt.input);
+ f.store.savePromptTemplates(settings.revision+1,{music:'LATER MUSIC\n{{task_context}}',video:settings.video});
+ const p=await prepareMusicTask({...f.options,attempt}),plan=JSON.parse(await readFile(p.planPath,'utf8'));
+ expect(plan.launch.stdin).toMatch(/^CUSTOM MUSIC DIRECTION/);expect(plan.launch.stdin).not.toContain('LATER MUSIC');
+ expect(plan.launch.stdin).toContain(attempt.input.musicPrompt);expect(plan.launch.stdin).toContain('scripts/native-call.ts');
+ expect(plan.attempt.promptTemplate).toEqual(attempt.promptTemplate);
+});
+test('pre-template queued music keeps legacy instruction order even when global templates change',async()=>{
+ const f=await fixture();delete f.attempt.promptTemplate;
+ f.store.savePromptTemplates(0,{music:'NEW MUSIC {{task_context}}',video:'NEW VIDEO {{task_context}}'});
+ const p=await prepareMusicTask(f.options),plan=JSON.parse(await readFile(p.planPath,'utf8')),prompt=plan.launch.stdin as string;
+ expect(prompt.indexOf('Music description:')).toBeLessThan(prompt.indexOf('Translate the creative brief'));
+ expect(prompt.indexOf('This cooperative helper')).toBeLessThan(prompt.indexOf('Do not use the earlier 500-token'));
+ expect(plan.attempt).not.toHaveProperty('promptTemplate');expect(prompt).not.toContain('NEW MUSIC');
+});
 async function save(path:string,value:unknown){await mkdir(join(path,'..'),{recursive:true});await writeFile(path,JSON.stringify(value,null,2)+'\n');}
 async function fixture(){
  const base=await mkdtemp(join(tmpdir(),'studio-music-'));dirs.push(base);const runtime=join(base,'runtime'),source=join(base,'source'),origin='http://127.0.0.1:9122';

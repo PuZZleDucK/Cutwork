@@ -1,4 +1,5 @@
 import type { FastifyInstance } from 'fastify';
+import {DEFAULT_AGENT_TEMPLATES,PROMPT_TEMPLATE_MAX_LENGTH,type AgentPromptTemplates} from '../../../../packages/core/src/contracts/prompt-templates.ts';
 import fastifyStatic from '@fastify/static';
 import { isAbsolute, resolve } from 'node:path';
 import { StudioStoreError } from './store.ts';
@@ -82,6 +83,10 @@ export async function registerStudioApi(app: FastifyInstance, { store, runtime, 
       api.post<{Params:{debugId:string}}>('/api/debug/:debugId/cancel',{schema:{params:debugParams,body:empty,querystring:empty}},request=>debug.cancel(request.params.debugId));
     }
     api.get('/api/studio', { schema: { querystring: empty } }, () => runtime.overview());
+    api.get('/api/config/prompt-templates',{schema:{querystring:empty}},()=>({current:store.promptTemplates(),defaults:DEFAULT_AGENT_TEMPLATES}));
+    api.put<{Body:{revision:number;templates:AgentPromptTemplates}}>('/api/config/prompt-templates',{
+      schema:{querystring:empty,body:plain({revision,templates:plain({music:{type:'string',minLength:1,maxLength:PROMPT_TEMPLATE_MAX_LENGTH},video:{type:'string',minLength:1,maxLength:PROMPT_TEMPLATE_MAX_LENGTH}})})},
+    },request=>store.savePromptTemplates(request.body.revision,request.body.templates));
     api.post<{ Body: { name: string } }>('/api/projects', { schema: { body: plain({ name: { type: 'string', minLength: 1, maxLength: 120 } }), querystring: empty } },
       (request, reply) => reply.code(201).send(store.createProject(request.body.name)));
     api.get<{ Params: { id: string } }>('/api/projects/:id', { schema: { params: projectParams, querystring: empty } }, request => store.project(request.params.id));

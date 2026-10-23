@@ -23,3 +23,14 @@ test('an existing soundtrack opens video editing and retains the music form moun
 test('project navigation offers a compact selector with status instead of consuming a permanent sidebar',()=>{
  const html=fixture();expect(html).toContain('aria-label="Current project"');expect(html).toContain('Workshop');expect(html).toContain('New project');expect(html).not.toContain('Make something');
 });
+test('project selector and notifications live in the navbar, tabs precede title, music shortcut is absent',()=>{
+ const html=fixture(true),header=html.slice(html.indexOf('<header'),html.indexOf('</header>'));
+ expect(header).toContain('id="current-project"');expect(header).toContain('aria-label="Notifications"');
+ expect(header.indexOf('Shared tool status')).toBeLessThan(header.indexOf('aria-label="Notifications"'));
+ expect(html.indexOf('aria-label="Project workspace"')).toBeLessThan(html.indexOf('<h1>Workshop'));
+ expect(html).not.toContain('Music &amp; lyrics');expect(html).toContain('0:10 · 120.0 BPM · Original soundtrack');
+});
+test('hazard guidance highlights music first, then video without selecting a different tab',()=>{
+ expect(fixture()).toMatch(/id="workspace-tab-music"[^>]*class="[^"]*needs-attention/);
+ expect(fixture(true)).toMatch(/id="workspace-tab-video"[^>]*class="[^"]*needs-attention/);
+});

@@ -21,6 +21,8 @@ export interface RenderOutputInput extends RegisteredAssetInput { frameCount: nu
 export interface RestoreAttemptInput { projectRevision: number; clipDraftRevision?: number }
 export interface RestoreAttemptResult { project: StudioProject; draft: ClipDraft | null; attempt: StudioAttempt }
 export interface StudioStore {
+  promptTemplates(): import('../../../../packages/core/src/contracts/prompt-templates.ts').PromptTemplateSettings;
+  savePromptTemplates(revision:number,templates:import('../../../../packages/core/src/contracts/prompt-templates.ts').AgentPromptTemplates):import('../../../../packages/core/src/contracts/prompt-templates.ts').PromptTemplateSettings;
   close(): void;
   lifecycle(projectId: string, artifact: ArtifactRef): ArtifactLifecycle;
   assertArtifactAvailable(projectId: string, artifact: ArtifactRef, options?: { allowArchived?: boolean }): void;

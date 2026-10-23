@@ -27,11 +27,15 @@ function nativeFailureDetail(call:{error:string|null;result:Json;release:Json}):
 /** Rewrite execution addresses only; literal creative text and guidance are not templates. */
 function reboundPrompt(original:Record<string,any>,parent:StudioAttempt,replacements:[string,string][]):string{
  let prompt=String(original.launch.stdin);const protectedParts=new Map<string,string>();
+ const [prefix='',suffix='']=parent.promptTemplate?.template.split('{{task_context}}')??['',''];
+ // Template literals occupy the outer edges, never arbitrary matching text in
+ // the runtime body. Even a one-letter prefix must not hide execution addresses.
+ if(parent.promptTemplate){assert.ok(prompt.startsWith(prefix)&&prompt.endsWith(suffix),'Captured prompt no longer matches its template');prompt=prompt.slice(prefix.length,prompt.length-suffix.length);}
  const input=parent.input,block='song' in parent?`Persistent VISUAL style:\n${parent.input.style}\n\nIndividual clip brief:\n${parent.input.clipPrompt}`:`Music description:\n${(input as {musicPrompt:string}).musicPrompt}\n\nOptional user lyrics (preserve supplied words):\n${(input as {lyrics:string}).lyrics}`;
  const blocks=[block,...(Array.isArray(original.guidance)?original.guidance.map((g:{sourcePath:string;sha256:string;text:string})=>`Product guidance ${g.sourcePath}; SHA256 ${g.sha256}:\n\n${g.text}`):[])];
  for(const text of blocks){if(!prompt.includes(text))continue;const token=`__STUDIO_LITERAL_${randomUUID()}__`;protectedParts.set(token,text);prompt=prompt.replaceAll(text,token);}
  for(const[from,to]of replacements){assert.ok(from);prompt=prompt.replaceAll(from,to);}
- for(const[token,text]of protectedParts)prompt=prompt.replaceAll(token,text);return prompt;
+ for(const[token,text]of protectedParts)prompt=prompt.replaceAll(token,text);return prefix+prompt+suffix;
 }
 export async function runReplayCall(o:{plan:ReplayCall;attempt:StudioAttempt;queue:GpuQueue;signal?:AbortSignal;timeoutMs?:number}):Promise<void>{
  o.signal?.throwIfAborted();assert.equal(digest(o.plan.request),o.plan.requestSha256,'Resolved replay request changed');
@@ -42,7 +46,7 @@ export async function runReplayCall(o:{plan:ReplayCall;attempt:StudioAttempt;que
 /** Caller already allocated a linked attempt with original parameters/seeds. */
 export async function prepareRecoveryTask(o:{runtime:string;origin:string;attempt:StudioAttempt;parent:StudioAttempt;queue:GpuQueue}):Promise<{planPath:string;planSha256:string;nativeReplayRequest?:Json;nativeRecoverySong?:{path:string;sha256:string}}>{
  const {runtime,attempt,parent,queue,origin}=o;
- assert.equal(attempt.projectId,parent.projectId);assert.deepEqual(attempt.input,parent.input);assert.deepEqual(attempt.seeds,parent.seeds);assert.equal(attempt.provider,parent.provider);assert.equal(attempt.model,parent.model);
+ assert.equal(attempt.projectId,parent.projectId);assert.deepEqual(attempt.input,parent.input);assert.deepEqual(attempt.seeds,parent.seeds);assert.equal(attempt.provider,parent.provider);assert.equal(attempt.model,parent.model);assert.deepEqual(attempt.promptTemplate,parent.promptTemplate);
  assert.ok(typeof parent.details.planPath==='string'&&typeof parent.details.planSha256==='string','Exact recovery unavailable: original captured task/hash missing');
  assert.equal(await fileHash(parent.details.planPath),parent.details.planSha256,'Original captured task changed');assert.ok((await stat(parent.details.planPath)).size<=4_000_000);
  const original=record(JSON.parse(await readFile(parent.details.planPath,'utf8')));assert.equal(original.attempt.id,parent.id);assert.equal(original.attempt.nativeCallId,parent.nativeCallId);assert.equal(original.runtime,runtime);

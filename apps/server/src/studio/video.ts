@@ -1,3 +1,4 @@
+import {DEFAULT_AGENT_TEMPLATES,renderAgentTemplate} from '../../../../packages/core/src/contracts/prompt-templates.ts';
 import assert from 'node:assert/strict';
 import {captureExecutionSource,captureReplayFile,fileHash,verifyExecutionSource,type ExecutionSource,type ReplayFile} from './execution-snapshot.ts';
 import {settleCancellation} from './cancellation.ts';
@@ -19,7 +20,7 @@ interface VideoOptions { runtime:string; source:string; origin:string; attempt:V
 interface RunOptions extends VideoOptions { queue:GpuQueue; signal?:AbortSignal }
 export interface VideoTaskDependencies { provider?:typeof runProvider; execute?:SetupExecutor }
 type Rec=Record<string,unknown>;
-type CapturedAttempt=Pick<VideoAttempt,'id'|'nativeCallId'|'projectId'|'provider'|'model'|'input'|'seeds'|'song'|'continuation'>;
+type CapturedAttempt=Pick<VideoAttempt,'id'|'nativeCallId'|'projectId'|'provider'|'model'|'input'|'seeds'|'song'|'continuation'|'promptTemplate'>;
 export interface TaskPlan {
  executionSource?:ExecutionSource; replaySong?:ReplayFile; replayCall?:ReplayCall;
  schemaVersion:1; runtime:string; source:string; origin:string; attempt:CapturedAttempt; nativePlan:VideoPlan;
@@ -35,7 +36,7 @@ const hash=(b:Buffer|string)=>createHash('sha256').update(b).digest('hex');
 const record=(v:unknown):Rec=>{assert.ok(v&&typeof v==='object'&&!Array.isArray(v),'Expected evidence object');return v as Rec;};
 const message=(e:unknown)=>(e instanceof Error?e.message:String(e)).slice(0,12000);
 const quote=(v:string)=>`'${v.replaceAll("'","'\\''")}'`;
-const captured=(a:VideoAttempt):CapturedAttempt=>structuredClone({id:a.id,nativeCallId:a.nativeCallId,projectId:a.projectId,provider:a.provider,model:a.model,input:a.input,seeds:a.seeds,song:a.song,...(a.continuation?{continuation:a.continuation}:{})});
+const captured=(a:VideoAttempt):CapturedAttempt=>structuredClone({id:a.id,nativeCallId:a.nativeCallId,projectId:a.projectId,provider:a.provider,model:a.model,input:a.input,seeds:a.seeds,song:a.song,...(a.promptTemplate?{promptTemplate:a.promptTemplate}:{}),...(a.continuation?{continuation:a.continuation}:{})});
 function parse(text:string):unknown{return JSON.parse(text,(_k,v:unknown,c?:{source?:string})=>{if(typeof v==='number'&&Number.isInteger(v)&&!Number.isSafeInteger(v)){assert.ok(c?.source,'Node 24 lossless native JSON parsing required');return c.source;}return v;});}
 async function json(path:string,max=16_000_000){assert.ok((await stat(path)).size<=max,'Evidence exceeds reader bound');return record(parse(await readFile(path,'utf8')));}
 async function sha(path:string,signal?:AbortSignal){signal?.throwIfAborted();const h=createHash('sha256');for await(const b of createReadStream(path,{signal:signal?AbortSignal.any([signal,AbortSignal.timeout(300000)]):AbortSignal.timeout(300000)}))h.update(b);return h.digest('hex');}
@@ -103,6 +104,21 @@ export async function prepareVideoTask(o:VideoOptions,deps:Pick<VideoTaskDepende
  const storedSong=store.project(attempt.projectId).songs.find(s=>s.id===attempt.song.id);assert.ok(storedSong,'Captured song is missing');
  const beats=storedSong.analysis.sampleIndices.map((s,i)=>({beat:i+1,sample:s,relativeSamples:(BigInt(s)-BigInt(nativePlan.conditioning.startSample)).toString()})).filter(b=>BigInt(b.relativeSamples)>=0n&&BigInt(b.relativeSamples)<BigInt(nativePlan.conditioning.totalSamples));
  const command=[join(runtime,`tools/runtime/node-v${record(pins.node).version}-linux-x64/bin/node`),join(source,'scripts/native-call.ts'),origin,attempt.projectId,attempt.id,'h3',paths.agentRequest].map(quote).join(' ');
+ launch.stdin=renderAgentTemplate(attempt.promptTemplate?.template??DEFAULT_AGENT_TEMPLATES.video,[
+  `Project ${attempt.projectId}; parent attempt ${attempt.id}; native H3 call ${attempt.nativeCallId}; captured song ${attempt.song.id}.`,
+  `Persistent VISUAL style:\n${attempt.input.style}\n\nIndividual clip brief:\n${attempt.input.clipPrompt}`,
+  `Requested interval is [${attempt.input.startFrame}, ${attempt.input.endFrame}) at exactly 24 fps (${nativePlan.requestedFrames} frames). Native generation is ${nativePlan.nativeFrames} frames, beginning at the same start. Preserve all original frames; initial placement includes only the ${nativePlan.requestedFrames} requested frames. Do not stretch or retime. Durations over 15 seconds are advisory warnings, not a cap.`,
+  ...(firstFrame?[`Continue from the selected last retained original PNG: ${firstFrame.path}; source frame ${attempt.continuation!.frame.index+1}, SHA256 ${firstFrame.sha256}. Inspect this supplied image with your normal tools and preserve its visual continuity. It is the first-frame input, not a replacement for the captured song audio. Do not use an MP4 extraction or the discarded untrimmed ending. The user may edit prepared times; the immutable interval below is authoritative. No seamless-motion guarantee or automatic chain is requested.`]:[]),
+  `Captured beat anchors inside the native interval: ${JSON.stringify(beats)}. Exact relative event time is relativeSamples / 48000 seconds. These are analysis estimates, not guaranteed visual alignment; do not invent beat data.`,
+  `Create ${paths.agentRequest} using these immutable native inputs, adding your translated tool prompt in the native "prompt" field:\n${JSON.stringify(nativeTemplate,null,2)}\nThe helper conditions every native frame with the matching original song samples and pads only beyond the actual song. Do not replace the song, borrow the current UI selection, generate a new song or use the two-second proof convenience builder.`,
+  `Use the existing helper through the running queue:\n${command}\nIt captures the actual tool request and owns only its own Comfy service. Wait for client state succeeded and inspect ${paths.nativeReceipt}. Never bypass a held lease or stop another application. If failed or uncertain, retain the evidence and explain.`,
+  `Source ${source}; STUDIO_DATA_ROOT ${runtime}; workspace ${launch.cwd}; run directory ${launch.runDirectory}. Exact assigned H3 seed is the decimal string ${attempt.seeds.h3}; never round it through a JavaScript Number or allocate a replacement.`,
+  ...guidance.map(g=>`Product guidance ${g.sourcePath}; SHA256 ${g.sha256}:\n\n${g.text}`),
+ ].join('\n\n'));
+
+  // Historical queued requests predate editable templates. Keep their original
+  // prompt wording and order rather than applying a later global configuration.
+  if (!attempt.promptTemplate) {
  launch.stdin=[
   'Create one fresh video clip for this captured music-video task. Perform the actual tool work; no automatic variations or silent expensive retries.',
   'Use your normal capabilities, tools, research, scripts and relevant project context. The workspace organises artifacts, not a filesystem sandbox. Reply naturally; no JSON answer format is required.',
@@ -117,6 +133,7 @@ export async function prepareVideoTask(o:VideoOptions,deps:Pick<VideoTaskDepende
   'Keep the complete original pre-encode PNG batch, encoded video, and generated native audio. No frame-rate conversion, trimming of preserved originals, export, fades, mastering or audio mixing is requested. State actual outputs, assumptions and what you reviewed; prose is not proof of success.',
   ...guidance.map(g=>`Product guidance ${g.sourcePath}; SHA256 ${g.sha256}:\n\n${g.text}`),
  ].join('\n\n');
+  }
  const plan:TaskPlan={schemaVersion:1,runtime,source,origin,attempt:captured(attempt),nativePlan,song,launch,...(firstFrame?{firstFrame,firstFrameSource:firstFrameSource!}:{}),guidance,sourceHashes,verifiedModels,modelManifestSha256:await sha(join(source,'integrations/h3/models.json')),recipeSha256:await sha(join(source,'integrations/comfyui/recipe.json')),lockSha256:await sha(join(source,'integrations/comfyui/requirements.lock')),sourceRevision:String(record(recipe.source).revision),paths};
  plan.executionSource=await captureExecutionSource(source,join(paths.planPath,'..','execution-source'),'h3');
  for(const [name,expected] of Object.entries(plan.sourceHashes))assert.equal(await fileHash(join(plan.executionSource.root,'integrations/h3',name)),expected,'Helper changed during capture');

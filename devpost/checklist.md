@@ -11,6 +11,18 @@ The scope, PRD and technical specification are approved. The learner approved th
 
 ## Latest fast-mode verification index
 
+**24 October recorded newcomer journey completed:** fresh application runtime,
+isolated Python environments and real model downloads, followed by Night Shift
+Garden: original song, eight successful video generations, seven placed clips,
+five continuations, overlap priority, trim/move, archive/restore/deletion and a
+verified 28-second export. The complete 4h18m30s raw recording is retained locally.
+A real LAN HTTP deletion bug was fixed in `df08ce5`; **1,425 tests**, typecheck/build
+and actual deletion retry pass. TTS restored; personal ComfyUI unchanged.
+See [recorded-fresh-install.md](recorded-fresh-install.md) for evidence and limits.
+Slice 9 remains unchecked for final learner review/wrap-up and the remaining
+explicit verification boundaries, not because model downloads are still running.
+The entries below are historical checkpoints, not the current runtime inventory.
+
 **Cutwork branding deployed:** final name, original hazard-striped clapperboard
 mark/favicon, and button styling for formerly link-like actions. **1,424 tests
 in 101 files**, typecheck/build and actual browser checks pass. Web-only deployment

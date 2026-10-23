@@ -20,7 +20,8 @@ async function identityStillPresent(owner: Owner): Promise<boolean> {
     const actual = await observeProcess(owner.pid);
     return actual.start === owner.start && actual.boot === owner.boot && actual.group === owner.group;
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return false;
+    // Linux can report ESRCH when /proc vanishes between open and read.
+    if (['ENOENT', 'ESRCH'].includes((error as NodeJS.ErrnoException).code ?? '')) return false;
     throw error;
   }
 }
@@ -32,7 +33,8 @@ async function executing(owner: Owner): Promise<boolean> {
     const stat = await readFile(`/proc/${owner.pid}/stat`, 'utf8');
     return stat.slice(stat.lastIndexOf(')') + 2).split(/\s+/)[0] !== 'Z';
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return false;
+    // Linux can report ESRCH when /proc vanishes between open and read.
+    if (['ENOENT', 'ESRCH'].includes((error as NodeJS.ErrnoException).code ?? '')) return false;
     throw error;
   }
 }

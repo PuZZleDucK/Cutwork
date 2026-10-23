@@ -1,4 +1,5 @@
 import type { Provider } from './generation.ts';
+import type { ClipTimingIntent } from '../time/linked-timing.ts';
 export type { Provider };
 export type ToolId = 'agent' | 'yue2' | 'comfyui' | 'h3' | 'analysis';
 export type ToolState = 'missing' | 'checking' | 'queued' | 'installing' | 'ready' | 'error' | 'reconciling';
@@ -40,7 +41,7 @@ export interface StudioSong {
 }
 export interface ProjectSnapshot {
   project: StudioProject; songs: StudioSong[]; attempts: MusicAttempt[]; videoAttempts: VideoAttempt[];
-  clips: StudioClip[]; arrangements: SongArrangement[]; reservations: VideoReservation[]; renders: StudioRender[];
+  clips: StudioClip[]; arrangements: SongArrangement[]; reservations: VideoReservation[]; renders: StudioRender[]; events: ProjectEvent[];
 }
 export interface StudioOverview {
   projects: ProjectSummary[]; selectedProjectId: string | null;
@@ -55,6 +56,7 @@ export interface SetupJob {
 export interface VideoInput {
   songId: string; clipPrompt: string; style: string; startFrame: number; endFrame: number;
   requestedIntervalSeconds?: { start: string; end: string };
+  timingIntent?: ClipTimingIntent;
 }
 export interface VideoAttempt {
   id: string; nativeCallId: string; projectId: string; sequence: number;
@@ -62,6 +64,7 @@ export interface VideoAttempt {
   provider: Provider; model: string; input: VideoInput; seeds: { h3: string };
   song: Pick<StudioSong, 'id' | 'assetId' | 'sha256' | 'sampleCount' | 'sampleRate' | 'channels'>;
   stage: string; error: string | null; clipId: string | null; details: Record<string, unknown>;
+  timingResolution?: { startSeconds: { numerator: string; denominator: string }; endSeconds: { numerator: string; denominator: string } };
 }
 export interface RawClipFrame { index: number; assetId: string; sha256: string; pixelSha256: string; bytes: number }
 export interface StudioClip {
@@ -80,4 +83,11 @@ export interface StudioRender {
   id: string; projectId: string; songId: string; revision: number; createdAt: string; updatedAt: string;
   state: RenderState; stage: string; error: string | null; snapshot: RenderSnapshot; snapshotHash: string;
   assetId: string | null; sha256: string | null; frameCount: number | null; planHash: string | null; details: Record<string, unknown>;
+}
+
+/** New committed operations only; migrations never invent unrecorded historical edits. */
+export type ProjectEventKind = 'project.created' | 'project.selected' | 'draft.saved' | 'style.changed' | 'song.selected'
+  | 'placement.added' | 'placement.moved' | 'placement.removed' | 'analysis.updated' | 'render.reused' | 'render.cache_invalidated';
+export interface ProjectEvent {
+  id: string; projectId: string; sequence: number; createdAt: string; kind: ProjectEventKind; data: Record<string, unknown>;
 }

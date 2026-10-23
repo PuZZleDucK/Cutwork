@@ -562,3 +562,28 @@ Exact generator/environment/model pins, practical 16 GB behaviour, cancellation 
 The learner initially expected configurable video fps and wondered whether raw VAE frames and per-job cancellation could be exposed. Inspection separated desired behaviour from native capabilities: 24 fps was explicitly adopted; saving the decoded batch and targeted Comfy cancellation have source-level support, but quantised PNGs are not floating-point tensor dumps and interruption requests are not measured stopping. Native frame counts remain the clearest example of a spec decision that needs both learner review and a real contract test.
 
 **Approval and handoff:** the learner approved the complete revised blueprint with "perfect, all sounds great" on 21 October 2026, including P9. Earlier proposals are accepted or explicitly replaced as above. `4-spec` is complete; the next stage is `5-build`, preserving test review before feature implementation. Extra Librosa capabilities are informational, not added requirements. No application implementation, Dundee installation, generation or repair agent has been launched during planning.
+
+### Integrated creative-loop implementation refinement (23 October 2026)
+
+Generation timing is pulled forward into the creative-loop UI. Each endpoint
+retains its last typed unit/string, or exact seconds as serialized integer
+numerator/denominator for a clicked sample-time boundary. Server validation
+re-resolves against the captured song analysis and verifies floor-start/ceil-end
+frame bounds; immutable attempt metadata records the resolved rational seconds.
+Approximate repeating displays never become authoritative through focus or
+polling. Invalid/incomplete entry is retained for correction, not auto-coerced.
+
+Sequence markers support keyboard buttons and pointer selection. Pointer
+coordinates choose a nearest measured beat (or exact zero/song-end boundary);
+post-song beats extrapolate the established beat map. The end selector is the
+default. Draft highlight is separate from placed/reserved interval-graph lanes:
+stable start/end/id sorting and first available lane reuse yield minimum rows.
+Coverage still uses only included placements. No timeline edit implicitly
+starts generation.
+
+Schema 3 adds an append-only project event ledger without rewriting legacy
+attempts or fabricating past style edits. A single UI timeline merges recorded
+project events with existing generation/render submission and terminal records.
+Video source changes initialize playback to unmuted volume 0.5 once, not on
+polling rerenders; encoding/mixing inputs are unaffected. Navbar order is a
+presentation rule, separate from installation dependency order.

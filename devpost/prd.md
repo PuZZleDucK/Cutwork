@@ -733,3 +733,21 @@ Installation and generation continuity during page reloads is required, but reco
 Verify cancellation of queued and running generations against the actual tools, including how to establish that execution has stopped, avoid unintended cancellation of unrelated work, and handle completion arriving at the same time as cancellation. Do not equate hiding a placeholder with stopping computation, promise a verified stop latency without evidence, or silently weaken the learner's immediate-stop requirement. Return to the product decision if an integration cannot support it.
 
 Verify exact tool identities/versions, the need for ComfyUI, the audio-analysis component required for beat timing, Ubuntu/GPU feasibility, realistic durations and export properties, agent-runner integration, credential handling, and applicable code/model/output terms. Verify the practical beat-timing method and its limits, including beat-grid origin, irregular or uncertain timing, and deriving the duration of a full final window beyond the available audio; do not claim analysis accuracy without checking it. Verify the adaptive 8/4/2/1-beat presets and their exact 50/16/8/4 BPM boundary cases, including gap filling, off-beat continuation, and a request extending past its song-audio input. Verify real short-clip support and native frame-count constraints without imposing the published four-second lower bound as a blanket product minimum. Requests above 15 seconds must remain warning-only at the product layer; distinguish actual backend limits from inherited wrapper guards and report failures truthfully rather than silently shortening, splitting, stretching, or claiming guaranteed support. Specifically verify the learner-reported H3 song-audio input and mixed-output behaviour, including reproduction fidelity and timing alignment; do not assume its output contains a sample-identical copy of the supplied song. These are investigation tasks, not claims made by the PRD. If findings change a product promise, return to the scope/PRD rather than silently substituting a different experience.
+
+### Integrated creative-loop feedback (23 October 2026)
+
+The shared navbar places Audio analysis immediately after YuE2. Generation
+start/end controls expose linked frames, beats and seconds; clicking a waveform
+or beat marker changes the end by default, with an explicit option to change
+the start. Existing exact containing-frame conventions still apply. An inverted
+selection is explained, not silently swapped. The proposed next shot appears as
+a distinct sequence highlight, excluded from coverage until successfully made.
+Placed and reserved intervals reuse the first available lane; simultaneous
+overlap, not clip count, determines the minimum number of rows.
+
+Confirmed acceptance clears the clip description for the next shot, but not
+project style. Failed/ambiguous submissions retain their inputs. One combined
+reverse-chronological creative record contains music, video, render and recorded
+project events, including saved visual-style changes. Prior unrecorded edits
+are not invented. Video players default to unmuted 50% playback volume, without
+changing export levels or resetting a viewer's volume choice during polling.

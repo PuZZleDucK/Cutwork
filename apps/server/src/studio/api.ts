@@ -19,11 +19,16 @@ interface SongParams { id: string; songId: string }
 interface PlacementParams extends SongParams { placementId: string }
 const songParams = plain({ id: uuid, songId: uuid });
 const placementParams = plain({ id: uuid, songId: uuid, placementId: uuid });
+const timingValue = { oneOf: [
+  plain({ unit: { type: 'string', enum: ['frames', 'beats', 'seconds'] }, value: { type: 'string', minLength: 1, maxLength: 1000 } }),
+  plain({ unit: { const: 'rational' }, value: plain({ numerator: { type: 'string', pattern: '^(0|[1-9][0-9]*)$', maxLength: 1000 }, denominator: { type: 'string', pattern: '^[1-9][0-9]*$', maxLength: 1000 } }) }),
+] };
 const videoInput = { ...plain({ songId: uuid, clipPrompt: { type: 'string', maxLength: 16000, minLength: 1 }, style: draft.properties.style,
   startFrame: revision, endFrame: { ...revision, minimum: 1 } }), properties: {
     songId: uuid, clipPrompt: { type: 'string', maxLength: 16000, minLength: 1 }, style: draft.properties.style,
     startFrame: revision, endFrame: { ...revision, minimum: 1 },
     requestedIntervalSeconds: plain({ start: { type: 'string', maxLength: 1000 }, end: { type: 'string', maxLength: 1000 } }),
+    timingIntent: plain({ start: timingValue, end: timingValue }),
   } };
 function lossless(value: unknown, depth = 0): void {
   if (depth > 64 || (typeof value === 'number' && (!Number.isFinite(value) || Object.is(value, -0) || (Number.isInteger(value) && !Number.isSafeInteger(value))))) {

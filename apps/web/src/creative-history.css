@@ -1,0 +1,22 @@
+.creative-history .history-row > summary { display:grid; grid-template-columns:76px minmax(0,1fr) auto; gap:16px; align-items:center; }
+.creative-history .history-type { font:11px var(--font-mono,monospace); letter-spacing:.12em; color:var(--muted,#9c9c98); }
+.creative-history time { font-size:11px; color:var(--muted,#9c9c98); text-align:right; }
+.creative-history .history-content { min-width:0; }
+.creative-history .history-style-diff { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+.creative-history .history-style-diff > div { min-width:0; }
+.creative-history .creative-history-thumbnail { display:block; width:180px; max-width:100%; margin:12px 0; border:1px solid var(--line,#41413c); }
+.creative-history video { display:block; width:400px; max-width:100%; margin:12px 0; background:#000; }
+.creative-history audio { width:100%; margin-top:10px; }
+.creative-history .history-provenance-note { margin:0 0 24px; }
+@media(max-width:700px) { .creative-history .history-row > summary { grid-template-columns:58px minmax(0,1fr); gap:10px; }.creative-history time { grid-column:2; text-align:left; }.creative-history .history-style-diff { grid-template-columns:1fr; } }
+.creative-history .history-row{border-top:1px solid var(--border);font-size:12px;line-height:1.7;min-width:0}
+.creative-history .history-row>summary{padding:17px 0;cursor:pointer;list-style:none}
+.creative-history .history-row>summary>strong{font-weight:400;overflow-wrap:anywhere}
+.creative-history .history-row>summary:hover>strong{color:var(--cyan)}
+.creative-history .history-content{padding:4px 14px 24px;border-left:1px solid #486265;overflow-wrap:anywhere}
+.creative-history pre{white-space:pre-wrap;overflow-wrap:anywhere;overflow:auto;max-width:100%;max-height:350px;padding:12px;background:#151a1c;font:10px/1.7 var(--mono);margin:10px 0}
+.creative-history .history-content details{margin:14px 0}
+.creative-history .history-content summary{cursor:pointer;color:var(--cyan)}
+.creative-history .history-content h4{margin:16px 0 9px}
+.creative-history .history-content .waveform{display:block;width:100%;height:100px}
+.creative-history .history-input{margin-bottom:16px}

@@ -1,5 +1,6 @@
 import Database from 'better-sqlite3';
 import { decimal as exactDecimal } from '../../../../packages/core/src/time/decimal.ts';
+import { resolveTiming, type TimingValue } from '../../../../packages/core/src/time/linked-timing.ts';
 import { songCoverage } from '../../../../packages/core/src/time/studio-timing.ts';
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { isAbsolute, normalize } from 'node:path';
@@ -7,7 +8,7 @@ import { providerModels } from '../providers/launch.ts';
 import { RENDER_PROFILE } from './render-contract.ts';
 import type { AttemptPatch, RegisteredAssetInput, SongInput, StudioStore, VideoOutputInput } from './store-contract.ts';
 import type { MusicAttempt, MusicDraft, MusicInput, Provider, SetupJob, SongAnalysis, StudioProject, StudioSong,
-  ToolId, ToolStatus, VideoInput, VideoAttempt, StudioClip, SongArrangement, StudioRender } from '../../../../packages/core/src/contracts/studio.ts';
+  ToolId, ToolStatus, VideoInput, VideoAttempt, StudioClip, SongArrangement, StudioRender, ProjectEvent, ProjectEventKind } from '../../../../packages/core/src/contracts/studio.ts';
 
 export class StudioStoreError extends Error {
   readonly statusCode: 400 | 404 | 409;
@@ -155,7 +156,7 @@ function registeredAsset(value: unknown): RegisteredAssetInput {
   return { assetId: uuid(a.assetId), path: absolutePath(a.path), sha256: digest(a.sha256) };
 }
 function videoInput(value: unknown): VideoInput {
-  const v = object(value, ['songId', 'clipPrompt', 'style', 'startFrame', 'endFrame'], ['requestedIntervalSeconds']);
+  const v = object(value, ['songId', 'clipPrompt', 'style', 'startFrame', 'endFrame'], ['requestedIntervalSeconds', 'timingIntent']);
   const input: VideoInput = { songId: uuid(v.songId), clipPrompt: text(v.clipPrompt, 'Clip prompt', 16000, true),
     style: text(v.style, 'Visual style', 16000), startFrame: integer(v.startFrame, 'Start frame'), endFrame: integer(v.endFrame, 'End frame') };
   if (input.endFrame <= input.startFrame) invalid('Video interval must be nonempty');
@@ -169,6 +170,21 @@ function videoInput(value: unknown): VideoInput {
           (e.numerator * 24n + e.denominator - 1n) / e.denominator !== BigInt(input.endFrame)) invalid('Frames must cover the exact requested time interval');
     } catch (error) { if (error instanceof StudioStoreError) throw error; invalid('Exact seconds must be nonnegative decimal strings'); }
     input.requestedIntervalSeconds = { start, end };
+  }
+  if (v.timingIntent !== undefined) {
+    const intent = object(v.timingIntent, ['start', 'end']);
+    const endpoint = (value: unknown): TimingValue => {
+      const point = object(value, ['unit', 'value']);
+      if (point.unit === 'rational') {
+        const fraction = object(point.value, ['numerator', 'denominator']);
+        const numerator = text(fraction.numerator, 'Timing numerator', 1000, true), denominator = text(fraction.denominator, 'Timing denominator', 1000, true);
+        if (!/^(0|[1-9][0-9]*)$/.test(numerator) || !/^[1-9][0-9]*$/.test(denominator)) invalid('Timing fractions require canonical nonnegative numerator and positive denominator');
+        return { unit: 'rational' as const, value: { numerator, denominator } };
+      }
+      if (point.unit !== 'frames' && point.unit !== 'beats' && point.unit !== 'seconds') invalid('Unsupported timing unit');
+      return { unit: point.unit, value: text(point.value, 'Timing value', 1000, true) };
+    };
+    input.timingIntent = { start: endpoint(intent.start), end: endpoint(intent.end) };
   }
   return input;
 }
@@ -227,7 +243,7 @@ export function openStudioStore(path: string): StudioStore {
       db.exec(`CREATE TABLE IF NOT EXISTS studio_meta (singleton INTEGER PRIMARY KEY CHECK(singleton=1), version INTEGER NOT NULL,
         provider TEXT NOT NULL, selected_project TEXT); INSERT OR IGNORE INTO studio_meta VALUES (1,1,'codex',NULL);`);
       const meta = db.prepare('SELECT version FROM studio_meta WHERE singleton=1').get() as { version: number };
-      if (![1, 2].includes(meta.version)) conflict('Unsupported studio schema version');
+      if (![1, 2, 3].includes(meta.version)) conflict('Unsupported studio schema version');
       db.exec(`
         CREATE TABLE IF NOT EXISTS studio_projects (sequence INTEGER PRIMARY KEY AUTOINCREMENT, id TEXT NOT NULL UNIQUE, data TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS studio_attempts (sequence INTEGER PRIMARY KEY AUTOINCREMENT, id TEXT NOT NULL UNIQUE,
@@ -279,6 +295,11 @@ export function openStudioStore(path: string): StudioStore {
         }
         db.exec('UPDATE studio_meta SET version=2 WHERE singleton=1');
       }
+      db.exec(`CREATE TABLE IF NOT EXISTS studio_events (sequence INTEGER PRIMARY KEY AUTOINCREMENT,
+        id TEXT NOT NULL UNIQUE, project_id TEXT NOT NULL REFERENCES studio_projects(id), data TEXT NOT NULL);
+        CREATE INDEX IF NOT EXISTS studio_events_project ON studio_events(project_id,sequence);
+        UPDATE studio_meta SET version=3 WHERE singleton=1;`);
+      // No event backfill: old rows cannot tell us when unrecorded edits happened.
       for (const id of toolIds) {
         const t: ToolStatus = { id, label: labels[id], state: 'missing', installed: false, detail: 'Not checked', log: '', checkedAt: null, jobId: null, active: false, queued: 0 };
         db.prepare('INSERT OR IGNORE INTO studio_tools VALUES (?,?)').run(id, canonical(t));
@@ -310,6 +331,14 @@ export function openStudioStore(path: string): StudioStore {
   function setupJobs(): SetupJob[] {
     return (db.prepare('SELECT sequence,data FROM studio_setup_jobs ORDER BY sequence').all() as SetupRow[]).map(row => ({ ...decode<SetupJob>(row), sequence: row.sequence }));
   }
+  function recordEvent(projectId: string, kind: ProjectEventKind, data: Record<string, unknown>, createdAt = now()): void {
+    const event: ProjectEvent = { id: randomUUID(), projectId, sequence: 0, createdAt, kind, data };
+    db.prepare('INSERT INTO studio_events(id,project_id,data) VALUES (?,?,?)').run(event.id, projectId, canonical(event));
+  }
+  function analysisSummary(a: SongAnalysis): Record<string, unknown> {
+    return { state: a.state, estimatedBpm: a.estimatedBpm, version: a.version, error: a.error, beatCount: a.sampleIndices.length,
+      waveformBucketSamples: a.waveformBucketSamples, peakCount: a.peaks.length, sha256: createHash('sha256').update(canonical(a)).digest('hex') };
+  }
   function nextSequence(): number {
     const current = (db.prepare('SELECT value FROM studio_acceptance WHERE singleton=1').get() as { value: number }).value;
     const next = integer(current + 1, 'Acceptance sequence', 1);
@@ -340,8 +369,9 @@ export function openStudioStore(path: string): StudioStore {
     if (sourceStartFrame + frameCount > clip.nativeFrames) invalid('Placement exceeds preserved source frames');
     const endFrame = integer(startFrame + frameCount, 'Placement end');
     const priority = integer(a.placements.reduce((max, p) => Math.max(max, p.priority), 0) + 1, 'Placement priority', 1);
-    return saveArrangement({ ...a, revision: a.revision + 1, placements: [...a.placements,
-      { id: randomUUID(), clipId: clip.id, startFrame, endFrame, sourceStartFrame, priority }] });
+    const placement = { id: randomUUID(), clipId: clip.id, startFrame, endFrame, sourceStartFrame, priority };
+    recordEvent(a.projectId, 'placement.added', { songId: a.songId, placement, revision: a.revision + 1 });
+    return saveArrangement({ ...a, revision: a.revision + 1, placements: [...a.placements, placement] });
   }
   function registerAsset(projectId: string, a: RegisteredAssetInput, mediaType: NonNullable<ReturnType<StudioStore['asset']>>['mediaType']): void {
     if (db.prepare('SELECT id FROM studio_assets WHERE id=? OR path=?').get(a.assetId, a.path)) conflict('Asset already belongs to a completed generation');
@@ -357,14 +387,16 @@ export function openStudioStore(path: string): StudioStore {
     provider() { return (db.prepare('SELECT provider FROM studio_meta WHERE singleton=1').get() as { provider: Provider }).provider; },
     setProvider(value) { const p = providerId(value); db.prepare('UPDATE studio_meta SET provider=? WHERE singleton=1').run(p); },
     selectedProject() { return (db.prepare('SELECT selected_project FROM studio_meta WHERE singleton=1').get() as { selected_project: string | null }).selected_project; },
-    selectProject(id) { write(() => { const p = project(id); db.prepare('UPDATE studio_meta SET selected_project=? WHERE singleton=1').run(p.id); }); },
+    selectProject(id) { write(() => { const p = project(id), before = store.selectedProject(); db.prepare('UPDATE studio_meta SET selected_project=? WHERE singleton=1').run(p.id);
+      if (before !== p.id) recordEvent(p.id, 'project.selected', { previousProjectId: before }); }); },
     createProject(name) {
       const validated = text(name, 'Project name', 120, true).trim();
       return write(() => {
         const p: StudioProject = { id: randomUUID(), name: validated, createdAt: now(), revision: 0,
           draft: { musicPrompt: '', lyrics: '', style: '' }, selectedSongId: null };
         db.prepare('INSERT INTO studio_projects(id,data) VALUES (?,?)').run(p.id, canonical(p));
-        db.prepare('UPDATE studio_meta SET selected_project=? WHERE singleton=1').run(p.id); return p;
+        db.prepare('UPDATE studio_meta SET selected_project=? WHERE singleton=1').run(p.id);
+        recordEvent(p.id, 'project.created', { name: p.name }, p.createdAt); return p;
       });
     },
     listProjects() {
@@ -385,11 +417,16 @@ export function openStudioStore(path: string): StudioStore {
         videoAttempts: videos, clips: (db.prepare('SELECT data FROM studio_clips WHERE project_id=? ORDER BY rowid').all(p.id) as JsonRow[]).map(row => decode<StudioClip>(row)),
         arrangements: (db.prepare('SELECT data FROM studio_arrangements WHERE project_id=? ORDER BY rowid').all(p.id) as JsonRow[]).map(row => decode<SongArrangement>(row)),
         reservations: videos.filter(a => activeStates.includes(a.state)).map(a => ({ attemptId: a.id, songId: a.song.id, startFrame: a.input.startFrame, endFrame: a.input.endFrame })),
-        renders: (db.prepare('SELECT data FROM studio_renders WHERE project_id=? ORDER BY sequence').all(p.id) as JsonRow[]).map(row => decode<StudioRender>(row)) };
+        renders: (db.prepare('SELECT data FROM studio_renders WHERE project_id=? ORDER BY sequence').all(p.id) as JsonRow[]).map(row => decode<StudioRender>(row)),
+        events: (db.prepare('SELECT sequence,data FROM studio_events WHERE project_id=? ORDER BY sequence').all(p.id) as SetupRow[]).map(row => ({ ...decode<ProjectEvent>(row), sequence: row.sequence })) };
     },
     saveDraft(id, revision, draft) {
       integer(revision, 'Project revision'); const input = musicDraft(draft);
       return write(() => { const p = project(id); if (p.revision !== revision) conflict('Project changed; reload before editing');
+        const timestamp = now();
+        if (p.draft.style !== input.style) recordEvent(p.id, 'style.changed', { before: p.draft.style, after: input.style, revision: p.revision + 1 }, timestamp);
+        if (p.draft.musicPrompt !== input.musicPrompt || p.draft.lyrics !== input.lyrics) recordEvent(p.id, 'draft.saved', {
+          before: { musicPrompt: p.draft.musicPrompt, lyrics: p.draft.lyrics }, after: { musicPrompt: input.musicPrompt, lyrics: input.lyrics }, revision: p.revision + 1 }, timestamp);
         return saveProject({ ...p, revision: p.revision + 1, draft: input }); });
     },
     selectSong(projectId, songId, revision) {
@@ -407,6 +444,7 @@ export function openStudioStore(path: string): StudioStore {
           // Visual style belongs to the current project; reselecting the same
           // song must not erase edits made since that song was generated.
           draft = { ...p.draft, musicPrompt: original.input.musicPrompt, lyrics: original.input.lyrics };
+          recordEvent(p.id, 'song.selected', { before: p.selectedSongId, after: s.id, cause: 'user', revision: p.revision + 1 });
         }
         return saveProject({ ...p, draft, selectedSongId: s.id, revision: p.revision + 1 }); });
     },
@@ -463,11 +501,13 @@ export function openStudioStore(path: string): StudioStore {
         db.prepare('INSERT INTO studio_arrangements VALUES (?,?,?)').run(s.id, s.projectId, canonical({ projectId: s.projectId, songId: s.id, revision: 0, placements: [] }));
         saveAttempt({ ...a, state: 'succeeded', stage: 'Complete', error: null, songId: s.id, details: capturedDetails, updatedAt: now() });
         db.prepare('UPDATE studio_attempts SET completion_json=? WHERE id=?').run(completion, a.id);
-        const p = project(a.projectId); saveProject({ ...p, selectedSongId: s.id, revision: p.revision + 1 }); return s;
+        const p = project(a.projectId); saveProject({ ...p, selectedSongId: s.id, revision: p.revision + 1 });
+        recordEvent(p.id, 'song.selected', { before: p.selectedSongId, after: s.id, cause: 'generation', revision: p.revision + 1 }); return s;
       });
     },
     setAnalysis(songId, value) {
       return write(() => { const s = songById(songId), updated = { ...s, analysis: analysis(value, s.sampleCount) };
+        if (canonical(s.analysis) !== canonical(updated.analysis)) recordEvent(s.projectId, 'analysis.updated', { songId: s.id, before: analysisSummary(s.analysis), after: analysisSummary(updated.analysis) });
         db.prepare('UPDATE studio_songs SET data=? WHERE id=?').run(canonical(updated), s.id); return updated; });
     },
     submitVideo(projectId, idempotencyKey, input) {
@@ -477,12 +517,25 @@ export function openStudioStore(path: string): StudioStore {
         if (song.projectId !== p.id) missing('Song not found in this project');
         const old = db.prepare('SELECT * FROM studio_video_attempts WHERE project_id=? AND idempotency_key=?').get(p.id, key) as AttemptRow | undefined;
         if (old) { if (old.input_json !== inputJson) conflict('Submission key already belongs to different inputs'); return videoSnapshot(old); }
+        let timingResolution: VideoAttempt['timingResolution'];
+        if (captured.timingIntent) {
+          const timing = resolveTiming(song, captured.timingIntent);
+          if (!timing.valid) invalid(timing.error);
+          if (timing.startFrame !== captured.startFrame || timing.endFrame !== captured.endFrame) invalid('Frame interval does not match captured exact timing intent');
+          const serialized = (value: { numerator: bigint; denominator: bigint }) => ({ numerator: String(value.numerator), denominator: String(value.denominator) });
+          timingResolution = { startSeconds: serialized(timing.startSeconds), endSeconds: serialized(timing.endSeconds) };
+          if (captured.requestedIntervalSeconds) {
+            const start = exactDecimal(captured.requestedIntervalSeconds.start), end = exactDecimal(captured.requestedIntervalSeconds.end);
+            if (start.numerator * timing.startSeconds.denominator !== timing.startSeconds.numerator * start.denominator ||
+                end.numerator * timing.endSeconds.denominator !== timing.endSeconds.numerator * end.denominator) invalid('Exact timing metadata conflicts');
+          }
+        }
         const provider = store.provider(), timestamp = now();
         const a: VideoAttempt = { id: randomUUID(), nativeCallId: randomUUID(), projectId: p.id, sequence: nextSequence(),
           createdAt: timestamp, updatedAt: timestamp, state: 'queued', provider, model: providerModels[provider], input: captured,
           seeds: { h3: (randomBytes(8).readBigUInt64BE() & ((1n << 63n) - 1n)).toString() },
           song: { id: song.id, assetId: song.assetId, sha256: song.sha256, sampleCount: song.sampleCount, sampleRate: song.sampleRate, channels: song.channels },
-          stage: 'Queued', error: null, clipId: null, details: {} };
+          stage: 'Queued', error: null, clipId: null, details: {}, ...(timingResolution ? { timingResolution } : {}) };
         db.prepare('INSERT INTO studio_video_attempts(sequence,id,native_call_id,project_id,idempotency_key,input_json,data) VALUES (?,?,?,?,?,?,?)')
           .run(a.sequence, a.id, a.nativeCallId, p.id, key, inputJson, canonical(a)); return a;
       });
@@ -536,12 +589,14 @@ export function openStudioStore(path: string): StudioStore {
       return write(() => { const a = currentArrangement(projectId, songId, revision), placement = a.placements.find(p => p.id === id);
         if (!placement) missing('Placement not found in this arrangement');
         const endFrame = integer(start + placement.endFrame - placement.startFrame, 'Placement end');
+        if (start !== placement.startFrame) recordEvent(a.projectId, 'placement.moved', { songId: a.songId, before: placement, after: { ...placement, startFrame: start, endFrame }, revision: a.revision + 1 });
         return saveArrangement({ ...a, revision: a.revision + 1, placements: a.placements.map(p => p.id === id ? { ...p, startFrame: start, endFrame } : p) }); });
     },
     removePlacement(projectId, songId, revision, placementId) {
       const id = uuid(placementId);
       return write(() => { const a = currentArrangement(projectId, songId, revision);
-        if (!a.placements.some(p => p.id === id)) missing('Placement not found in this arrangement');
+        const placement = a.placements.find(p => p.id === id); if (!placement) missing('Placement not found in this arrangement');
+        recordEvent(a.projectId, 'placement.removed', { songId: a.songId, placement, revision: a.revision + 1 });
         return saveArrangement({ ...a, revision: a.revision + 1, placements: a.placements.filter(p => p.id !== id) }); });
     },
     enqueueRender(projectId, songId, revision, idempotencyKey) {
@@ -558,7 +613,8 @@ export function openStudioStore(path: string): StudioStore {
         // remains durable: replay after later edits must still return that record.
         const cached = (db.prepare('SELECT data FROM studio_renders WHERE project_id=? AND song_id=? AND cache_eligible=1 ORDER BY sequence DESC').all(p.id, song.id) as JsonRow[])
           .map(row => decode<StudioRender>(row)).find(r => r.revision === revision && r.snapshotHash === snapshotHash && ['queued', 'running', 'succeeded'].includes(r.state));
-        if (cached) { db.prepare('INSERT INTO studio_render_keys VALUES (?,?,?)').run(p.id, key, cached.id); return cached; }
+        if (cached) { db.prepare('INSERT INTO studio_render_keys VALUES (?,?,?)').run(p.id, key, cached.id);
+          recordEvent(p.id, 'render.reused', { renderId: cached.id, songId: song.id, revision, state: cached.state }); return cached; }
         const r: StudioRender = { id: randomUUID(), projectId: p.id, songId: song.id, revision, createdAt: timestamp, updatedAt: timestamp,
           state: 'queued', stage: 'Queued', error: null, snapshot, snapshotHash,
           assetId: null, sha256: null, frameCount: null, planHash: null, details: {} };
@@ -566,7 +622,9 @@ export function openStudioStore(path: string): StudioStore {
         db.prepare('INSERT INTO studio_render_keys VALUES (?,?,?)').run(p.id, key, r.id); return r;
       });
     },
-    invalidateRenderCache(id) { const value = uuid(id); write(() => { if (!renderRow(value)) missing('Render not found'); db.prepare('UPDATE studio_renders SET cache_eligible=0 WHERE id=?').run(value); }); },
+    invalidateRenderCache(id) { const value = uuid(id); write(() => { const row = renderRow(value); if (!row) missing('Render not found');
+      const changed = db.prepare('UPDATE studio_renders SET cache_eligible=0 WHERE id=? AND cache_eligible=1').run(value);
+      if (changed.changes) { const r = decode<StudioRender>(row); recordEvent(r.projectId, 'render.cache_invalidated', { renderId: r.id, songId: r.songId, revision: r.revision }); } }); },
     renders() { return (db.prepare('SELECT data FROM studio_renders ORDER BY sequence').all() as JsonRow[]).map(row => decode<StudioRender>(row)); },
     render(id) { const row = renderRow(id); return row ? decode<StudioRender>(row) : null; },
     patchRender(id, patch) {

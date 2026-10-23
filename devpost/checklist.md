@@ -25,6 +25,12 @@ integrated learner checkpoint remains before precision editing. See
 [slice-3-live-evidence.md](slice-3-live-evidence.md). TTS is restored and personal
 ComfyUI is unchanged. Slice 3 remains unchecked until that hands-on feedback.
 
+The learner then requested timing/sequence/history refinements. These are now
+implemented and deployed: **919 tests per host**, exact schema-3 preservation
+and LAN browser checks. See [slice-3-feedback.md](slice-3-feedback.md). The
+requested-feedback retry remains the integrated checkpoint; later precision
+editing and recovery slices are not marked complete.
+
 ## Working Agreement
 
 - The build order is approved. Write tests and record their assertions, fixtures and live-test boundaries before implementation; the learner's fast-mode standing approval removes routine waiting for sign-off. A missing import or unavailable GPU is not meaningful behavioural test evidence.
@@ -343,6 +349,9 @@ Reflection: Not offered yet; any personal response belongs in the ignored learne
 Activity mode: Proposed focused planning/verification investigation suitable for an experienced developer; not yet performed.
 
 ## Revisions
+
+- 23 October 2026 integrated learner feedback: bring generation-only linked timing from slice 5 into the slice-3 feedback pass, add selectable beat ranges and proposed-shot highlighting, compact overlap lanes, clear accepted clip descriptions, combine creative history including style edits, reorder navbar analysis and set preview playback to 50%. Exact timing/coverage/export semantics are unchanged; remaining trim/dominance/continuation controls stay in their planned slices. See [slice-3-feedback.md](slice-3-feedback.md).
+
 
 - **23 October 2026 — diagnostic fidelity after two native census failures:**
   the learner approved 27 tests for preserving immediate native error fields in

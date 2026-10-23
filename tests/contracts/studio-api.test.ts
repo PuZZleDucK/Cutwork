@@ -1,6 +1,6 @@
 /** Real Fastify HTTP boundary and SQLite; fake runtime never launches agents. */
 import { afterEach, expect, test, vi } from 'vitest';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { mkdtemp, mkdir, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -30,11 +30,13 @@ async function fixture(withWeb = false) {
     checkProvider: vi.fn(async () => status()),
     setup: vi.fn(tool => (tool === 'all' ? ['agent', 'yue2', 'comfyui', 'h3', 'analysis'] as const : [tool]).map(id => store.enqueueSetup(id))),
     submitMusic: vi.fn(async (id, key, input) => store.submitMusic(id, key, input)),
+    submitVideo: vi.fn(async (id, key, input) => store.submitVideo(id, key, input)),
+    render: vi.fn(async (id, songId, revision, key) => store.enqueueRender(id, songId, revision, key)),
   };
   const app = createNativeApi({ queue, allowedHosts: [host], validateSubmission() {}, hasAttempt: () => false });
   cleanup.push(() => app.close());
   await registerStudioApi(app, { store, runtime, dataRoot, webRoot: withWeb ? webRoot : null });
-  const request = (method: 'GET' | 'HEAD' | 'POST' | 'PUT', url: string, payload?: unknown, headers: Record<string, string> = {}) =>
+  const request = (method: 'GET' | 'HEAD' | 'POST' | 'PUT' | 'DELETE', url: string, payload?: unknown, headers: Record<string, string> = {}) =>
     app.inject({ method, url, headers: { host, ...headers }, ...(payload === undefined ? {} : { payload: JSON.stringify(payload), headers: { host, 'content-type': 'application/json', ...headers } }) });
   async function asset(path?: string) {
     const p = store.createProject('Asset fixture'), attempt = store.submitMusic(p.id, randomUUID(), musicInput);
@@ -183,4 +185,66 @@ test('static UI is served only from configured build root and does not swallow A
   expect((await f.request('GET', '/api/not-present')).statusCode).toBe(404);
   expect((await f.request('GET', '/%2e%2e/studio.sqlite')).statusCode).toBe(404);
   const without = await fixture(); expect((await without.request('GET', '/')).statusCode).toBe(404);
+});
+
+async function videoFixture() {
+  const f = await fixture(), a = await f.asset(), id = randomUUID();
+  const input = { songId: a.song.id, clipPrompt: 'Synthetic video', style: 'Visual', startFrame: 0, endFrame: 2 };
+  const attempt = f.store.submitVideo(a.project.id, randomUUID(), input);
+  const videoPath = join(a.projectPath, `${id}.mp4`), framePaths = [0, 1].map(n => join(a.projectPath, `${id}-${n}.png`));
+  await writeFile(videoPath, 'SYNTHETIC VIDEO BYTES'); for (const path of framePaths) await writeFile(path, 'PNG TRANSPORT FIXTURE');
+  const clip = f.store.finishVideo(attempt.id, { title: 'Fixture clip', video: { assetId: randomUUID(), path: videoPath, sha256: 'b'.repeat(64) }, audio: null,
+    frames: framePaths.map((path, index) => ({ assetId: randomUUID(), path, index, sha256: 'c'.repeat(64), pixelSha256: 'd'.repeat(64), bytes: 21 })),
+    frameCount: 2, width: 640, height: 480, fps: '24/1' }, {});
+  return { ...f, ...a, input, clip };
+}
+test('video submission delegates only valid exact inputs and records project-bound pending reservation', async () => {
+  const f = await fixture(), a = await f.asset(), body = { idempotencyKey: randomUUID(), input: { songId: a.song.id, clipPrompt: 'A dancer', style: 'Neon', startFrame: 0, endFrame: 24, requestedIntervalSeconds: { start: '0.0', end: '1.0' } } };
+  const url = `/api/projects/${a.project.id}/video`, result = await f.request('POST', url, body); expect(result.statusCode).toBe(202);
+  expect(f.runtime.submitVideo).toHaveBeenCalledWith(a.project.id, body.idempotencyKey, body.input);
+  expect((await f.request('POST', url, body)).json()).toEqual(result.json());
+  expect((await f.request('GET', `/api/projects/${a.project.id}`)).json().reservations).toHaveLength(1);
+  for (const input of [{ ...body.input, seed: '5' }, { ...body.input, startFrame: 0.1 }, { ...body.input, startFrame: '0' }, { ...body.input, endFrame: 0 }]) {
+    expect((await f.request('POST', url, { idempotencyKey: randomUUID(), input })).statusCode).toBe(400);
+  }
+  const other = f.store.createProject('Other'); expect((await f.request('POST', `/api/projects/${other.id}/video`, body)).statusCode).toBe(404);
+});
+test('arrangement add/move/remove routes reject stale edits and foreign project clips', async () => {
+  const f = await videoFixture(), base = `/api/projects/${f.project.id}/songs/${f.song.id}`;
+  const initial = (await f.request('GET', `${base}/arrangement`)).json(); expect(initial.revision).toBe(1);
+  const added = await f.request('POST', `${base}/placements`, { revision: 1, clipId: f.clip.id, startFrame: 10 }); expect(added.statusCode).toBe(200);
+  const id = added.json().placements[1].id;
+  const moved = await f.request('PUT', `${base}/placements/${id}`, { revision: 2, startFrame: 20 }); expect(moved.statusCode).toBe(200);
+  expect(moved.json().placements[1]).toMatchObject({ startFrame: 20, endFrame: 22 });
+  expect((await f.request('DELETE', `${base}/placements/${id}`, { revision: 2 })).statusCode).toBe(409);
+  expect((await f.request('DELETE', `${base}/placements/${id}`, { revision: 3 })).json().placements).toHaveLength(1);
+  const other = await f.asset();
+  expect((await f.request('POST', `/api/projects/${other.project.id}/songs/${other.song.id}/placements`, { revision: 0, clipId: f.clip.id, startFrame: 0 })).statusCode).toBe(404);
+});
+test('registered clip video and preserved PNG frames stream correct MIME with existing byte-range rules', async () => {
+  const f = await videoFixture();
+  const video = await f.request('GET', `/api/assets/${f.clip.assetId}`, undefined, { range: 'bytes=0-8' });
+  expect(video.statusCode).toBe(206); expect(video.headers['content-type']).toBe('video/mp4'); expect(video.body).toBe('SYNTHETIC');
+  const png = await f.request('GET', `/api/assets/${f.clip.rawFrames[0]!.assetId}`); expect(png.headers['content-type']).toBe('image/png'); expect(png.body).toBe('PNG TRANSPORT FIXTURE');
+});
+test('render request/read/download binds project and current arrangement revision while stale preview remains playable', async () => {
+  const f = await videoFixture(), base = `/api/projects/${f.project.id}`, body = { revision: 1, idempotencyKey: randomUUID() };
+  const accepted = await f.request('POST', `${base}/songs/${f.song.id}/renders`, body); expect(accepted.statusCode).toBe(202); const r = accepted.json();
+  expect(f.runtime.render).toHaveBeenCalledWith(f.project.id, f.song.id, 1, body.idempotencyKey);
+  expect((await f.request('GET', `${base}/renders/${r.id}`)).json()).toEqual(r);
+  expect((await f.request('GET', `${base}/renders/${r.id}/download`)).statusCode).toBe(409);
+  const path = join(f.projectPath, 'render.mp4'); await writeFile(path, 'RENDER TRANSPORT BYTES');
+  const done = f.store.finishRender(r.id, { assetId: randomUUID(), path, sha256: createHash('sha256').update('RENDER TRANSPORT BYTES').digest('hex'), frameCount: 24, planHash: 'a'.repeat(64), receiptPath: join(f.projectPath, 'receipt.json') }, {});
+  const download = await f.request('GET', `${base}/renders/${r.id}/download`); expect(download.statusCode).toBe(200); expect(download.body).toBe('RENDER TRANSPORT BYTES');
+  expect(download.headers['content-type']).toBe('video/mp4'); expect(download.headers['content-disposition']).toMatch(/^attachment; filename="music-video-[a-f0-9-]+\.mp4"$/);
+  expect((await f.request('HEAD', `${base}/renders/${r.id}/download`)).body).toBe('');
+  await writeFile(path, 'CHANGED IN PLACE'); expect((await f.request('GET', `${base}/renders/${r.id}/download`)).statusCode).toBe(409);
+  expect((await f.request('HEAD', `${base}/renders/${r.id}/download`)).statusCode).toBe(409);
+  await writeFile(path, 'RENDER TRANSPORT BYTES');
+  expect((await f.request('GET', `/api/projects/${randomUUID()}/renders/${r.id}`)).statusCode).toBe(404);
+  expect((await f.request('GET', `/api/projects/${randomUUID()}/renders/${r.id}/download`)).statusCode).toBe(404);
+  f.store.movePlacement(f.project.id, f.song.id, 1, r.snapshot.arrangement.placements[0].id, 2);
+  expect((await f.request('GET', `${base}/renders/${r.id}/download`)).statusCode).toBe(409);
+  expect((await f.request('GET', `/api/assets/${done.assetId}`)).statusCode).toBe(200);
+  expect((await f.request('POST', `${base}/songs/${f.song.id}/renders`, { revision: 1, idempotencyKey: randomUUID() })).statusCode).toBe(409);
 });

@@ -43,7 +43,7 @@ const adapter = createSystemdGpuAdapter({ runRoot: join(dataRoot, 'jobs/native-u
 let studio: ReturnType<typeof createStudioRuntime> | undefined;
 try {
  const server = await startNativeCoordinator({ database: join(dataRoot, 'jobs/gpu-queue.sqlite'), adapter, host, port, allowedHosts,
-  hasAttempt: id => store.attempt(id) !== null,
+  hasAttempt: id => store.attempt(id) !== null || store.videoAttempt(id) !== null,
   validateSubmission: call => validateStudioNativeCall(store, call),
   async configure(app, queue) {
    reconcileStudioStartup(store, queue);

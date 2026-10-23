@@ -1,8 +1,8 @@
 # AI Music Video Maker — build in progress
 
-A learner-led, agent-mediated music-video studio for Ubuntu 26.04 / 16 GB NVIDIA hardware, with a LAN browser interface. **The first soundtrack browser slice is live and mechanically verified; early UI feedback is next.** Video editing/export and fresh-host release packaging are still in progress.
+A learner-led, agent-mediated music-video studio for Ubuntu 26.04 / 16 GB NVIDIA hardware, with a LAN browser interface. **The browser song → clips → preview/export loop is live and mechanically verified; integrated hands-on feedback is next.** Richer editing/recovery and fresh-host release packaging are still in progress.
 
-Approved product decisions live in [`devpost/`](devpost/). Current build state is in [the checklist](devpost/checklist.md); current browser evidence is in [slice 2 verification](devpost/slice-2-live-evidence.md), with native generation evidence in [slice 1](devpost/slice-1-native-evidence.md).
+Approved product decisions live in [`devpost/`](devpost/). Current build state is in [the checklist](devpost/checklist.md); current browser evidence is in [slice 3 verification](devpost/slice-3-live-evidence.md), with native generation evidence in [slice 1](devpost/slice-1-native-evidence.md).
 
 ## Development checks
 
@@ -14,7 +14,7 @@ npm run typecheck
 npm test
 ```
 
-Current verification is recorded in [the slice-2 evidence](devpost/slice-2-live-evidence.md). Typechecking, the default test suite and the browser build are run before checkpoints. These tests
+Current verification is recorded in [the slice-3 evidence](devpost/slice-3-live-evidence.md). Typechecking, the default test suite and the browser build are run before checkpoints. These tests
 use explicit fixtures and do not spend provider credits or generate media.
 
 The first developer-facing native proof also passes on Dundee: both requested
@@ -43,12 +43,20 @@ Open `http://<server-name-or-IP>:9122/`. The current Dundee instance is
 anyone who can reach it can run work as the server account. Do not expose it to the
 public Internet. No credentials are entered through a studio web form.
 
-The first slice provides Projects/Config, reversible Codex/Claude selection,
+The current studio provides Projects/Config, reversible Codex/Claude selection,
 managed tool setup/verification, saved music/lyrics drafts, server-owned
 generation, original WAV playback, estimated beat/waveform analysis and expandable
-history. Selecting another song restores its original description and lyrics; project visual style is reserved for video. Warnings and notifications float over the workspace and can be dismissed or reopened. Reloading a browser does not stop a setup job or generation. The interface
-shows only implemented stages; video editing, export and richer recovery controls
-come next. The Assembly branding is provisional; Kirsty is not bundled yet.
+history. Selecting another song restores its original description and lyrics;
+project visual style is reserved for video. Warnings and notifications float over
+the workspace and can be dismissed or reopened. Reloading a browser does not stop
+a setup job or generation.
+
+You can describe song-conditioned H3 clips with a shared visual style, inspect
+all original frames, place/move clips, see coverage/gaps, and preview/download an
+assembled MP4. Current exports use original song audio and black gaps. The
+interface shows only implemented stages; precision editing, continuation, richer
+recovery and archive/delete follow in later slices. The Assembly branding is
+provisional; Kirsty is not bundled yet.
 
 `STUDIO_DATA_ROOT` defaults to `~/.local/share/music-video-studio`. Optional
 `STUDIO_ALLOWED_HOSTS` is an exact comma-separated `host:port` list and must include

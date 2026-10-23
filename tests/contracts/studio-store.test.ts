@@ -131,7 +131,7 @@ describe('Durable project studio store (CPU SQLite; no tool executions)', () => 
     const { store: s, path } = setup(), p = s.createProject('Test');
     const a = s.submitMusic(p.id, randomUUID(), musicInput), input = song(), completed = s.finishMusic(a.id, input, { source: 'native' });
     expect(s.attempt(a.id)).toMatchObject({ state: 'succeeded', songId: completed.id, details: { source: 'native' } });
-    expect(s.asset(input.assetId)).toEqual({ projectId: p.id, path: input.assetPath, sha256: input.sha256 });
+    expect(s.asset(input.assetId)).toEqual({ projectId: p.id, path: input.assetPath, sha256: input.sha256, mediaType: 'audio/wav' });
     expect(s.project(p.id).project.selectedSongId).toBe(completed.id);
     const b = s.submitMusic(p.id, randomUUID(), musicInput), second = s.finishMusic(b.id, song(), {});
     expect(s.finishMusic(a.id, input, { source: 'later duplicate' })).toEqual(completed);

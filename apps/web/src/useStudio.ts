@@ -2,6 +2,7 @@ import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import type { MusicAttempt, MusicDraft, MusicInput, ProjectSnapshot, StudioOverview, StudioProject, ToolId, Provider } from '../../../packages/core/src/contracts/studio.ts';
 import { errorNoticeReducer } from './notifications.ts';
 import { ApiError, request } from './api.ts';
+import { latestReadGuard } from './video-state.ts';
 import { attemptIsActive, createRequestId, emptyDraft, mergeSavedDraft, musicInputFromDraft } from './studio-state.ts';
 
 export function useStudio() {
@@ -21,6 +22,7 @@ export function useStudio() {
   const saveFlight = useRef<Promise<void> | null>(null);
   const actionFlight = useRef(false);
   const mounted = useRef(true);
+  const reads = useRef(latestReadGuard());
   const submission = useRef<{ projectId: string; input: MusicInput; key: string } | null>(null);
 
   const receive = useCallback((next: ProjectSnapshot, reset = false) => {
@@ -34,17 +36,21 @@ export function useStudio() {
     }
   }, []);
   const refresh = useCallback(async () => {
-    const next = await request<StudioOverview>('/api/studio');
-    if (!mounted.current) return false;
-    setOverview(next);
-    const id = current.current.project?.id ?? next.selectedProjectId;
-    let project: ProjectSnapshot | null = null;
-    if (id) {
-      project = await request<ProjectSnapshot>(`/api/projects/${encodeURIComponent(id)}`);
-      if (mounted.current) receive(project, current.current.project === null);
+    const sequence = reads.current.begin();
+    try {
+      const next = await request<StudioOverview>('/api/studio');
+      if (!mounted.current || !reads.current.isCurrent(sequence)) return false;
+      const id = current.current.project?.id ?? next.selectedProjectId;
+      const project = id ? await request<ProjectSnapshot>(`/api/projects/${encodeURIComponent(id)}`) : null;
+      if (!mounted.current || !reads.current.isCurrent(sequence)) return false;
+      setOverview(next);
+      if (project) receive(project, current.current.project === null);
+      setConnection(null);
+      return next.tools.some(t => t.active || t.queued > 0 || ['checking','installing','queued'].includes(t.state)) || !!project?.attempts.some(a => attemptIsActive(a.state)) || !!project?.videoAttempts.some(a => attemptIsActive(a.state)) || !!project?.renders.some(r => ['queued','running'].includes(r.state));
+    } catch (error) {
+      if (!mounted.current || !reads.current.isCurrent(sequence)) return false;
+      throw error;
     }
-    if (mounted.current) setConnection(null);
-    return next.tools.some(t => t.active || t.queued > 0 || ['checking','installing','queued'].includes(t.state)) || !!project?.attempts.some(a => attemptIsActive(a.state));
   }, [receive]);
   useEffect(() => {
     mounted.current = true;
@@ -153,8 +159,12 @@ export function useStudio() {
     // Acceptance is already confirmed. A failed follow-up read must not masquerade as a failed submission.
     await refresh().catch(e => setConnection(e instanceof Error ? e.message : 'Waiting for the next studio update.'));
   });
+  const perform = (operation: () => Promise<void>, success: string) => act(async () => {
+    await save(); await operation(); reads.current.begin(); setNotice(success);
+    await refresh().catch(e => setConnection(e instanceof Error ? e.message : 'Waiting for the next studio update.'));
+  });
   const provider = (value: Provider) => act(async () => { await request('/api/provider', { provider: value }); await refresh(); });
   const checkProvider = () => act(async () => { await request('/api/provider/check', {}); await refresh(); });
   const setup = (tool: ToolId | 'all') => act(async () => { await request(`/api/setup/${tool}`, {}); await refresh(); });
-  return { overview, snapshot, draft, dirty, saving, busy, error, connection, conflict, notice, messageVersion, errorVersion: errorNotice.occurrence, edit, save, selectProject, createProject, resolveConflict, selectSong, generate, provider, checkProvider, setup, refresh, clearError: () => dispatchError({type:'clear'}) };
+  return { overview, snapshot, draft, dirty, saving, busy, error, connection, conflict, notice, messageVersion, errorVersion: errorNotice.occurrence, edit, save, selectProject, createProject, resolveConflict, selectSong, generate, provider, checkProvider, setup, refresh, perform, clearError: () => dispatchError({type:'clear'}) };
 }

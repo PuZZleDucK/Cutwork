@@ -1,16 +1,17 @@
 /** Real SQLite scheduling, injected setup/provider functions. No models or services. */
 import { afterEach, expect, test, vi } from 'vitest';
-import { randomUUID } from 'node:crypto';
+import { randomUUID, createHash } from 'node:crypto';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, rm, mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { openStudioStore } from '../../apps/server/src/studio/store.ts';
 import { openGpuQueue } from '../../apps/server/src/jobs/gpu-queue.ts';
 import { createStudioRuntime } from '../../apps/server/src/studio/runtime.ts';
 import { providerModels } from '../../apps/server/src/providers/launch.ts';
-import type { MusicAttempt, Provider, ProviderStatus, ToolId } from '../../packages/core/src/contracts/studio.ts';
+import type { RenderOptions } from '../../apps/server/src/studio/render-contract.ts';
+import type { MusicAttempt, VideoAttempt, Provider, ProviderStatus, ToolId } from '../../packages/core/src/contracts/studio.ts';
 const cleanup: (() => Promise<void>)[] = [];
 afterEach(async () => { for (const fn of cleanup.splice(0).reverse()) await fn(); });
 const draft = { musicPrompt: 'Synthetic scheduler fixture', lyrics: '' };
@@ -31,9 +32,12 @@ async function fixture(nativeRuntimeLimitSeconds = 3600) {
  };
  const prepare = vi.fn(async ({ attempt }: { attempt: MusicAttempt }) => ({ planPath: join(root, attempt.id, 'captured-task.json') }));
  const run = vi.fn(async ({ attempt }: { attempt: MusicAttempt }) => { store.patchAttempt(attempt.id, { state: 'failed', stage: 'FAKE run ended without media', error: 'FAKE test outcome' }); });
- const runtime = createStudioRuntime({ store, queue, runtime: root, source: root, origin: 'http://127.0.0.1:9122', setupAdapter: adapter, prepareMusic: prepare, runMusic: run, pollMs: 10, nativeRuntimeLimitSeconds });
+ const prepareVideo = vi.fn(async ({ attempt }: { attempt: VideoAttempt }) => ({ planPath: join(root, attempt.id, 'captured-task.json') }));
+ const runVideo = vi.fn(async ({ attempt }: { attempt: VideoAttempt }) => { store.patchVideoAttempt(attempt.id, { state: 'failed', stage: 'FAKE video ended without media', error: 'FAKE outcome' }); });
+ const render = vi.fn(async (o:RenderOptions) => { const outputPath=join(root,'projects',o.plan.projectId,'renders',o.renderId,'video.mp4'); await mkdir(join(outputPath,'..'),{recursive:true}); await writeFile(outputPath,'FAKE RENDER'); return {outputPath,sha256:createHash('sha256').update('FAKE RENDER').digest('hex'),bytes:11,frameCount:48,sampleCount:'96000',receiptPath:join(root,'receipt.json'),planHash:'c'.repeat(64)}; });
+ const runtime = createStudioRuntime({ store, queue, runtime: root, source: root, origin: 'http://127.0.0.1:9122', setupAdapter: adapter, prepareMusic: prepare, runMusic: run, prepareVideo, runVideo, runRender: render, pollMs: 10, nativeRuntimeLimitSeconds });
  cleanup.push(() => runtime.close());
- return { runtime, store, queue, adapter, prepare, run, installed, auth, status };
+ return { runtime, store, queue, adapter, prepare, run, prepareVideo, runVideo, render, installed, auth, status };
 }
 const settled = (f: Awaited<ReturnType<typeof fixture>>) => vi.waitFor(() => expect(f.store.setupJobs().filter(j => ['queued', 'running'].includes(j.state))).toHaveLength(0));
 
@@ -224,4 +228,61 @@ test('startup converts persisted pending analysis to interrupted failure without
  expect(f.store.project(other.id).songs[0]).toEqual(finished);expect(f.runtime.overview().tools.find(t=>t.id==='analysis')?.active).toBe(false);expect(f.run).not.toHaveBeenCalled();expect(f.adapter.install).not.toHaveBeenCalled();
  // Repeated start/polling is not another startup and cannot interrupt new analysis.
  const newlyPending=create(p.id,pending);await f.runtime.start();expect(f.store.project(p.id).songs.find(s=>s.id===newlyPending.id)?.analysis.state).toBe('pending');
+});
+
+function fixtureSong(f:Awaited<ReturnType<typeof fixture>>,projectId:string){
+ const a=f.store.submitMusic(projectId,randomUUID(),draft);f.store.patchAttempt(a.id,{state:'running'});
+ return f.store.finishMusic(a.id,{title:'Fixture song',assetId:randomUUID(),assetPath:`/fixture/${projectId}/${a.id}.wav`,sha256:'a'.repeat(64),sampleCount:'96000',sampleRate:48000,channels:2,durationSeconds:2,truncated:false,analysis:{state:'available',estimatedBpm:120,sampleIndices:['0','24000','48000','72000'],waveformBucketSamples:512,peaks:[0.1],error:null,version:'fixture'}},{});
+}
+test('video capture deduplicates, retains captured song/style/provider, and dispatches via separate video adapter',async()=>{
+ const f=await fixture();await f.runtime.start();const p=f.store.createProject('Video'),song=fixtureSong(f,p.id),key=randomUUID(),input={songId:song.id,style:'Cyan industrial',clipPrompt:'Dancing robot',startFrame:0,endFrame:48};
+ const [a,b]=await Promise.all([f.runtime.submitVideo(p.id,key,input),f.runtime.submitVideo(p.id,key,input)]);await f.runtime.selectProvider('claude');
+ await vi.waitFor(()=>expect(f.runVideo).toHaveBeenCalledTimes(1));expect(a.id).toBe(b.id);expect(f.prepareVideo).toHaveBeenCalledTimes(1);expect(f.run).not.toHaveBeenCalled();expect(f.runVideo.mock.calls[0]![0].attempt.input).toEqual(input);expect(f.runVideo.mock.calls[0]![0].attempt.provider).toBe('codex');
+});
+test('video readiness failure does not dispatch and preserves failed placeholder instead of reinterpreting music',async()=>{
+ const f=await fixture();f.installed.delete('h3');await f.runtime.start();const p=f.store.createProject('Video'),song=fixtureSong(f,p.id),a=await f.runtime.submitVideo(p.id,randomUUID(),{songId:song.id,style:'',clipPrompt:'Scene',startFrame:0,endFrame:48});
+ await vi.waitFor(()=>expect(f.store.videoAttempt(a.id)?.state).toBe('failed'));expect(f.runVideo).not.toHaveBeenCalled();expect(f.run).not.toHaveBeenCalled();
+});
+test('music and video share original acceptance order across projects',async()=>{
+ const f=await fixture();const p=f.store.createProject('Sequence'),song=fixtureSong(f,p.id);
+ const video=await f.runtime.submitVideo(p.id,randomUUID(),{songId:song.id,style:'',clipPrompt:'First',startFrame:0,endFrame:48}),music=await f.runtime.submitMusic(p.id,randomUUID(),draft);await f.runtime.start();
+ await vi.waitFor(()=>expect(f.run).toHaveBeenCalledTimes(1));expect(f.runVideo).toHaveBeenCalledTimes(1);expect(f.runVideo.mock.invocationCallOrder[0]).toBeLessThan(f.run.mock.invocationCallOrder[0]!);expect(video.sequence).toBeLessThan(music.sequence);
+});
+test('render is revision-bound, idempotent, and completes through the CPU renderer',async()=>{
+ const f=await fixture();await f.runtime.start();const p=f.store.createProject('Render'),song=fixtureSong(f,p.id),key=randomUUID(),revision=f.store.arrangement(p.id,song.id).revision;
+ const a=await f.runtime.render(p.id,song.id,revision,key),b=await f.runtime.render(p.id,song.id,revision,key);expect(a.id).toBe(b.id);
+ await vi.waitFor(()=>expect(f.store.render(a.id)?.state).toBe('succeeded'));expect(f.render).toHaveBeenCalledTimes(1);expect(f.render.mock.calls[0]![0].plan.song.sha256).toBe(song.sha256);expect(f.render.mock.calls[0]![0].plan.revision).toBe(revision);expect(f.store.render(a.id)?.assetId).toBeTruthy();
+});
+
+test('CPU preview starts while native video remains active, with one render worker and awaited shutdown',async()=>{
+ const f=await fixture();await f.runtime.start();const p=f.store.createProject('Parallel'),song=fixtureSong(f,p.id),videoGate=deferred(),renderGate=deferred();
+ f.runVideo.mockImplementationOnce(async({attempt})=>{f.store.patchVideoAttempt(attempt.id,{state:'running'});await videoGate.promise;f.store.patchVideoAttempt(attempt.id,{state:'failed'});});
+ cleanup.push(async()=>{videoGate.resolve();renderGate.resolve();});
+ const render=f.render.getMockImplementation()!;f.render.mockImplementationOnce(async(o)=>{await renderGate.promise;return render(o);});
+ await f.runtime.submitVideo(p.id,randomUUID(),{songId:song.id,clipPrompt:'Long generation',style:'',startFrame:0,endFrame:48});await vi.waitFor(()=>expect(f.runVideo).toHaveBeenCalledTimes(1));
+ const r=await f.runtime.render(p.id,song.id,0,randomUUID());await vi.waitFor(()=>expect(f.render).toHaveBeenCalledTimes(1));
+ await f.runtime.render(p.id,song.id,0,randomUUID());await new Promise(r=>setTimeout(r,30));expect(f.render).toHaveBeenCalledTimes(1);expect(f.store.render(r.id)?.state).toBe('running');
+ let closed=false;const closing=f.runtime.close().then(()=>{closed=true;});await new Promise(r=>setTimeout(r,10));expect(closed).toBe(false);renderGate.resolve();videoGate.resolve();await closing;expect(closed).toBe(true);
+});
+test('bad cached output is invalidated before a new render key, not returned as fresh success',async()=>{
+ const f=await fixture();await f.runtime.start();const p=f.store.createProject('Cache'),song=fixtureSong(f,p.id),key=randomUUID();
+ const r=await f.runtime.render(p.id,song.id,0,key);await vi.waitFor(()=>expect(f.store.render(r.id)?.state).toBe('succeeded'));const good=await f.runtime.render(p.id,song.id,0,randomUUID());expect(good.id).toBe(r.id);
+ const saved=f.store.render(r.id)!;await writeFile(f.store.asset(saved.assetId!)!.path,'CORRUPTED CACHE');
+ await expect(f.runtime.render(p.id,song.id,0,key)).rejects.toMatchObject({code:'STUDIO_RENDER_UNAVAILABLE'});
+ const replacement=await f.runtime.render(p.id,song.id,0,randomUUID());expect(replacement.id).not.toBe(r.id);expect(f.store.render(r.id)?.state).toBe('succeeded');
+});
+test('global warning exposes a reconciling render even when its project is not selected',async()=>{
+ const f=await fixture();const p=f.store.createProject('Interrupted render'),song=fixtureSong(f,p.id),r=f.store.enqueueRender(p.id,song.id,0,randomUUID());f.store.patchRender(r.id,{state:'reconciling',error:'Owned CPU cleanup unconfirmed'});f.store.createProject('Elsewhere');
+ expect(f.runtime.overview().warnings.join(' ')).toMatch(/Interrupted work requires reconciliation/);
+ await f.runtime.start();await new Promise(r=>setTimeout(r,30));expect(f.render).not.toHaveBeenCalled();
+});
+test('ComfyUI status mirrors the actual H3 native lane without counting pre-agent requests twice',async()=>{
+ const f=await fixture();await f.runtime.start();const projectId=randomUUID();
+ const one=f.queue.submit({id:randomUUID(),attemptId:randomUUID(),projectId,tool:'h3',request:{}}),two=f.queue.submit({id:randomUUID(),attemptId:randomUUID(),projectId,tool:'h3',request:{}});
+ const tools=()=>Object.fromEntries(f.runtime.overview().tools.map(t=>[t.id,t]));
+ expect(tools().comfyui).toMatchObject({active:false,queued:2});expect(tools().h3).toMatchObject({active:false,queued:2});expect(tools().yue2).toMatchObject({active:false,queued:0});
+ const lease=f.queue.claim('fixture-owned-worker')!;expect(lease.callId).toBe(one.id);
+ expect(tools().comfyui).toMatchObject({active:true,queued:1});expect(tools().h3).toMatchObject({active:true,queued:1});expect(tools().agent?.queued).toBe(0);
+ f.queue.cancelAttempt(two.attemptId);expect(tools().comfyui?.queued).toBe(0);
+ f.queue.prepareLaunch(lease,{fixtureCommand:true});f.queue.acknowledgeLaunch(lease,{fixtureOwner:true});f.queue.finish(lease,'succeeded',{fixture:true},{fixtureReleased:true});expect(tools().comfyui).toMatchObject({active:false,queued:0});
 });

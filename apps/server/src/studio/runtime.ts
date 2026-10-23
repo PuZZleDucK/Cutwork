@@ -1,16 +1,24 @@
+import { randomUUID, createHash } from 'node:crypto';
+import { createReadStream } from 'node:fs';
+import { realpath, stat } from 'node:fs/promises';
+import { join, isAbsolute, resolve, relative } from 'node:path';
 import { providerModels } from '../providers/launch.ts';
 import type { GpuQueue, MaintenanceLease } from '../jobs/gpu-queue-contract.ts';
 import { createSetupAdapter, type SetupReadiness } from './setup.ts';
 import { prepareMusicTask, runMusicTask } from './music.ts';
+import { prepareVideoTask, runVideoTask } from './video.ts';
+import { runStudioRender } from './render.ts';
+import type { RenderPlan } from './render-contract.ts';
 import { StudioStoreError } from './store.ts';
 import type { StudioStore } from './store-contract.ts';
 import type { StudioRuntime } from './runtime-contract.ts';
-import type { MusicInput, Provider, ProviderStatus, SetupJob, ToolId } from '../../../../packages/core/src/contracts/studio.ts';
+import type { MusicInput, Provider, ProviderStatus, SetupJob, ToolId, StudioRender } from '../../../../packages/core/src/contracts/studio.ts';
 
 interface RuntimeOptions {
  store: StudioStore; queue: GpuQueue; runtime: string; source: string; origin: string;
  setupAdapter?: Omit<ReturnType<typeof createSetupAdapter>, 'close'> & { close?(): void | Promise<void> };
- prepareMusic?: typeof prepareMusicTask; runMusic?: typeof runMusicTask; pollMs?: number; nativeRuntimeLimitSeconds?: number;
+ prepareMusic?: typeof prepareMusicTask; runMusic?: typeof runMusicTask;
+ prepareVideo?: typeof prepareVideoTask; runVideo?: typeof runVideoTask; runRender?: typeof runStudioRender; pollMs?: number; nativeRuntimeLimitSeconds?: number;
 }
 const ids: ToolId[] = ['agent', 'yue2', 'comfyui', 'h3', 'analysis'];
 const active = ['preparing', 'waiting_gpu', 'running', 'validating'];
@@ -25,6 +33,7 @@ export function createStudioRuntime(options: RuntimeOptions): StudioRuntime & { 
  const { store, queue, runtime, source, origin } = options;
  const adapter = options.setupAdapter ?? createSetupAdapter({ runtime, source });
  const prepareMusic = options.prepareMusic ?? prepareMusicTask, runMusic = options.runMusic ?? runMusicTask;
+ const prepareVideo = options.prepareVideo ?? prepareVideoTask, runVideo = options.runVideo ?? runVideoTask, runRender = options.runRender ?? runStudioRender;
  const pollMs = options.pollMs ?? 500;
  const nativeRuntimeLimitSeconds = options.nativeRuntimeLimitSeconds ?? 3600;
  if (!Number.isSafeInteger(nativeRuntimeLimitSeconds) || nativeRuntimeLimitSeconds < 1) throw new Error('Invalid native runtime limit');
@@ -34,7 +43,8 @@ export function createStudioRuntime(options: RuntimeOptions): StudioRuntime & { 
  const providerChecks = new Map<Provider, number>();
  const checking = new Set<Promise<ProviderStatus>>();
  const captures = new Map<string, Promise<void>>();
- let started = false, stopped = false, initial: Promise<void> | undefined, running: Promise<void> | undefined;
+ const renderChecks = new Set<Promise<StudioRender>>();
+ let started = false, stopped = false, initial: Promise<void> | undefined, running: Promise<void> | undefined, renderRunning: Promise<void> | undefined;
  let timer: NodeJS.Timeout | undefined, closing: Promise<void> | undefined, fault: string | null = null;
  function unknown(provider: Provider): ProviderStatus {
   return { provider, model: providerModels[provider], installed: false, auth: 'unknown', detail: 'Checking the pinned CLI and server sign-in.', signInCommand: '' };
@@ -81,6 +91,9 @@ export function createStudioRuntime(options: RuntimeOptions): StudioRuntime & { 
   store.patchTool('analysis', { active: false });
   for (const attempt of store.attempts()) if (attempt.state === 'queued' && !attempt.details.planPath && !captures.has(attempt.id)) {
    store.patchAttempt(attempt.id, { state: 'failed', stage: 'Task capture was interrupted before dispatch; submit a new request', error: 'No complete captured task was recorded before server restart' });
+  }
+  for (const attempt of store.videoAttempts()) if (attempt.state === 'queued' && !attempt.details.planPath && !captures.has(attempt.id)) {
+   store.patchVideoAttempt(attempt.id, { state: 'failed', stage: 'Task capture was interrupted before dispatch; submit a new request', error: 'No complete captured task was recorded before server restart' });
   }
   for (const id of ids) {
    if (stopped) break;
@@ -138,30 +151,84 @@ export function createStudioRuntime(options: RuntimeOptions): StudioRuntime & { 
   } finally { if (lease) queue.releaseMaintenance(lease); }
   return true;
  }
- async function step() {
-  if (stopped || fault || queue.heldLease()) return;
-  // Unknown creative work may still use the managed tools outside the native lane.
-  if (store.attempts().some(a => a.state === 'reconciling')) return;
-  const job = store.setupJobs().find(j => j.state === 'queued');
-  if (job) { await setupJob(job); return; }
-  const attempt = store.attempts().find(a => a.state === 'queued' && typeof a.details.planPath === 'string');
-  if (!attempt) return;
-  store.patchAttempt(attempt.id, { state: 'preparing', stage: 'Checking captured provider and music tool readiness' });
+ async function renderJob(job: StudioRender) {
   try {
-   const status = await check(attempt.provider);
-   if (stopped) { store.patchAttempt(attempt.id, { state: 'queued', stage: 'Queued; shutdown occurred before provider dispatch' }); return; }
-   if (!status.installed || status.auth !== 'signed-in') throw new Error('Captured provider needs server sign-in. Check its configuration before a new request.');
-   if (store.tool('yue2').state !== 'ready') throw new Error('YuE2 is not ready. Complete or verify its setup before a new request.');
-   await runMusic({ runtime, source, origin, attempt: store.attempt(attempt.id)!, store, queue, signal: controller.signal });
+   const { snapshot } = job, songAsset = store.asset(snapshot.song.assetId);
+   if (!songAsset || songAsset.projectId !== job.projectId || songAsset.sha256 !== snapshot.song.sha256 || snapshot.song.sampleRate !== 48000 || snapshot.song.channels !== 2) throw new Error('Captured render song asset is unavailable or changed');
+   const plan: RenderPlan = { schemaVersion: 1, projectId: job.projectId, songId: job.songId, revision: job.revision,
+    song: { path: songAsset.path, sha256: songAsset.sha256, sampleCount: snapshot.song.sampleCount, sampleRate: 48000, channels: 2 },
+    placements: snapshot.arrangement.placements.map(p => {
+     const clip = snapshot.clips.find(c => c.id === p.clipId); if (!clip) throw new Error('Captured render clip is missing');
+     return { ...p, frames: clip.rawFrames.map(f => { const asset = store.asset(f.assetId);
+      if (!asset || asset.projectId !== job.projectId || asset.sha256 !== f.sha256) throw new Error('Captured render frame asset is unavailable or changed');
+      return { path: asset.path, sha256: asset.sha256 }; }) };
+    }) };
+   if (stopped) return;
+   store.patchRender(job.id, { state: 'running', stage: 'Rendering captured arrangement' });
+   const result = await runRender({ runtime, renderId: job.id, plan, signal: controller.signal,
+    onProgress: (frame, totalFrames) => store.patchRender(job.id, { stage: `Rendering frame ${frame} of ${totalFrames}`, details: { progress: { frame, totalFrames } } }) });
+   store.finishRender(job.id, { assetId: randomUUID(), path: result.outputPath, sha256: result.sha256, frameCount: result.frameCount, planHash: result.planHash, receiptPath: result.receiptPath },
+    { validationReceiptPath: result.receiptPath, bytes: result.bytes, sampleCount: result.sampleCount });
   } catch (error) {
-   const current = store.attempt(attempt.id)!;
-   if (stopped && current.state === 'preparing') { store.patchAttempt(attempt.id, { state: 'queued', stage: 'Queued; shutdown occurred before provider dispatch' }); return; }
-   if (!['succeeded', 'failed', 'reconciling'].includes(current.state)) store.patchAttempt(attempt.id, {
-    state: current.state === 'preparing' ? 'failed' : 'reconciling', stage: 'Generation stopped', error: message(error) });
-   else if (current.state === 'succeeded') process.stderr.write(`Song retained; post-ingestion error: ${message(error)}\n`);
+   const text = message(error); store.patchRender(job.id, { state: cleanupUncertain(text) ? 'reconciling' : 'failed', stage: 'Render stopped', error: text });
   }
  }
+ async function step() {
+  if (stopped || fault || queue.heldLease()) return;
+  // Unknown creative work may still use managed tools outside the native lane.
+  const music = store.attempts(), videos = store.videoAttempts();
+  if ([...music, ...videos].some(a => a.state === 'reconciling') || store.renders().some(r => r.state === 'reconciling')) return;
+  const job = store.setupJobs().find(j => j.state === 'queued');
+  if (job) { await setupJob(job); return; }
+  const pending = [...music.map(attempt => ({ kind: 'music' as const, attempt })), ...videos.map(attempt => ({ kind: 'video' as const, attempt }))]
+   .filter(v => v.attempt.state === 'queued' && typeof v.attempt.details.planPath === 'string').sort((a, b) => a.attempt.sequence - b.attempt.sequence);
+  const next = pending[0];
+  if (!next) return;
+  const { attempt } = next, video = next.kind === 'video';
+  const patch = video ? store.patchVideoAttempt.bind(store) : store.patchAttempt.bind(store);
+  const read = () => video ? store.videoAttempt(attempt.id)! : store.attempt(attempt.id)!;
+  patch(attempt.id, { state: 'preparing', stage: `Checking captured provider and ${video ? 'video' : 'music'} tool readiness` });
+  try {
+   const status = await check(attempt.provider);
+   if (stopped) { patch(attempt.id, { state: 'queued', stage: 'Queued; shutdown occurred before provider dispatch' }); return; }
+   if (!status.installed || status.auth !== 'signed-in') throw new Error('Captured provider needs server sign-in. Check its configuration before a new request.');
+   if (video) {
+    if (store.tool('comfyui').state !== 'ready' || store.tool('h3').state !== 'ready') throw new Error('ComfyUI and H3 must be ready before a new request.');
+    await runVideo({ runtime, source, origin, attempt: store.videoAttempt(attempt.id)!, store, queue, signal: controller.signal });
+   } else {
+    if (store.tool('yue2').state !== 'ready') throw new Error('YuE2 is not ready. Complete or verify its setup before a new request.');
+    await runMusic({ runtime, source, origin, attempt: store.attempt(attempt.id)!, store, queue, signal: controller.signal });
+   }
+  } catch (error) {
+   const current = read();
+   if (stopped && current.state === 'preparing') { patch(attempt.id, { state: 'queued', stage: 'Queued; shutdown occurred before provider dispatch' }); return; }
+   if (!['succeeded', 'failed', 'reconciling'].includes(current.state)) patch(attempt.id, {
+    state: current.state === 'preparing' ? 'failed' : 'reconciling', stage: 'Generation stopped', error: message(error) });
+   else if (current.state === 'succeeded') process.stderr.write(`Media retained; post-ingestion error: ${message(error)}\n`);
+  }
+ }
+ function wakeRender() {
+  if (!started || stopped || fault || renderRunning) return;
+  const attempts = [...store.attempts(), ...store.videoAttempts()];
+  if (attempts.some(a => a.state === 'reconciling') || store.renders().some(r => r.state === 'reconciling')) return;
+  const lease = queue.heldLease(), held = lease ? queue.get(lease.callId) : null;
+  if (lease && (!held || held.state === 'reconciling' || !attempts.some(a => a.id === held.attemptId && active.includes(a.state)))) return;
+  const job = store.renders().find(r => r.state === 'queued'); if (!job) return;
+  renderRunning = renderJob(job).catch(error => { fault = message(error); process.stderr.write(`Studio renderer stopped: ${fault}\n`); }).finally(() => { renderRunning = undefined; });
+ }
+ async function cachedRenderValid(render: StudioRender): Promise<boolean> {
+  try {
+   const asset = render.assetId ? store.asset(render.assetId) : null;
+   if (!asset || asset.projectId !== render.projectId || asset.sha256 !== render.sha256 || asset.mediaType !== 'video/mp4') return false;
+   const root = join(runtime, 'projects', render.projectId), rel = relative(root, asset.path);
+   if (!isAbsolute(asset.path) || resolve(asset.path) !== asset.path || !rel || rel === '..' || rel.startsWith('../') || isAbsolute(rel) || await realpath(asset.path) !== asset.path || !(await stat(asset.path)).isFile()) return false;
+   const hash = createHash('sha256');
+   for await (const chunk of createReadStream(asset.path, { signal: AbortSignal.any([controller.signal, AbortSignal.timeout(300000)]) })) hash.update(chunk);
+   return hash.digest('hex') === render.sha256;
+  } catch (error) { if (stopped) throw error; return false; }
+ }
  function wake() {
+  wakeRender();
   if (!started || stopped || running || fault) return;
   running = step().catch(error => { fault = message(error); process.stderr.write(`Studio scheduler stopped: ${fault}\n`); }).finally(() => { running = undefined; });
  }
@@ -173,16 +240,21 @@ export function createStudioRuntime(options: RuntimeOptions): StudioRuntime & { 
    return initial;
   },
   overview() {
-   const attempts = store.attempts(), native = queue.list(), tools = store.tools().map(t => {
+   const attempts = [...store.attempts(), ...store.videoAttempts()], native = queue.list(), tools = store.tools().map(t => {
     if (t.id === 'agent') return { ...t, active: t.active || attempts.some(a => active.includes(a.state)), queued: attempts.filter(a => a.state === 'queued').length };
-    if (t.id === 'yue2' || t.id === 'h3') return { ...t, active: t.active || native.some(c => c.tool === t.id && ['leased', 'launching', 'running', 'cancel_requested'].includes(c.state)), queued: native.filter(c => c.tool === t.id && c.state === 'queued').length };
+    if (t.id === 'yue2' || t.id === 'h3' || t.id === 'comfyui') {
+     // H3 runs through the owned ComfyUI service; both indicators describe the
+     // same native lane, not additional jobs or pre-agent reservations.
+     const nativeTool = t.id === 'comfyui' ? 'h3' : t.id;
+     return { ...t, active: t.active || native.some(c => c.tool === nativeTool && ['leased', 'launching', 'running', 'cancel_requested'].includes(c.state)), queued: native.filter(c => c.tool === nativeTool && c.state === 'queued').length };
+    }
     return t;
    });
    const warnings = ['Trusted LAN only: anyone who can access this studio can run full-access creative agents on the server.',
     'Models share one GPU lane. Other resident applications can exhaust RAM or VRAM; the studio never stops unrelated services.',
     `Each native generation is bounded to ${nativeRuntimeLimitSeconds} seconds; a job exceeding this limit is stopped, not silently retried.`];
    if (queue.heldLease() && !attempts.some(a => active.includes(a.state))) warnings.push('An existing native lease blocks new dispatch until reconciliation.');
-   if (attempts.some(a => a.state === 'reconciling') || tools.some(t => t.state === 'reconciling')) warnings.push('Interrupted work requires reconciliation; it is not automatically replayed.');
+   if (attempts.some(a => a.state === 'reconciling') || tools.some(t => t.state === 'reconciling') || store.renders().some(r => r.state === 'reconciling')) warnings.push('Interrupted work requires reconciliation; it is not automatically replayed.');
    if (fault) warnings.push('Studio scheduler stopped after an internal error. Inspect the server log before recovery.');
    return { projects: store.listProjects(), selectedProjectId: store.selectedProject(), provider: providers.get(store.provider()) ?? unknown(store.provider()), tools, warnings };
   },
@@ -211,6 +283,35 @@ export function createStudioRuntime(options: RuntimeOptions): StudioRuntime & { 
    }
    await capture; captures.delete(attempt.id); return store.attempt(attempt.id)!;
   },
+  async submitVideo(projectId, idempotencyKey, input) {
+   assertOpen(); const attempt = store.submitVideo(projectId, idempotencyKey, input);
+   if (attempt.state !== 'queued' || attempt.details.planPath) return attempt;
+   let capture = captures.get(attempt.id);
+   if (!capture) {
+    capture = (async () => {
+     try { const result = await prepareVideo({ runtime, source, origin, attempt, store }); store.patchVideoAttempt(attempt.id, { details: { ...attempt.details, ...result }, stage: 'Queued; immutable video task captured' }); }
+     catch (error) { store.patchVideoAttempt(attempt.id, { state: 'failed', stage: 'Could not capture video task', error: message(error) }); }
+    })(); captures.set(attempt.id, capture);
+   }
+   await capture; captures.delete(attempt.id); return store.videoAttempt(attempt.id)!;
+  },
+  render(projectId, songId, revision, idempotencyKey) {
+   assertOpen();
+   const work = (async () => {
+    for (const previous of store.renders().filter(r => r.projectId === projectId && r.songId === songId && r.revision === revision && r.state === 'succeeded')) {
+     if (!await cachedRenderValid(previous)) store.invalidateRenderCache(previous.id);
+    }
+    assertOpen(); const result = store.enqueueRender(projectId, songId, revision, idempotencyKey);
+    // Cover a success racing the first scan and exact idempotency replay of an
+    // invalid old artifact; never rewrite its historical successful record.
+    if (result.state === 'succeeded' && !await cachedRenderValid(result)) {
+     store.invalidateRenderCache(result.id);
+     throw new StudioStoreError(409, 'STUDIO_RENDER_UNAVAILABLE', 'The previously rendered file is missing or changed. Request a new render with a new idempotency key.');
+    }
+    return result;
+   })();
+   renderChecks.add(work); void work.then(() => renderChecks.delete(work), () => renderChecks.delete(work)); return work;
+  },
   close() {
    if (closing) return closing;
    stopped = true; controller.abort(new Error('Studio is shutting down')); if (timer) clearInterval(timer);
@@ -218,7 +319,7 @@ export function createStudioRuntime(options: RuntimeOptions): StudioRuntime & { 
    let adapterClosed: Promise<void>;
    try { adapterClosed = Promise.resolve(adapter.close?.()); } catch (error) { adapterClosed = Promise.reject(error); }
    return closing = (async () => {
-    const results = await Promise.allSettled([adapterClosed, initial, ...captures.values(), running, ...checking]);
+    const results = await Promise.allSettled([adapterClosed, initial, ...captures.values(), running, renderRunning, ...renderChecks, ...checking]);
     const failed = results.find(result => result.status === 'rejected'); if (failed?.status === 'rejected') throw failed.reason;
    })();
   },

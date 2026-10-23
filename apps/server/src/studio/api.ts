@@ -3,9 +3,9 @@ import fastifyStatic from '@fastify/static';
 import { isAbsolute, resolve } from 'node:path';
 import { StudioStoreError } from './store.ts';
 import { sendStudioAsset } from './assets.ts';
-import type { StudioStore } from './store-contract.ts';
+import type { PlacementInput, StudioStore } from './store-contract.ts';
 import type { StudioRuntime } from './runtime-contract.ts';
-import type { MusicDraft, MusicInput, Provider, ToolId } from '../../../../packages/core/src/contracts/studio.ts';
+import type { MusicDraft, MusicInput, Provider, ToolId, VideoInput } from '../../../../packages/core/src/contracts/studio.ts';
 
 interface StudioApiOptions { store: StudioStore; runtime: StudioRuntime; dataRoot: string; webRoot: string | null }
 const uuid = { type: 'string', pattern: '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$' };
@@ -15,6 +15,16 @@ const empty = plain({});
 const draft = plain({ musicPrompt: { type: 'string', maxLength: 16000 }, lyrics: { type: 'string', maxLength: 32000 }, style: { type: 'string', maxLength: 16000 } });
 const musicInput = plain({ musicPrompt: draft.properties.musicPrompt, lyrics: draft.properties.lyrics });
 const projectParams = plain({ id: uuid });
+interface SongParams { id: string; songId: string }
+interface PlacementParams extends SongParams { placementId: string }
+const songParams = plain({ id: uuid, songId: uuid });
+const placementParams = plain({ id: uuid, songId: uuid, placementId: uuid });
+const videoInput = { ...plain({ songId: uuid, clipPrompt: { type: 'string', maxLength: 16000, minLength: 1 }, style: draft.properties.style,
+  startFrame: revision, endFrame: { ...revision, minimum: 1 } }), properties: {
+    songId: uuid, clipPrompt: { type: 'string', maxLength: 16000, minLength: 1 }, style: draft.properties.style,
+    startFrame: revision, endFrame: { ...revision, minimum: 1 },
+    requestedIntervalSeconds: plain({ start: { type: 'string', maxLength: 1000 }, end: { type: 'string', maxLength: 1000 } }),
+  } };
 function lossless(value: unknown, depth = 0): void {
   if (depth > 64 || (typeof value === 'number' && (!Number.isFinite(value) || Object.is(value, -0) || (Number.isInteger(value) && !Number.isSafeInteger(value))))) {
     throw new StudioStoreError(400, 'STUDIO_INPUT', 'Request contains an invalid numeric value or excessive nesting');
@@ -55,6 +65,40 @@ export async function registerStudioApi(app: FastifyInstance, { store, runtime, 
     api.post<{ Params: { id: string }; Body: { idempotencyKey: string; input: MusicInput } }>('/api/projects/:id/music',
       { schema: { params: projectParams, body: plain({ idempotencyKey: uuid, input: musicInput }), querystring: empty } }, async (request, reply) =>
         reply.code(202).send(await runtime.submitMusic(request.params.id, request.body.idempotencyKey, request.body.input)));
+    api.post<{ Params: { id: string }; Body: { idempotencyKey: string; input: VideoInput } }>('/api/projects/:id/video',
+      { schema: { params: projectParams, body: plain({ idempotencyKey: uuid, input: videoInput }), querystring: empty } }, async (request, reply) =>
+        reply.code(202).send(await runtime.submitVideo(request.params.id, request.body.idempotencyKey, request.body.input)));
+    api.get<{ Params: SongParams }>('/api/projects/:id/songs/:songId/arrangement',
+      { schema: { params: songParams, querystring: empty } }, request => store.arrangement(request.params.id, request.params.songId));
+    api.post<{ Params: SongParams; Body: PlacementInput & { revision: number } }>('/api/projects/:id/songs/:songId/placements',
+      { schema: { params: songParams, body: { ...plain({ revision, clipId: uuid, startFrame: revision }), properties: { revision, clipId: uuid, startFrame: revision,
+        sourceStartFrame: revision, frameCount: { ...revision, minimum: 1 } } }, querystring: empty } }, request => {
+        const { revision, ...input } = request.body; return store.addPlacement(request.params.id, request.params.songId, revision, input);
+      });
+    api.put<{ Params: PlacementParams; Body: { revision: number; startFrame: number } }>('/api/projects/:id/songs/:songId/placements/:placementId',
+      { schema: { params: placementParams, body: plain({ revision, startFrame: revision }), querystring: empty } }, request =>
+        store.movePlacement(request.params.id, request.params.songId, request.body.revision, request.params.placementId, request.body.startFrame));
+    api.delete<{ Params: PlacementParams; Body: { revision: number } }>('/api/projects/:id/songs/:songId/placements/:placementId',
+      { schema: { params: placementParams, body: plain({ revision }), querystring: empty } }, request =>
+        store.removePlacement(request.params.id, request.params.songId, request.body.revision, request.params.placementId));
+    api.post<{ Params: SongParams; Body: { revision: number; idempotencyKey: string } }>('/api/projects/:id/songs/:songId/renders',
+      { schema: { params: songParams, body: plain({ revision, idempotencyKey: uuid }), querystring: empty } }, async (request, reply) =>
+        reply.code(202).send(await runtime.render(request.params.id, request.params.songId, request.body.revision, request.body.idempotencyKey)));
+    const projectRender = (projectId: string, renderId: string) => {
+      const render = store.render(renderId);
+      if (!render || render.projectId !== projectId.toLowerCase()) throw new StudioStoreError(404, 'STUDIO_NOT_FOUND', 'Render not found in this project');
+      return render;
+    };
+    api.get<{ Params: { id: string; renderId: string } }>('/api/projects/:id/renders/:renderId',
+      { schema: { params: plain({ id: uuid, renderId: uuid }), querystring: empty } }, request => projectRender(request.params.id, request.params.renderId));
+    api.route<{ Params: { id: string; renderId: string } }>({ method: ['GET', 'HEAD'], url: '/api/projects/:id/renders/:renderId/download', exposeHeadRoute: false,
+      schema: { params: plain({ id: uuid, renderId: uuid }), querystring: empty }, handler: (request, reply) => {
+        const render = projectRender(request.params.id, request.params.renderId);
+        if (render.state !== 'succeeded' || !render.assetId) throw new StudioStoreError(409, 'STUDIO_CONFLICT', 'Render is not ready to download');
+        if (store.arrangement(render.projectId, render.songId).revision !== render.revision) throw new StudioStoreError(409, 'STUDIO_CONFLICT', 'Render is stale; preview the current arrangement before downloading');
+        reply.header('content-disposition', `attachment; filename="music-video-${render.id}.mp4"`);
+        return sendStudioAsset(request, reply, store, root, render.assetId, true);
+      } });
     api.route<{ Params: { assetId: string } }>({ method: ['GET', 'HEAD'], url: '/api/assets/:assetId', exposeHeadRoute: false,
       schema: { params: plain({ assetId: uuid }), querystring: empty }, handler: (request, reply) => sendStudioAsset(request, reply, store, root) });
     if (webRoot !== null) await api.register(fastifyStatic, { root: resolve(webRoot), prefix: '/', index: ['index.html'], dotfiles: 'deny',

@@ -1,4 +1,5 @@
 import { constants } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { open, realpath, type FileHandle } from 'node:fs/promises';
 import { isAbsolute, join, relative, resolve, sep } from 'node:path';
 import type { FastifyReply, FastifyRequest } from 'fastify';
@@ -23,9 +24,9 @@ function interval(header: string, size: number): [number, number] | null {
 /** Only registered immutable asset IDs, never client-provided filenames. The
  * opened descriptor is rechecked on Linux before streaming that same descriptor,
  * rather than validating one path then reopening another in the HTTP library. */
-export async function sendStudioAsset(request: FastifyRequest<{ Params: { assetId: string } }>, reply: FastifyReply,
-  store: StudioStore, dataRoot: string) {
-  const asset = store.asset(request.params.assetId);
+export async function sendStudioAsset(request: FastifyRequest, reply: FastifyReply,
+  store: StudioStore, dataRoot: string, assetId = (request.params as { assetId: string }).assetId, verifyDigest = false) {
+  const asset = store.asset(assetId);
   const unavailable = () => reply.code(404).send({ code: 'STUDIO_ASSET_NOT_FOUND', error: 'Asset not found' });
   if (!asset) return unavailable();
   const projectRoot = join(dataRoot, 'projects', asset.projectId);
@@ -38,7 +39,21 @@ export async function sendStudioAsset(request: FastifyRequest<{ Params: { assetI
     handle = await open(asset.path, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK);
     const actual = await realpath(`/proc/self/fd/${handle.fd}`), info = await handle.stat();
     if (actual !== asset.path || !inside(projectRoot, actual) || !info.isFile() || !Number.isSafeInteger(info.size)) return unavailable();
-    reply.header('x-content-type-options', 'nosniff').header('accept-ranges', 'bytes').type('audio/wav');
+    if (verifyDigest) {
+      // Verify the descriptor actually served, not a pathname reopened after hashing.
+      const digest = createHash('sha256'), buffer = Buffer.alloc(1024 * 1024);
+      let position = 0;
+      while (position < info.size) {
+        const read = await handle.read(buffer, 0, Math.min(buffer.length, info.size - position), position);
+        if (read.bytesRead === 0) return unavailable();
+        digest.update(buffer.subarray(0, read.bytesRead)); position += read.bytesRead;
+      }
+      const after = await handle.stat();
+      if (digest.digest('hex') !== asset.sha256 || after.size !== info.size || after.mtimeMs !== info.mtimeMs) {
+        return reply.code(409).send({code:'STUDIO_ASSET_CHANGED',error:'The verified export file changed. Render a new preview before downloading.'});
+      }
+    }
+    reply.header('x-content-type-options', 'nosniff').header('accept-ranges', 'bytes').type(asset.mediaType);
     const range = request.headers.range;
     let start = 0, end = info.size - 1;
     if (range !== undefined) {

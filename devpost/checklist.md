@@ -31,6 +31,8 @@ and LAN browser checks. See [slice-3-feedback.md](slice-3-feedback.md). The
 requested-feedback retry remains the integrated checkpoint; later precision
 editing and recovery slices are not marked complete.
 
+A subsequent small timing/order polish pass is recorded in [slice-3-polish.md](slice-3-polish.md): ascending clip starts, a linked duration column, Start-left selection and stable timing layout. Later build slices remain pending.
+
 ## Working Agreement
 
 - The build order is approved. Write tests and record their assertions, fixtures and live-test boundaries before implementation; the learner's fast-mode standing approval removes routine waiting for sign-off. A missing import or unavailable GPU is not meaningful behavioural test evidence.
@@ -415,3 +417,5 @@ Activity mode: Proposed focused planning/verification investigation suitable for
   open. No fresh-host installation or complete browser video editor is claimed.
 
 - **23 October 2026 — early UI feedback:** the learner requested floating, dismissible notices, original music/lyrics restoration on song changes, and visual style excluded from music generation. Updated PRD/spec and their HTML companions; implemented and verified the changes without new generation or altering retained media/history. Preserve the card-heavy look comment for polish. The learner accepted the corrections with “great, perfect”; proceed to the integrated browser video loop.
+
+- **23 October, further integrated feedback:** add read-only generation duration between linked endpoints; sort library entries by current placement/original request time without changing overlap priority; put Start left while keeping End the default; stabilize timing/selection layout rather than globally suppress scrolling. Detailed evidence and the intermittent-scroll verification boundary are in `slice-3-polish.md`.

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { StudioSong } from '../../packages/core/src/contracts/studio.ts';
 import {
-  displayTimingValue, layoutIntervalLanes, parseTimingValue, resolveTiming, resolveTimingSeconds, selectBeatBoundary, timingFromFrames, timingValueFromSeconds,
+  displayTimingDuration, displayTimingValue, layoutIntervalLanes, parseTimingValue, resolveTiming, resolveTimingSeconds, selectBeatBoundary, timingFromFrames, timingValueFromSeconds,
   type ClipTimingIntent, type ResolvedTiming,
 } from '../../packages/core/src/time/linked-timing.ts';
 
@@ -208,4 +208,25 @@ describe('beat boundary clicking',()=>{
     }
     expect(current.endSeconds).toEqual(r(25n,24n));expect(current.endFrame).toBe(25);
   });
+});
+
+describe('generation duration display',()=>{
+ it('counts outward-rounded frames, not the difference of containing labels',()=>{
+  const s=song();expect(displayTimingDuration(s,resolveTiming(s,seconds('0.01','0.02')))).toEqual({frames:'1',seconds:'0.01',beats:'0.02'});
+ });
+ it('subtracts exact arbitrary decimals before formatting',()=>{
+  const s=song();expect(displayTimingDuration(s,resolveTiming(s,seconds('1.000000000000000001','1.123456789012345679')))).toEqual({frames:'3',seconds:'0.123456789012345678',beats:'0.246913578024691356'});
+ });
+ it('marks repeating duration without reparsing rounded endpoints',()=>{
+  const s=song();expect(displayTimingDuration(s,resolveTiming(s,timingFromFrames(1,2)))).toEqual({frames:'1',seconds:'≈ 0.041666666666',beats:'≈ 0.083333333333'});
+ });
+ it('measures beats over irregular anchors rather than multiplying estimated BPM',()=>{
+  const s=song(['24000','48000','120000']);expect(displayTimingDuration(s,resolveTiming(s,seconds('0.75','1.75')))).toEqual({frames:'24',seconds:'1',beats:'1'});
+ });
+ it('keeps frame and second durations without beat analysis',()=>{
+  const s=song([]);expect(displayTimingDuration(s,resolveTiming(s,seconds('0','1')))).toEqual({frames:'24',seconds:'1',beats:null});
+ });
+ it('does not manufacture a duration for incomplete or inverted input',()=>{
+  const s=song();for(const intent of [seconds('','1'),seconds('2','1')])expect(displayTimingDuration(s,resolveTiming(s,intent))).toBeNull();
+ });
 });

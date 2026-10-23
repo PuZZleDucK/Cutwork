@@ -109,6 +109,15 @@ export function displayTimingValue(song: TimingSong, input: TimingValue): Linked
   return linked(song, seconds, safe(floor(framePosition(seconds)) + 1n), input);
 }
 
+/** Requested beat/second duration, with the separately rounded generated frame count. */
+export function displayTimingDuration(song: TimingSong, timing: TimingResolution): LinkedTimingDisplay | null {
+  if (!timing.valid) return null;
+  let beats: string | null = null;
+  try { beats = display(subtract(beatAtTime(song, timing.endSeconds), beatAtTime(song, timing.startSeconds))); }
+  catch { /* An unavailable beat map does not invalidate seconds or generated frames. */ }
+  return { frames: String(timing.endFrame - timing.startFrame), seconds: display(timing.durationSeconds), beats };
+}
+
 /** JSON-safe exact seconds; use for clicked boundaries without decimal round trips. */
 export function timingValueFromSeconds(value: Rational): TimingValue {
   const seconds = normal(value);

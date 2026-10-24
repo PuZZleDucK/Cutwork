@@ -112,8 +112,9 @@ keep their captured provider; the new selection applies only to new requests.
 Use the setup panels or **Install all**. They cover YuE2, audio analysis, ComfyUI
 and H3 dependencies/models, with tool-specific progress, failures, Retry and
 confirmed Debug. Setup belongs to the server, not a project: switching projects
-or refreshing the browser does not start a duplicate installation. Completed
-panels collapse into shared status indicators.
+or refreshing the browser does not start a duplicate installation. All tool indicators are visible from the start, disabled until installed. Keep
+every setup panel visible until the complete toolchain is ready, then clear the
+setup area together. Only the actively installing step has animated hazard stripes.
 
 - **YuE2:** its own managed Python/venv and pinned music model assets.
 - **ComfyUI + H3:** a different managed Python/venv, owned loopback service and

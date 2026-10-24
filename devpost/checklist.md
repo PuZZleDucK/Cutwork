@@ -450,6 +450,8 @@ Activity mode: Proposed focused planning/verification investigation suitable for
 
 ## Revisions
 
+- **24 October — setup presentation:** keep all tool indicators from first load, animate only the currently installing step, retain all panels until the complete toolchain is ready, and remove the group together. Verified with 1,445 tests, typecheck/build, controlled browser setup states and web-only Dundee deployment. See [setup-presentation.md](setup-presentation.md). Final learner review remains open.
+
 - **23 October — user reprioritised the editing workspace:** do not wait for duplicate cold downloads to develop the product. Audit showed Continue From End and restored placement existed but were hidden inside fine-edit disclosures. Implement direct actions, a compact project selector, separate workspace sections, integrated preview/sequence and exact timeline-to-editor selection using existing tools/media. No backend or generator change; cold-install evidence remains separate and incomplete.
 
 - **23 October — actual service-path repair and preservation:** real systemd rejected argument-style quotes around `WorkingDirectory`; a red regression and actual parser check now cover the corrected path syntax. The frozen repair passes the full 1,332-test suite, typecheck/build and 30 Python cases. Normal persistent service installation succeeds, and the final 55/55 audit preserves every original asset/creative/native/Debug record and unrelated service identity. The first failed activation and a separately reviewed asdf PATH observation mismatch remain in the evidence. Fresh-runtime tool installation continues separately; slice 9 and final acceptance stay unchecked.

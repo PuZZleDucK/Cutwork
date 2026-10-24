@@ -1,11 +1,11 @@
 import { expect, it } from 'vitest';
 import { acceptedClipPrompt, orderedToolIndicators, initializePreviewAudio } from './feedback-state.ts';
 import type { ToolStatus } from '../../../packages/core/src/contracts/studio.ts';
-it('places analysis immediately after YuE2 without mutating setup order or including agent/uninstalled tools',()=>{
+it('places analysis immediately after YuE2 without mutating setup order, excluding only the separately rendered agent',()=>{
  const tools=['agent','yue2','comfyui','h3','analysis'].map(id=>({id,installed:true}) as ToolStatus);
  expect(orderedToolIndicators(tools).map(t=>t.id)).toEqual(['yue2','analysis','comfyui','h3']);
  expect(tools.map(t=>t.id)).toEqual(['agent','yue2','comfyui','h3','analysis']);
- tools[4]!.installed=false;expect(orderedToolIndicators(tools).map(t=>t.id)).toEqual(['yue2','comfyui','h3']);
+ tools[4]!.installed=false;expect(orderedToolIndicators(tools).map(t=>t.id)).toEqual(['yue2','analysis','comfyui','h3']);
 });
 it('clears only the successfully accepted description, never a newer draft or uncertain submission',()=>{
  expect(acceptedClipPrompt('shot','shot',true)).toBe('');

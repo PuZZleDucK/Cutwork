@@ -70,14 +70,14 @@ export function PreviewExport({studio,song,arrangement,active}:{studio:Studio;so
   {current?.state==='succeeded'&&current.assetId&&<a className="button secondary" href={`/api/projects/${song.projectId}/renders/${current.id}/download`} download>Download MP4 ↓</a>}</div></div>
  </section>;
 }
-export function VideoStudio({studio,panel='video',onRequestPanel}:{studio:Studio;panel?:WorkspacePanel;onRequestPanel?:(panel:WorkspacePanel)=>void}) {
+export function VideoStudio({studio,musicSection,panel='generate',onRequestPanel}:{studio:Studio;musicSection?:ReactNode;panel?:WorkspacePanel;onRequestPanel?:(panel:WorkspacePanel)=>void}) {
  const snapshot=studio.snapshot!,song=activeArtifacts(snapshot,'song',snapshot.songs).find(s=>s.id===snapshot.project.selectedSongId);
- if(!song)return <><WorkspacePane name="video" active={panel}><section className="empty-video"><h2>Select a soundtrack to edit video</h2><button className="button secondary" onClick={()=>openWorkspaceInput('music',onRequestPanel,'music-prompt')}>Open music</button></section><ClipLibrary studio={studio} song={null} arrangement={null}/></WorkspacePane><WorkspacePane name="archive" active={panel}><ArchivedMedia studio={studio}/></WorkspacePane><WorkspacePane name="history" active={panel}><CreativeHistory studio={studio} onRestoreMusic={()=>openWorkspaceInput('music',onRequestPanel,'music-prompt')}/></WorkspacePane></>;
+ if(!song)return <><WorkspacePane name="generate" active={panel}>{musicSection}<section className="empty-video"><h2>Generate Video</h2><p>Generate or select a soundtrack above to start creating video clips.</p></section><ClipLibrary studio={studio} song={null} arrangement={null}/></WorkspacePane><WorkspacePane name="archive" active={panel}><ArchivedMedia studio={studio}/></WorkspacePane><WorkspacePane name="history" active={panel}><CreativeHistory studio={studio} onRestoreMusic={()=>openWorkspaceInput('generate',onRequestPanel,'music-prompt')}/></WorkspacePane></>;
  const savedArrangement=snapshot.arrangements.find(a=>a.songId===song.id)??{songId:song.id,projectId:song.projectId,revision:0,placements:[]};
  const arrangement={...savedArrangement,placements:savedArrangement.placements.filter(placement=>artifactState(snapshot,{kind:'clip',id:placement.clipId})==='active')};
- return <VideoWorkspace key={song.id} studio={studio} song={song} arrangement={arrangement} panel={panel} onRequestPanel={onRequestPanel}/>;
+ return <VideoWorkspace key={song.id} musicSection={musicSection} studio={studio} song={song} arrangement={arrangement} panel={panel} onRequestPanel={onRequestPanel}/>;
 }
-function VideoWorkspace({studio,song,arrangement,panel,onRequestPanel}:{studio:Studio;song:StudioSong;arrangement:SongArrangement;panel:WorkspacePanel;onRequestPanel:((panel:WorkspacePanel)=>void)|undefined}) {
+function VideoWorkspace({studio,song,arrangement,panel,onRequestPanel,musicSection}:{studio:Studio;musicSection?:ReactNode;song:StudioSong;arrangement:SongArrangement;panel:WorkspacePanel;onRequestPanel:((panel:WorkspacePanel)=>void)|undefined}) {
  const draft=useClipDraft(studio,song,arrangement);
  const continueFrom=async(context:ClipEditContext)=>{
   const ok=await studio.perform(async()=>{
@@ -93,7 +93,7 @@ function VideoWorkspace({studio,song,arrangement,panel,onRequestPanel}:{studio:S
   },'');
   if(!ok)return;
   if(context.songId!==song.id&&!await studio.selectSong(context.songId))return;
-  openWorkspaceInput('video',onRequestPanel,'clip-prompt');
+  openWorkspaceInput('generate',onRequestPanel,'clip-prompt');
  };
 
  const restoreParameters=async(attempt:VideoAttempt)=>{
@@ -116,12 +116,12 @@ function VideoWorkspace({studio,song,arrangement,panel,onRequestPanel}:{studio:S
      studio.acceptRestoredProject(result.project,beforeProjectDraft,result.draft);
     }});
   },'Video parameters restored to their original song. No generation started; review the style, description, image and timing, then Generate a new variation.');
-  if(ok){openWorkspaceInput('video',onRequestPanel,'clip-prompt');}
+  if(ok){openWorkspaceInput('generate',onRequestPanel,'clip-prompt');}
  };
 
  const selectClip=(clipId:string,placementId:string)=>{
   const row=document.getElementById(`clip-library-${clipId}`);const context=[...(row?.querySelectorAll<HTMLElement>('[data-placement-id]')??[])].find(element=>element.dataset.placementId===placementId);const input=context?.querySelector<HTMLInputElement>('input:not(:disabled)');if(input){input.focus({preventScroll:true});input.scrollIntoView({block:'nearest',behavior:'auto'});return;}
   row?.focus({preventScroll:true});row?.scrollIntoView({block:'nearest',behavior:'auto'});
  };
- return <><WorkspacePane name="video" active={panel}><div className="video-workspace"><ClipForm studio={studio} song={song} draft={draft}/><PreviewExport studio={studio} song={song} arrangement={arrangement} active={panel==='video'}/><VideoTimeline studio={studio} song={song} arrangement={arrangement} draft={draft} onSelectClip={selectClip} onSwapPriority={(firstPlacementId,secondPlacementId)=>void studio.perform(async()=>{await request(`/api/projects/${song.projectId}/songs/${song.id}/dominance`,{revision:arrangement.revision,firstPlacementId,secondPlacementId});},'Clip order updated.')}/><ClipLibrary studio={studio} song={song} arrangement={arrangement} onContinue={continueFrom} onRestore={restoreParameters}/></div></WorkspacePane><WorkspacePane name="archive" active={panel}><ArchivedMedia studio={studio}/><button className="button secondary" onClick={()=>openWorkspaceInput('video',onRequestPanel,'clip-library')}>Open clip library to place restored clips →</button></WorkspacePane><WorkspacePane name="history" active={panel}><CreativeHistory studio={studio} onRestoreVideo={restoreParameters} onRestoreMusic={()=>openWorkspaceInput('music',onRequestPanel,'music-prompt')}/></WorkspacePane></>;
+ return <><WorkspacePane name="generate" active={panel}>{musicSection}<div className="video-workspace"><ClipForm studio={studio} song={song} draft={draft}/><PreviewExport studio={studio} song={song} arrangement={arrangement} active={panel==='generate'}/><VideoTimeline studio={studio} song={song} arrangement={arrangement} draft={draft} onSelectClip={selectClip} onSwapPriority={(firstPlacementId,secondPlacementId)=>void studio.perform(async()=>{await request(`/api/projects/${song.projectId}/songs/${song.id}/dominance`,{revision:arrangement.revision,firstPlacementId,secondPlacementId});},'Clip order updated.')}/><ClipLibrary studio={studio} song={song} arrangement={arrangement} onContinue={continueFrom} onRestore={restoreParameters}/></div></WorkspacePane><WorkspacePane name="archive" active={panel}><ArchivedMedia studio={studio}/><button className="button secondary" onClick={()=>openWorkspaceInput('generate',onRequestPanel,'clip-library')}>Open clip library to place restored clips →</button></WorkspacePane><WorkspacePane name="history" active={panel}><CreativeHistory studio={studio} onRestoreVideo={restoreParameters} onRestoreMusic={()=>openWorkspaceInput('generate',onRequestPanel,'music-prompt')}/></WorkspacePane></>;
 }

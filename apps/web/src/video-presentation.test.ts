@@ -40,5 +40,5 @@ test('generation has a concise heading without removing its descriptive action b
  const intent=timingFromFrames(0,48);
  const props={song,studio:{draft:{style:''},overview:{provider:{auth:'signed-in'},tools:[]}},draft:{intent,timing:resolveTiming(song,intent),persistence:{value:{clipPrompt:''}}}} as unknown as Parameters<typeof ClipForm>[0];
  const html=renderToStaticMarkup(createElement(ClipForm,props));
- expect(html).toContain('<h2>Generate</h2>');expect(html).not.toContain('H3 / NATIVE 24 FPS');expect(html).toContain('Generate clip →');
+ expect(html).toContain('<h2>Generate Video</h2>');expect(html).not.toContain('H3 / NATIVE 24 FPS');expect(html).toContain('Generate clip →');
 });

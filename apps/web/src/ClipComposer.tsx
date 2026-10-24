@@ -59,7 +59,7 @@ export function ClipForm({studio,song,draft}:{studio:Studio;song:StudioSong;draf
   },'Clip queued at its captured time. You can describe the next shot.');
   if(ok){submission.current=null;clearMatchingSession(submissionKey,persistedIdentity);draft.clearAccepted(submitted.clipPrompt,intent,continuation);}
  };
- return <section className="video-compose" aria-label="Clip generation"><div className="section-code">03 / DIRECT</div><div className="video-section-heading"><h2>Generate</h2></div>
+ return <section className="video-compose" aria-label="Clip generation"><div className="section-code">03 / DIRECT</div><div className="video-section-heading"><h2>Generate Video</h2></div>
 
   <form onSubmit={e=>{e.preventDefault();void generate();}}><fieldset disabled={studio.busy||draft.persistence.resolving}>
    <label htmlFor="visual-style">Project visual style <span className="optional">VIDEO ONLY · OPTIONAL</span></label><textarea id="visual-style" rows={2} value={studio.draft.style} onChange={e=>studio.edit({...studio.draft,style:e.target.value})} placeholder="Consistent characters, palette, setting and camera language across all your clips…" />

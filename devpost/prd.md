@@ -90,7 +90,7 @@ Source: `scope.md > The POC Boundary` and `Later`; see also `Changes to the Appr
 
 ## Look and Feel
 
-**23 October workspace refinement:** use a compact project selector and explicit Music / Video / Archive / History navigation rather than a long stack of cards. Keep video direction, preview and sequence together on desktop; stack them on narrow screens. Continue From End and Place/Remove are visible per-clip actions, with separately labelled Timing & audio controls. Clicking a placed timeline clip opens its exact saved edit, including repeated uses of one clip. Section changes preserve drafts, and parameter reuse opens/focuses the appropriate editor. This changes presentation and reachability, not generation, timing, archival or agent-authority rules.
+**23 October workspace refinement:** use a compact project selector and explicit Generate / Archive / History navigation, with music above video on Generate (24 October refinement) rather than a long stack of cards. Keep video direction, preview and sequence together on desktop; stack them on narrow screens. Continue From End and Place/Remove are visible per-clip actions, with separately labelled Timing & audio controls. Clicking a placed timeline clip opens its exact saved edit, including repeated uses of one clip. Section changes preserve drafts, and parameter reuse opens/focuses the appropriate editor. This changes presentation and reachability, not generation, timing, archival or agent-authority rules.
 
 - Functional, attractive industrial styling, not visual decoration at the expense of working controls.
 - Hazard stripes for unfinished work; the uncovered timeline spans are a natural application of that direction.
@@ -784,3 +784,9 @@ confirmation. Audio controls precede Trim and Position. **Continue from** is a
 label change only: it still captures the clicked saved edit's last retained
 frame, exact current end and continuation parameters. Multiple saved edit
 contexts keep their own unambiguous actions. Successful edits do not notify.
+
+### Unified Generate workspace (24 October 2026)
+
+Use **Generate / Archive / History** tabs. Generate combines music at the top with video generation, live preview, sequence and library underneath. Use **Generate Music** and **Generate Video** headings. Remove the separate Music/Video tabs and the duplicate video soundtrack dropdown; the generated-song list is the single song selector. Switching projects preserves the active tab; existing song-selection, prompt/lyrics restoration and per-song arrangement behaviour are unchanged.
+
+Show generated songs before the selected song's player. Use a fixed-height scrollable list exposing two complete versions and part of the next. Clamp each title to two lines (full title remains available by tooltip and accessible name), show duration above estimated BPM, omit generation date/time, and place **Archive** above **Delete** at the far right. Missing BPM displays an em dash. The shorter Delete label retains the full confirmation. Manual song selection keeps the list's scroll and keyboard position. Generate keeps hazard guidance for a missing soundtrack or first video, and shows a combined active song/clip count.

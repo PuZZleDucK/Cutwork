@@ -8,8 +8,8 @@ Fresh Cutwork runtime, tool environments and model downloads on the prepared Ubu
 
 ## Checklist
 - [x] Freeze source, preflight idle state/storage and verify a recording pilot before deleting/installing.
-- [ ] Start continuous capture; clean/bootstrap app; select Claude; install generators from empty runtime.
-- [ ] Day: generate original music with Claude, then one audio-conditioned clip; preview both.
+- [x] Start continuous capture; clean/bootstrap app; select Claude; install generators from empty runtime.
+- [x] Day: generate original music with Claude, then one audio-conditioned clip; preview both.
 - [ ] Switch provider to Codex; Night: generate original music and opening clip.
 - [ ] Macro takes: preview 1; remove 1; reuse → 2; preview 2; delete 2; reuse 1 → 3; preview/use 3.
 - [ ] Finish cohesive Night sequence with raw-frame continuation, overlap priority, archive/restore, frame-exact edits and an ending beyond the song.
@@ -24,3 +24,10 @@ Raw files and machine-specific observations are kept outside Git under Videos/Cu
 - 16:58:01 AEDT: continuous 1920×904 H.264 screen capture started after a verified content-only pilot. Separate isolated Chrome audio pilot passes; no microphone/default sink is captured.
 - 16:58–16:59: previous idle Cutwork runtime removed; frozen a069a59 source bootstrapped on port 9128. Host Python snapshots match. First API response has no projects and all generation tools uninstalled. Provider credentials and unrelated services remain outside the reset.
 - 17:00 AEDT: selected Claude/Opus 5.5 through setup, verified existing sign-in, then clicked Install all. YuE2 is installing; ComfyUI, H3 and analysis are queued. All setup panels/status indicators remain visible. Recorder and read-only installation observer are active.
+- 17:42: YuE2 dependency/import/model verification passed. 17:59: ComfyUI setup passed and H3 began its 35,087,235,076-byte fresh model download. Brief observer HTTP timeouts recovered without restarting installations; these are retained in evidence.
+- Latest source regression: 1,504 tests in 113 files, typecheck and production build pass.
+- 19:48:57: all five shared tools ready. Host-Python snapshot still matches. TTS temporarily paused for inference; separate personal ComfyUI retains PID 1216557.
+- 19:50: created Day Shift Sketchbook and submitted its first original music request through the UI. Captured provider is Claude/Opus 5.5; no Night project exists yet.
+
+- Day music completed: 25.52 seconds, analysed 112.5 BPM; full song and 4.46-second native clip playbacks reached their ends without media errors. Both captured Claude/Opus 5.5. The video CLI remained alive for five minutes after its final report with no child processes; a recorded identity-checked SIGINT yielded code 0, then normal Cutwork validation accepted the already-generated output. No receipt/database edits or rerender. This operator intervention is a known demo boundary, not a seamless-install claim.
+- 20:14: switched provider to Codex through the status selector, created Night Shift Garden, and submitted its fresh short-score music request.

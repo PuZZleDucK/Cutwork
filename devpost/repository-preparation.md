@@ -108,3 +108,22 @@ bytes exactly. The targeted timeline suite passes 20 tests, and the reviewed pub
 text/links pass. No force push, credential disclosure, new permission grant or
 private submission-draft publication occurred. This note is a follow-up commit to
 the same authorised publication, not a separate release or submission acceptance.
+
+
+## Submitted assets and final acceptance — 25 October 2026
+
+The owner explicitly requested publication of the supplied demo video, animated
+submission artwork and owner-written submission answers. They were published
+unchanged in `d50f2bf`, with README links and the updated planning recap/app map.
+Anonymous GitHub tree reads verified all seven changed files against local Git
+blob identities, and an anonymous README read matched local bytes. GitHub accepted
+the 92.47 MiB video with a large-file advisory; no history rewrite or LFS migration
+was performed. Media checks and the retained Opus diagnostic are documented in
+`docs/media/README.md`; no repair or re-encoding was applied.
+
+The owner confirms the demo and repository are public and included in the
+submitted entry, and now explicitly accepts the prototype with its documented
+Claude-completion, accessibility and fresh-OS verification limits. Final Review,
+slice 9 and the existing-practice learning recap are closed in `checklist.md`.
+This is release acceptance, not a new technical test result. No hosted application,
+additional exercise or new development work is required for this handoff.

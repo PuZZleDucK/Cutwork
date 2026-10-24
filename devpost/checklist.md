@@ -5,21 +5,27 @@ status: approved
 
 # Build Checklist
 
+**Completed and signed off for submission — 25 October 2026.** All build slices,
+hands-on acceptance checkpoints and the learning wrap-up are closed within the
+accepted proof-of-concept boundary. Dated checkpoints below preserve the build
+history; their older pending statements do not reopen completed work.
+
 Build mode: **fast** — explicitly selected by the learner on 23 October 2026 because submission is due this weekend. Standing approval applies to routine in-scope tests, implementation, bounded verification and commits. Do not pause for per-batch approval; stop for genuine blockers, consequential scope/architecture changes or feedback that materially affects the product. Retain tests-first development, mechanical verification, independent focused review where useful, privacy safeguards and honest live-evidence boundaries. Prior learn-mode approval gates are historical, not current blockers. No blanket permission to kill unrelated work or conceal failed results.
 
-The scope, PRD and technical specification are approved. The learner approved this build order on 21 October 2026 ("looks great"). It sequences the approved product, without adding new behaviour; no further build-order sign-off is required. Git was initialised with the learner's agreement. On 21 October the learner explicitly requested a partial progress checkpoint commit; this saves the work without completing slice 1. Slice 1 has initial application modules, Dundee runtime/CLI preparation and successful real provider capability probes; a direct short YuE2 generation has now passed, and a first short song-conditioned H3 clip has passed; a first agent-driven attempt recovered real media after an H3 observation failure, but a clean chain pass remains outstanding. All 78 approved local tests pass, including the eight implementation-review regressions and both provider-runner failure paths.
+**Historical starting checkpoint (21 October; superseded by the index below):** The scope, PRD and technical specification are approved. The learner approved this build order on 21 October 2026 ("looks great"). It sequences the approved product, without adding new behaviour; no further build-order sign-off is required. Git was initialised with the learner's agreement. On 21 October the learner explicitly requested a partial progress checkpoint commit; this saves the work without completing slice 1. Slice 1 has initial application modules, Dundee runtime/CLI preparation and successful real provider capability probes; a direct short YuE2 generation has now passed, and a first short song-conditioned H3 clip has passed; a first agent-driven attempt recovered real media after an H3 observation failure, but a clean chain pass remains outstanding. All 78 approved local tests pass, including the eight implementation-review regressions and both provider-runner failure paths.
 
 ## Latest fast-mode verification index
 
 **Submission and closing recap — 25 October 2026:** the owner confirms the demo
 video and repository are public and included in the submitted entry. No hosted
 application is planned or needed for this handoff. Owner-supplied demo, animated
-submission artwork and submission answers are being published unchanged by
+submission artwork and submission answers were published unchanged in `d50f2bf` by
 explicit request. The existing archive/restore planning decision and learner-written
 submission reflection provide the brief learning recap; no new interactive code
-tour, code edit or testing session is implied. Final Review still awaits the
-explicit acceptance requested in this closing conversation. Known limitations
-remain recorded rather than converted into passing checks.
+tour, code edit or testing session is implied. The owner explicitly accepted the
+submitted prototype and its recorded limitations on 25 October. Final Review and
+slice 9 are now closed; limitations remain recorded, not converted into passing
+checks.
 
 **Submission reconciliation — learner decision:** skip the remaining accessibility
 checks for this submission. The final keyboard/focus/dialog and reduced-motion
@@ -34,8 +40,9 @@ observed issues from the second recording have now been investigated: Config's
 stale context display was reproduced, fixed and deployed; the Claude post-completion
 hang did not recur in four pinned native CLI probes and is deferred for
 post-submission investigation. See [the findings](post-demo-issue-investigation.md).
-Neither was a failed render or lost project. Final learner approval/watch-listen,
-learning wrap-up and submission preparation remain separate; the public source is now published.
+Neither was a failed render or lost project. Final owner acceptance, the brief
+learning recap and submission publication are recorded above. Acceptance does not
+claim an additional watch/listen session or new technical verification.
 
 **Public source published — 25 October:** [PuZZleDucK/Cutwork](https://github.com/PuZZleDucK/Cutwork),
 branch `main`, after explicit learner authorisation. Refreshed README, installation/
@@ -44,8 +51,9 @@ are available without authentication; README and sample bytes match locally.
 Bounded current/history credential review and media/link checks pass; the unchanged
 code baseline has 1,510 tests plus typecheck/build, and the timing wording review
 passes 20 focused tests. Measured VRAM is documented with sampling/allocator limits.
-Local agent/course files, raw captures and the learner's concurrent submission draft
-remain excluded. No submission authorship or course-completion claim. See
+Local agent/course files, raw captures and the private learner profile remain
+excluded. The owner later authorised the submission answers and supplied media
+for publication in `d50f2bf`; no submission prose was written by the agent. See
 [repository preparation](repository-preparation.md).
 
 **24 October post-demo fix:** source `08a6b5a` adds setup-triggered context refresh
@@ -65,7 +73,8 @@ Two raw segments total 4h52m19.983s, with chapter index and app-audio editions.
 All recordings/export/retained clips decode; take-2 purge and frame hashes pass.
 TTS restored, personal ComfyUI unchanged. See [recorded-demo-v2.md](recorded-demo-v2.md)
 for the confirmation gap, two operator-workaround boundaries and exact evidence.
-Final learner review/wrap-up and submission editing remain open.
+At that checkpoint final learner review/wrap-up and submission editing remained
+open; the closing record above supersedes that status.
 
 **Earlier 24 October recorded newcomer journey completed:** fresh application runtime,
 isolated Python environments and real model downloads, followed by Night Shift
@@ -75,8 +84,8 @@ verified 28-second export. The complete 4h18m30s raw recording is retained local
 A real LAN HTTP deletion bug was fixed in `df08ce5`; **1,425 tests**, typecheck/build
 and actual deletion retry pass. TTS restored; personal ComfyUI unchanged.
 See [recorded-fresh-install.md](recorded-fresh-install.md) for evidence and limits.
-Slice 9 remains unchecked for final learner review/wrap-up and the remaining
-explicit verification boundaries, not because model downloads are still running.
+At that checkpoint slice 9 remained unchecked for final learner acceptance, not
+because downloads were still running. It is now closed with the recorded limits.
 The entries below are historical checkpoints, not the current runtime inventory.
 
 **Cutwork branding deployed:** final name, original hazard-striped clapperboard
@@ -466,14 +475,14 @@ The next work is the prepared real-model lane verification; no slice/G4 gate is 
   Learner check: Archive and restore a clip after replacing its timeline space, then explicitly delete a disposable clip after reading the confirmation. Inspect remaining history and the changed preview/coverage. Archive/restore a song and verify that its saved arrangement returns without automatic selection.
   Commit: `Add artifact lifecycle and retained generation history`
 
-- [ ] **9. Demonstrate the complete newcomer path and finish verification**
+- [x] **9. Demonstrate the complete newcomer path and finish verification**
   Becomes usable: A documented, coherent prototype that can be set up from no preinstalled generators, used from the LAN, and taken through song creation, several clips and an independently playable export with the full approved controls present.
   Why now: The final claim is about the integrated newcomer experience, not individually passing components or the developer's prepared machine. This pass tests that claim before final learner review and shipping preparation.
   PRD ref: `prd.md > The Core Journey`; `prd.md > What We're Building`; `prd.md > Screens and Layout`; `prd.md > Look and Feel`; all 18 feature headings under `prd.md > Features and Behavior`.
   Spec ref: `spec.md > Where It Runs and How Someone Tries It`; `spec.md > Look and Feel`; `spec.md > Media, framework and licence references`; `spec.md > Verification and Build Gates`; `spec.md > PRD Traceability`; `spec.md > What Was Simplified and Why`.
   Build: Finish onboarding/run instructions, service lifecycle explanations, prerequisite diagnostics, verified dependency/model/font notices and the accepted visual/status/accessibility details. Exercise a clean supported installation without deleting unrelated Dundee installations; use a fresh managed runtime/root and document any host prerequisites already present. If a genuinely clean supported OS baseline is unavailable, leave that evidence gap explicit rather than certifying fresh-host support. Complete the PRD-to-test/evidence matrix and correct integration defects without silently adding deferred features. Resolve the project's own licence with the learner before public release; no licence is chosen by this checklist and no publication occurs here.
   Verify (mechanical): Run the full reviewed domain/server/Python/browser suites, type checking and production build. Audit all 160 PRD criteria for actual coverage/evidence and unresolved failures. Run the documented bootstrap/service and built-server LAN path, exercise both fixed provider pairings, and perform a fresh song-plus-approximately-three-clips browser journey with history, edits, continuation and export. Test first-use installation separately from reinstall/idempotency, verify host Python preservation and shared dependency readiness, and independently probe/watch/listen to final media in VLC. The final keyboard/focus/dialog and reduced-motion accessibility sweep is skipped by learner decision; retain earlier responsive observations without claiming current cross-device certification. Preserve recorded error/auth/status evidence and the separate pre-publication privacy audit. Do not claim an 8 GB target, seamless joins, mastered audio or unattended repair beyond the verified scope.
-  Current evidence: `recorded-demo-v2.md` supersedes the older pending-install notes: current bootstrap, empty managed tool environments/model downloads, both providers and full edit/export workflow are verified on the prepared host. Accessibility sweep skipped by learner decision; no fresh-OS certification. The slice stays open for unresolved observed issues and final learner review, not another download run.
+  Current evidence: `recorded-demo-v2.md` supersedes the older pending-install notes: current bootstrap, empty managed tool environments/model downloads, both providers and full edit/export workflow are verified on the prepared host. Accessibility sweep skipped by learner decision; no fresh-OS certification. The owner accepted the submitted prototype on 25 October with the intermittent Claude completion issue documented, accessibility sweep skipped and fresh-OS certification explicitly absent. Slice 9 is complete within those accepted limits; no repeat downloads or new certification are implied.
   Learner check: Review the completed newcomer evidence and explore the finished app freely: multiple projects, awkward timings, failed/cancelled work, archive/restore and export. Tell me what is broken, confusing or worth changing. Agreed fixes go under Final Review; the prototype is not declared finished until you retry them and confirm readiness.
   Commit: `Verify the complete newcomer music video workflow`
 
@@ -481,7 +490,7 @@ The next work is the prepared real-model lane verification; no slice/G4 gate is 
 
 - [x] Early usable behavior explored — slice 2 (corrections accepted with “great, perfect”, 23 October 2026): actual setup and song generation in the LAN UI; feedback is resolved before building the browser video workflow. Slice 1 also has its contract/media learner check, not a substitute for this UI feedback.
 - [x] Integrated creative loop explored — slice 3 (accepted with “perfect”, 23 October 2026): create clips and independently play the export before investing in precision editing. This checks whether the central creative flow works, distinct from setup feedback.
-- [ ] Final kick-the-tires exploration and feedback completed — slice 9 and Final Review; record this session once rather than repeating it. In learn mode every slice also receives its own Learner check.
+- [x] Final kick-the-tires exploration and feedback completed — the existing hands-on UI/refinement rounds and recorded journey were accepted on 25 October. This closes the single final checkpoint without inventing another exploration or test session.
 
 ## Final Review
 
@@ -494,9 +503,16 @@ single final review below rather than inventing separate approvals.
 - [x] Investigate the two observed run issues under the learner's fix-if-reproduced instruction: Config refresh reproduced/fixed/deployed; Claude did not recur in four native probes, retained as a post-submission rough edge. See `post-demo-issue-investigation.md`. This is an investigation disposition, not final learner acceptance.
 - **SKIPPED, not passed:** remaining accessibility checks, explicitly waived for this submission. No accessibility implementation removed.
 
-- [ ] Final review complete — feedback resolved and learner confirms ready to ship
+- [x] Final review complete — owner explicitly signs off the submitted prototype on 25 October, accepting the documented limitations.
 
-Record actual observations here after the learner tries the final app. Add agreed fixes/refinements as unchecked items; verify, commit, and have affected behaviour retried before marking them complete. No feedback or passing test result is implied by this draft. A change to the approved boundary requires discussion and document reconciliation, not an automatic new feature.
+Acceptance record: after the final-review question explicitly named the unresolved
+intermittent Claude completion hang, skipped accessibility sweep and absence of
+fresh-OS certification, the owner confirmed sign-off. The owner had already
+confirmed that the demo/repository are public and included in the submitted entry.
+No hosted application is planned. The prior feedback, implemented corrections and
+recorded evidence are accepted as the submitted proof of concept; no additional
+code change, model run, listening session or accessibility result is claimed.
+Any future improvements belong to post-submission work, not an unfinished gate.
 
 ## Code Tour and App Map
 

@@ -40,6 +40,12 @@ orchestration—not a fully offline application.
 
 ## See it in action
 
+**[Watch/download the submitted demo video →](docs/media/Cutwork%20Demo.webm)**
+(3m22s, WebM with audio, 92.5 MiB). The developer's
+[submission notes](devpost/submission-info.md) and
+[animated submission artwork](devpost/Cutwork.gif) are included unchanged.
+No hosted application is required to watch the demonstration.
+
 **Night Shift Garden** is a completed 28-second demonstration: an original song,
 six placed shots, four frame-based continuations, an overlapping macro insert,
 and a closing image that continues beyond the music.

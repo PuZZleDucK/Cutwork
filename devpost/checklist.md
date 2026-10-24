@@ -11,6 +11,16 @@ The scope, PRD and technical specification are approved. The learner approved th
 
 ## Latest fast-mode verification index
 
+**Submission and closing recap — 25 October 2026:** the owner confirms the demo
+video and repository are public and included in the submitted entry. No hosted
+application is planned or needed for this handoff. Owner-supplied demo, animated
+submission artwork and submission answers are being published unchanged by
+explicit request. The existing archive/restore planning decision and learner-written
+submission reflection provide the brief learning recap; no new interactive code
+tour, code edit or testing session is implied. Final Review still awaits the
+explicit acceptance requested in this closing conversation. Known limitations
+remain recorded rather than converted into passing checks.
+
 **Submission reconciliation — learner decision:** skip the remaining accessibility
 checks for this submission. The final keyboard/focus/dialog and reduced-motion
 sweep is **SKIPPED / NOT VERIFIED**, not passed. Existing accessibility features
@@ -490,15 +500,29 @@ Record actual observations here after the learner tries the final app. Add agree
 
 ## Code Tour and App Map
 
-- [ ] Learning activity complete — guided route, focused alternative, prior practice connected, or brief recap
-- [ ] Optional edit and transfer reflection addressed — offered/declined/already covered/not applicable as appropriate
-- [ ] `devpost/app-map.html` generated from finished code, checked, and shown, including a project-grounded practice to reuse
+- [x] Learning activity complete — brief evidence-based recap of planning practice already performed during the build, not a repeated guided code tour.
+- [x] Optional edit and transfer reflection addressed — extra edit not applicable to this existing-practice recap; reflection already supplied in the developer's own submission answers. No new reflection or survey response authored by the agent.
+- [x] `devpost/app-map.html` refreshed against current code, checked, and provided as the take-home reference, including a project-grounded practice to reuse.
 
-Activity and evidence: The app-map HTML is already prepared and its earlier visual check is recorded in `slice-9-readiness.md`; the learner wrap-up has not been conducted. Proposed focused activity: follow one actual timing/continuation or setup decision from scope to PRD to spec to its reviewed tests and running implementation. Use a real build discovery if one is more instructive; do not claim learning merely because it was explained.
-Route and stops: Prepared in `devpost/app-map.html`; check against the latest workspace changes before showing it. A prepared route is not a completed learner activity.
-Edit outcome: Not offered yet; optional, not a second mandatory exercise.
-Reflection: Not offered yet; any personal response belongs in the ignored learner profile, not the public checklist/map.
-Activity mode: Proposed focused planning/verification investigation suitable for an experienced developer; not yet performed.
+Activity and evidence: The owner worked through the observable archive/restore
+rule during requirements: archived A is removed; if B occupies its old interval,
+restored A returns unplaced and B stays unchanged. The closing recap connects that
+rule to the bounded no-undo scope, the separate artifact/placement design in the
+specification, `store.ts → lifecycleChange`, and the actual A/B regression in
+`tests/contracts/studio-lifecycle-store.test.ts`. That targeted suite passes all
+19 tests in this closing pass. This reuses completed planning practice and its
+evidence; it does not claim a new hands-on test or demonstrated mastery.
+
+Route and stops: The three-stop source route remains in `devpost/app-map.html`
+as an optional reference, not an interactive tour that was performed. Refreshed
+against `36d15fe`; current path/anchor checks accompany publication. The browser tool refused the
+local file URL, so no new browser visual check is claimed; the map is provided
+as an offline file link, with its prior visual review retained.
+Edit outcome: No extra code edit needed or performed for this recap.
+Reflection: Already supplied by the learner in the owner-authored submission
+file, explicitly authorised for public inclusion. No private profile material
+is copied into the checklist or map; no additional personal answer is required.
+Activity mode: Brief existing-practice planning/verification recap, 25 October 2026.
 
 ## Revisions
 

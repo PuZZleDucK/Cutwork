@@ -48,3 +48,28 @@ a blanket output-rights guarantee. Consult [third-party notices](../../THIRD_PAR
 and the linked upstream terms before reusing generated media commercially. No model
 weights, source film/song uploads, private provider transcripts or third-party
 character artwork are included here.
+
+## Owner-supplied submission assets — 25 October 2026
+
+- [`Cutwork Demo.webm`](Cutwork%20Demo.webm): the developer's narrated demo,
+  supplied for publication after submission. Unchanged 201.7-second WebM,
+  1920×1080, 30 fps, VP8 video and Opus audio; 96,964,626 bytes (92.5 MiB).
+  It is separate from the generated 28-second film above and from the raw
+  clean-install recordings, which remain outside this repository.
+- [`../../devpost/Cutwork.gif`](../../devpost/Cutwork.gif): owner-supplied animated
+  Cutwork submission artwork, unchanged 900×600 GIF, 4,332,590 bytes. It does not
+  replace the application's existing clapperboard SVG.
+- [`../../devpost/submission-info.md`](../../devpost/submission-info.md): the
+  developer's own submission answers, published by explicit request without
+  rewriting or copy editing. This intentional public artifact is distinct from
+  the ignored private learner profile.
+
+The owner confirms the video and repository are public and included in the
+submitted entry. No public app deployment is planned for the submission. These
+files are supplied as-is; existing third-party/output-rights boundaries still apply.
+
+Publication checks: both supplied media files decode to the end. FFmpeg exits 0
+for the WebM but emits one `Error parsing Opus packet header` diagnostic; no
+re-encoding or audio repair was applied. Sampled video frames and the GIF were
+visually reviewed. This is not a full human watch/listen or an exhaustive privacy
+audit; the owner confirms these are the public submission assets to publish.

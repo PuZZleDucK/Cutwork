@@ -450,6 +450,8 @@ Activity mode: Proposed focused planning/verification investigation suitable for
 
 ## Revisions
 
+- **24 October — automatic clip edits:** valid trims and movements save automatically with guarded, typing-safe persistence. Reorder and shorten library actions, move placement status above previews and Audio above Trim. Verification is recorded in [clip-autosave.md](clip-autosave.md); final learner review remains open.
+
 - **24 October — video presentation polish:** share the sequence teal with brighter placed-library cards, retain neutral unplaced cards, simplify the four video headings and remove redundant annotations/footer decoration. Details and verification: [video-presentation.md](video-presentation.md). No generation, placement or media changes; final learner review remains open.
 
 - **24 October — setup presentation:** keep all tool indicators from first load, animate only the currently installing step, retain all panels until the complete toolchain is ready, and remove the group together. Verified with 1,445 tests, typecheck/build, controlled browser setup states and web-only Dundee deployment. See [setup-presentation.md](setup-presentation.md). Final learner review remains open.

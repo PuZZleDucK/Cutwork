@@ -685,3 +685,28 @@ reboot-resumable model inference.
 ### Notification dismissal refinement (24 October 2026)
 
 The notification inbox contains failures and the initial trusted-LAN notice, not successful operations or routine GPU/timeout documentation. Keep collapse, review and dismissal separate: review selects only undismissed IDs and the badge counts only those IDs. Polling must not resurrect a dismissed occurrence; a new error occurrence may announce normally. Persist only the opaque LAN-warning dismissal ID in localStorage, migrating the previous session preference without persisting error or prompt text. Expired five-second announcements remain reviewable until individually dismissed. Draft-conflict recovery also stays in the music form so dismissing an overlay cannot strand an unsaved draft.
+
+### Automatic clip-edit persistence (24 October 2026)
+
+The frontend uses a per-edit-context controller (`clip-edit-autosave.ts`) with a
+350 ms typing debounce and blur/Enter flush. It validates linked frame/beat/second
+intent before PUT, serializes writes per context, and preserves the latest input
+if an earlier acknowledgement arrives during typing. Fields remain enabled for
+the active edit kind; continuation, reuse, lifecycle and placement actions wait
+for that edit to settle. Invalid drafts never replace the saved arrangement.
+Unmount flushes valid pending work against its captured project/context; page
+unload warns about unfinished input. Failed saves retain the in-page draft with
+explicit retry/discard; dirty remote revisions require loading the latest edit.
+
+`clip-edit-persistence.ts` retains both context and arrangement revision guards.
+A single arrangement-conflict retry is allowed only after a fresh project read
+proves the edited context itself is unchanged. Never replay unknown transport
+outcomes or borrow a newer context revision. Accepted responses update the live
+sequence immediately through a monotonic, project-scoped snapshot merge and
+invalidate older polling reads; a refresh supplies history and overview updates.
+No global busy lock is taken for typing saves. Only failures raise notifications.
+
+The card composes placement status above its preview, then Continue from / Reuse
+parameters / Remove, then Archive / Delete. Audio precedes Trim and Position.
+The compact Delete label does not shorten the confirmation or alter lifecycle
+semantics. The Continue from label does not alter the last-retained-frame rule.

@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useRef, type ReactNode } from 'react';
 import type { SongArrangement, StudioSong, ClipEditContext, ClipDraft as SavedClipDraft, ProjectSnapshot,VideoAttempt } from '../../../packages/core/src/contracts/studio.ts';
 import { request } from './api.ts';
 import { clipSessionKey,readSession,writeSession } from './clip-session.ts';
@@ -31,22 +31,26 @@ export function ClipLibrary({studio,song,arrangement,onContinue,onRestore}:{stud
    if(entry.kind==='attempt'){const a=entry.attempt;return <article className={`clip-card clip-pending ${attemptIsActive(a.state)?'working':''}`} key={entry.id} data-start-frame={entry.startFrame}><span className="eyebrow">H3 / {a.state.replaceAll('_',' ').toUpperCase()}</span><h3>{a.input.clipPrompt}</h3><p className="small-copy">{a.stage}</p><span className="micro">{a.input.startFrame} → {a.input.endFrame} / {a.input.songId===song?.id?'THIS SONG':'OTHER SONG'}</span>{a.error&&<details><summary className="warning">Failure details</summary><pre>{a.error}</pre></details>}<GenerationActions studio={studio} attempt={a} onRestore={onRestore?()=>onRestore(a):undefined}/></article>;}
    const clip=entry.clip,allContexts=snapshot.editContexts.filter(c=>c.clipId===clip.id),contexts=allContexts.filter(c=>c.songId===song?.id).sort((a,b)=>(a.sourceOriginFrame+a.sourceStartFrame)-(b.sourceOriginFrame+b.sourceStartFrame));
    const missingContext=allContexts.some(c=>!snapshot.songs.some(s=>s.id===c.songId)||['deleting','deleted'].includes(artifactState(snapshot,{kind:'song',id:c.songId})));
-   return <article className={`clip-card ${arrangement?.placements.some(p=>p.clipId===clip.id)?'in-sequence':'unplaced'}`} id={`clip-library-${clip.id}`} tabIndex={-1} key={entry.id} data-start-frame={entry.startFrame??undefined}>
+   const original=attempts.find(a=>a.id===clip.attemptId),placed=arrangement?.placements.some(p=>p.clipId===clip.id);
+   const reuse=(disabled=false)=>original&&onRestore?<GenerationActions studio={studio} attempt={original} onRestore={()=>onRestore(original)} compact disabled={disabled}/>:null;
+   const card=(placement:ReactNode,actions:ReactNode,controls:ReactNode,disabled=false)=><article className={`clip-card ${placed?'in-sequence':'unplaced'}`} id={`clip-library-${clip.id}`} tabIndex={-1} key={entry.id} data-start-frame={entry.startFrame??undefined}>
+    {placement}
     <PreviewVideo controls preload="none" src={asset(clip.assetId)} poster={clip.rawFrames[0]?asset(clip.rawFrames[0].assetId):undefined} aria-label={`Preview clip ${clip.title}`} />
-    <div className="clip-card-body"><h3 title={clip.title}>{clip.title}</h3><ArtifactControls studio={studio} refValue={{kind:'clip',id:clip.id}} title={clip.title}/>
-     {(()=>{const original=attempts.find(a=>a.id===clip.attemptId);return original&&onRestore?<GenerationActions studio={studio} attempt={original} onRestore={()=>onRestore(original)}/>:null;})()}
-
-     {song&&arrangement&&onContinue&&contexts.map(context=><ClipEditControls key={context.id} studio={studio} song={song} arrangement={arrangement} clip={clip} context={context} onContinue={onContinue} />)}
-     {!contexts.length&&<div className="other-song-continuations">{allContexts.map(context=>{
-      const referenced=snapshot.songs.find(s=>s.id===context.songId),state=artifactState(snapshot,{kind:'song',id:context.songId});
-      return <div key={context.id}><p className="small-copy muted">Saved edit on {referenced?.title??'missing song'} · source {context.sourceStartFrame+1}–{context.sourceEndFrame} · end {context.sourceOriginFrame+context.sourceEndFrame} frames{context.placementId?'':' · unplaced'}</p>
-       {!referenced||['deleting','deleted'].includes(state)?<RetargetClipContext studio={studio} context={context}/>:state==='archived'?<p className="warning">Restore this song from the archive before continuing its saved edit.</p>:onContinue?<button className="button secondary small" disabled={studio.busy} onClick={()=>void onContinue(context)}>Continue From End on {referenced.title} ↑</button>:<button className="button secondary small" disabled={studio.busy} onClick={()=>void studio.selectSong(referenced.id)}>Select {referenced.title} to edit or continue</button>}
-      </div>;
-     })}</div>}
-     {song&&arrangement&&!contexts.length&&!missingContext&&<button className="button secondary small" disabled={studio.busy} onClick={()=>void studio.perform(async()=>{const next=clipSuggestion(song,arrangement.placements,snapshot.reservations);const startFrame=next?.startFrame??Math.max(0,...arrangement.placements.map(p=>p.endFrame));await request(`/api/projects/${song.projectId}/songs/${song.id}/placements`,{revision:arrangement.revision,clipId:clip.id,startFrame});},'Clip placed in the selected song sequence.')}>Place in sequence</button>}
-
-    </div>
+    <div className="clip-card-body"><h3 title={clip.title}>{clip.title}</h3>{actions}<ArtifactControls studio={studio} refValue={{kind:'clip',id:clip.id}} title={clip.title} deleteLabel="Delete" disabled={disabled}/>{controls}</div>
    </article>;
+   if(song&&arrangement&&onContinue&&contexts.length)return <ClipEditControls key={entry.id} studio={studio} song={song} arrangement={arrangement} clip={clip} context={contexts[0]!} onContinue={onContinue} reuseAction={reuse}>{parts=>card(parts.placement,parts.actions,<>{parts.controls}{contexts.slice(1).map(context=><ClipEditControls key={context.id} studio={studio} song={song} arrangement={arrangement} clip={clip} context={context} onContinue={onContinue}/>)}</>,parts.actionsDisabled)}</ClipEditControls>;
+   const placement=<div className="clip-placement-bar"><span className="clip-placement-state">{placed?'IN SEQUENCE':'UNPLACED'}</span>{song&&arrangement&&!contexts.length&&!missingContext&&<button className="button secondary small" disabled={studio.busy} onClick={()=>void studio.perform(async()=>{const next=clipSuggestion(song,arrangement.placements,snapshot.reservations);const startFrame=next?.startFrame??Math.max(0,...arrangement.placements.map(p=>p.endFrame));await request(`/api/projects/${song.projectId}/songs/${song.id}/placements`,{revision:arrangement.revision,clipId:clip.id,startFrame});},'')}>Place in sequence</button>}</div>;
+   const otherContinuations=onContinue?allContexts.map(context=>{
+    const referenced=snapshot.songs.find(s=>s.id===context.songId);
+    return referenced&&artifactState(snapshot,{kind:'song',id:context.songId})==='active'?<button key={context.id} className="button secondary small" disabled={studio.busy} onClick={()=>void onContinue(context)}>Continue from {referenced.title}</button>:null;
+   }):null;
+   const otherContexts=<div className="other-song-continuations">{allContexts.map(context=>{
+    const referenced=snapshot.songs.find(s=>s.id===context.songId),state=artifactState(snapshot,{kind:'song',id:context.songId});
+    return <div key={context.id}><p className="small-copy muted">Saved edit on {referenced?.title??'missing song'} · source {context.sourceStartFrame+1}–{context.sourceEndFrame} · end {context.sourceOriginFrame+context.sourceEndFrame} frames{context.placementId?'':' · unplaced'}</p>
+     {!referenced||['deleting','deleted'].includes(state)?<RetargetClipContext studio={studio} context={context}/>:state==='archived'?<p className="warning">Restore this song from the archive before continuing its saved edit.</p>:onContinue?null:<button className="button secondary small" disabled={studio.busy} onClick={()=>void studio.selectSong(referenced.id)}>Select {referenced.title} to edit or continue</button>}
+    </div>;
+   })}</div>;
+   return card(placement,<div className="clip-primary-actions">{otherContinuations}{reuse()}</div>,otherContexts);
   })}</div>
  </section>;
 }

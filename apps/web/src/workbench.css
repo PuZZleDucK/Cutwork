@@ -43,3 +43,10 @@
 .live-preview-mute.button{padding:5px 8px;min-height:28px}
 .live-preview-mute[aria-pressed=true]{border-color:var(--cyan);background:#29423f;color:#d9f1e9}
 @media(max-width:740px){.brand-mark{width:32px;height:32px}}
+/* Compact clip actions and automatic timing edits. */
+.clip-placement-bar{display:flex;align-items:center;flex-wrap:wrap;gap:5px 8px;padding:6px 9px;font:9px var(--mono);color:var(--muted);min-height:33px}
+.clip-placement-bar .clip-frame-count{margin-left:auto}.clip-placement-bar .button{font-size:10px;padding:4px 6px;min-height:24px;margin-left:auto}
+.clip-primary-actions{display:flex;align-items:center;flex-wrap:wrap;gap:5px;margin:0}.clip-primary-actions>.generation-recovery,.clip-primary-actions .row-actions{margin:0}.clip-primary-actions .generation-recovery{min-width:0}.clip-primary-actions .small-copy{display:none}
+.clip-card-body>.artifact-controls{margin:0}.clip-card .clip-edit{border-top:0;padding-top:0}.clip-edit .clip-soundtrack{border-top:0;margin-top:0;padding-top:0}.clip-save-status{font-size:10px;line-height:1.5;color:var(--muted);display:flex;align-items:center;flex-wrap:wrap;gap:5px}.clip-save-status[role=alert]{color:var(--amber)}
+
+.clip-primary-actions>.button{margin:0}

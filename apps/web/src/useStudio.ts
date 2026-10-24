@@ -9,6 +9,8 @@ import { errorNoticeReducer } from './notifications.ts';
 import { ApiError, request } from './api.ts';
 import { latestReadGuard } from './video-state.ts';
 import { attemptIsActive, emptyDraft, mergeSavedDraft, musicInputFromDraft } from './studio-state.ts';
+import {acknowledgeClipEdit,persistClipEdit,type ClipEditResult,type ClipEditPatch} from './clip-edit-persistence.ts';
+import type {ClipEditContext} from '../../../packages/core/src/contracts/studio.ts';
 
 export function useStudio() {
   const [overview, setOverview] = useState<StudioOverview | null>(null);
@@ -215,8 +217,17 @@ export function useStudio() {
     reads.current.begin();
     setSnapshot(old=>old?.project.id===record.projectId?{...old,deletions:[...(old.deletions??[]).filter(row=>row.id!==record.id),record]}:old);
   };
+  const acceptClipEdit = (result:ClipEditResult) => {
+    reads.current.begin();
+    setSnapshot(old=>acknowledgeClipEdit(old,result));
+    void refresh().catch(e=>setConnection(e instanceof Error?e.message:'Waiting for the next studio update.'));
+  };
+  const saveClipEdit = async (context:ClipEditContext,revision:number,patch:ClipEditPatch):Promise<ClipEditResult> => {
+    const result=await persistClipEdit(context,revision,patch);acceptClipEdit(result);return result;
+  };
+  const reportClipEditError = (text:string) => {dispatchError({type:'raise',text});void refresh().catch(()=>{});};
   const provider = (value: Provider) => act(async () => { await request('/api/provider', { provider: value }); await refresh(); });
   const checkProvider = () => act(async () => { await request('/api/provider/check', {}); await refresh(); });
   const setup = (tool: ToolId | 'all') => act(async () => { await request(`/api/setup/${tool}`, {}); await refresh(); });
-  return { overview, snapshot, draft, dirty, saving, busy, cancelling, error, connection, conflict, notice, messageVersion, errorVersion: errorNotice.occurrence, edit, save, selectProject, createProject, resolveConflict, selectSong, generate, provider, checkProvider, setup, refresh, perform, performImmediate, performCancellation, saveProjectForRestore, acceptRestoredProject, restoreMusic, acceptDeletion, clearError: () => dispatchError({type:'clear'}) };
+  return { overview, snapshot, draft, dirty, saving, busy, cancelling, error, connection, conflict, notice, messageVersion, errorVersion: errorNotice.occurrence, edit, save, selectProject, createProject, resolveConflict, selectSong, generate, provider, checkProvider, setup, refresh, perform, performImmediate, performCancellation, saveProjectForRestore, acceptRestoredProject, restoreMusic, acceptDeletion, acceptClipEdit, saveClipEdit, reportClipEditError, clearError: () => dispatchError({type:'clear'}) };
 }

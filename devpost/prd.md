@@ -766,3 +766,21 @@ reverse-chronological creative record contains music, video, render and recorded
 project events, including saved visual-style changes. Prior unrecorded edits
 are not invented. Video players default to unmuted 50% playback volume, without
 changing export levels or resetting a viewer's volume choice during polling.
+
+### Automatic library editing and compact controls (24 October 2026)
+
+Valid clip trims and position changes apply automatically to the selected song's
+sequence after a short typing pause or on leaving the field. There are no Apply
+trim or Apply move buttons. Partial/invalid input leaves the last valid sequence
+unchanged. Saving must not disable the field being edited or overwrite newer
+keystrokes; a failure retains the input with retry, while a revision conflict
+requires explicit recovery rather than silently replacing another edit.
+
+Show placement status, frame count and the unplaced **Place in sequence** action
+above the clip preview, without the old status divider. The first button row is
+**Continue from**, **Reuse parameters**, **Remove** (when placed); the second is
+**Archive**, **Delete**. Delete still opens the full irreversible-deletion
+confirmation. Audio controls precede Trim and Position. **Continue from** is a
+label change only: it still captures the clicked saved edit's last retained
+frame, exact current end and continuation parameters. Multiple saved edit
+contexts keep their own unambiguous actions. Successful edits do not notify.

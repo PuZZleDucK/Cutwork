@@ -11,6 +11,21 @@ The scope, PRD and technical specification are approved. The learner approved th
 
 ## Latest fast-mode verification index
 
+**Submission reconciliation — learner decision:** skip the remaining accessibility
+checks for this submission. The final keyboard/focus/dialog and reduced-motion
+sweep is **SKIPPED / NOT VERIFIED**, not passed. Existing accessibility features
+and earlier tests remain intact; no accessibility certification is claimed.
+Responsive observations remain limited to the recorded desktop/narrow fixtures;
+no fresh cross-device certification or new sweep is being added as a gate.
+
+The fresh managed-install and creative journey are complete; do not restart
+model downloads or treat old scratchpad “pending” notes as current work. The only
+observed unresolved workflow issues from the second recording are the Claude
+post-completion process hang and stale Config context display, detailed in
+[the issue explanations](recorded-demo-v2.md#observed-issues-not-yet-fixed).
+Neither is a failed render or lost project. Final learner approval/watch-listen,
+learning wrap-up, public-source audit and submission preparation remain separate.
+
 **24 October second recorded journey completed:** frozen source `a069a59`, fresh
 runtime/environments/model downloads, Claude Day song+clip before Codex Night.
 The requested macro take-1/remove/reuse/take-2/preview/delete/reuse-take-1/take-3
@@ -428,8 +443,9 @@ The next work is the prepared real-model lane verification; no slice/G4 gate is 
   PRD ref: `prd.md > The Core Journey`; `prd.md > What We're Building`; `prd.md > Screens and Layout`; `prd.md > Look and Feel`; all 18 feature headings under `prd.md > Features and Behavior`.
   Spec ref: `spec.md > Where It Runs and How Someone Tries It`; `spec.md > Look and Feel`; `spec.md > Media, framework and licence references`; `spec.md > Verification and Build Gates`; `spec.md > PRD Traceability`; `spec.md > What Was Simplified and Why`.
   Build: Finish onboarding/run instructions, service lifecycle explanations, prerequisite diagnostics, verified dependency/model/font notices and the accepted visual/status/accessibility details. Exercise a clean supported installation without deleting unrelated Dundee installations; use a fresh managed runtime/root and document any host prerequisites already present. If a genuinely clean supported OS baseline is unavailable, leave that evidence gap explicit rather than certifying fresh-host support. Complete the PRD-to-test/evidence matrix and correct integration defects without silently adding deferred features. Resolve the project's own licence with the learner before public release; no licence is chosen by this checklist and no publication occurs here.
-  Verify (mechanical): Run the full reviewed domain/server/Python/browser suites, type checking and production build. Audit all 160 PRD criteria for actual coverage/evidence and unresolved failures. Run the documented bootstrap/service and built-server LAN path, exercise both fixed provider pairings, and perform a fresh song-plus-approximately-three-clips browser journey with history, edits, continuation and export. Test first-use installation separately from reinstall/idempotency, verify host Python preservation and shared dependency readiness, and independently probe/watch/listen to final media in VLC. Check keyboard focus/dialogs, reduced motion, responsive layout, error/auth states, no secret leakage and real status indicators. Do not claim an 8 GB target, seamless joins, mastered audio or unattended repair beyond the verified scope.
-  Learner check: Follow the newcomer instructions from the agreed clean test starting point, then explore the finished app freely: multiple projects, awkward timings, failed/cancelled work, archive/restore and export. Tell me what is broken, confusing or worth changing. Agreed fixes go under Final Review; the prototype is not declared finished until you retry them and confirm readiness.
+  Verify (mechanical): Run the full reviewed domain/server/Python/browser suites, type checking and production build. Audit all 160 PRD criteria for actual coverage/evidence and unresolved failures. Run the documented bootstrap/service and built-server LAN path, exercise both fixed provider pairings, and perform a fresh song-plus-approximately-three-clips browser journey with history, edits, continuation and export. Test first-use installation separately from reinstall/idempotency, verify host Python preservation and shared dependency readiness, and independently probe/watch/listen to final media in VLC. The final keyboard/focus/dialog and reduced-motion accessibility sweep is skipped by learner decision; retain earlier responsive observations without claiming current cross-device certification. Preserve recorded error/auth/status evidence and the separate pre-publication privacy audit. Do not claim an 8 GB target, seamless joins, mastered audio or unattended repair beyond the verified scope.
+  Current evidence: `recorded-demo-v2.md` supersedes the older pending-install notes: current bootstrap, empty managed tool environments/model downloads, both providers and full edit/export workflow are verified on the prepared host. Accessibility sweep skipped by learner decision; no fresh-OS certification. The slice stays open for unresolved observed issues and final learner review, not another download run.
+  Learner check: Review the completed newcomer evidence and explore the finished app freely: multiple projects, awkward timings, failed/cancelled work, archive/restore and export. Tell me what is broken, confusing or worth changing. Agreed fixes go under Final Review; the prototype is not declared finished until you retry them and confirm readiness.
   Commit: `Verify the complete newcomer music video workflow`
 
 ## Hands-on Checkpoints
@@ -440,9 +456,14 @@ The next work is the prepared real-model lane verification; no slice/G4 gate is 
 
 ## Final Review
 
-- [ ] Second workspace refinement: navbar/project/notification layout, persistent guided tabs, editable captured agent templates, live preview, compact clip cards and sequence-only priority. Implemented, deployed and mechanically/browser verified in `workbench-round-two.md`; learner retry remains open.
+The two earlier workspace-refinement rounds are implemented and superseded by
+later learner-directed refinements and the recorded journey. Their evidence stays
+in `workbench-feedback.md` and `workbench-round-two.md`; they are not two additional
+implementation/retest projects. Consolidate remaining human acceptance into the
+single final review below rather than inventing separate approvals.
 
-- [ ] 23 October requested refinement: replace inefficient card layout with a dense workspace and make continuation/restored placement plainly reachable. Implementation and browser checks are recorded in `workbench-feedback.md`. The learner's visual response is positive ("that's looking a lot better"); final hands-on functional review remains open, not inferred from visual approval.
+- [ ] Decide/resolve the two observed run issues: Claude process completion and Config context refresh. They were worked around, not fixed; details in `recorded-demo-v2.md`.
+- **SKIPPED, not passed:** remaining accessibility checks, explicitly waived for this submission. No accessibility implementation removed.
 
 - [ ] Final review complete — feedback resolved and learner confirms ready to ship
 
@@ -461,6 +482,13 @@ Reflection: Not offered yet; any personal response belongs in the ignored learne
 Activity mode: Proposed focused planning/verification investigation suitable for an experienced developer; not yet performed.
 
 ## Revisions
+
+- **Submission reconciliation after recorded demo v2:** learner explicitly skips
+  remaining accessibility checks. Record them as skipped/unverified, preserve
+  existing features and historical evidence, reconcile fresh-install/creative
+  proof as complete, and consolidate obsolete workspace-review checkboxes into
+  the single final review. Neither final acceptance nor issue resolution is
+  inferred. This changes verification scheduling, not the product requirements.
 
 - **24 October — configurable task contexts:** replace read-only context viewers with full editable music/T2VA/I2VA overrides, durable revisioned saves, explicit defaults and submission-time captures. Custom instructions replace rather than append the old guides. **1,504 tests / 113 files**, typecheck/build, disposable browser conflict/reset/navigation checks and isolated deployed task preparation pass. Dundee database backed up; projects/templates/native-call records preserved. See [editable-task-contexts.md](editable-task-contexts.md). Final learner review remains open.
 

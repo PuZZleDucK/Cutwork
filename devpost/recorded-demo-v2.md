@@ -57,6 +57,44 @@ confirmation pause separates the two original segments; this is not a claim of
 an uninterrupted capture or a zero-intervention installation. Final learner
 review, public-release audit and an edited submission demo remain separate work.
 
+## Observed issues not yet fixed
+
+### Claude process did not exit after completed Day video
+
+- **Observed once in this run:** H3 had produced and validated its native media,
+  and Claude had written its final report, but the Claude CLI stayed alive with
+  no child processes. Cutwork was still waiting for process closure before
+  finalizing its generation, so the user would see work remain in progress.
+- After five idle minutes following the report, the operator verified process
+  identity and sent SIGINT only to that Claude process. It returned exit code 0;
+  Cutwork then performed its normal checks and placed the original clip. No
+  regeneration, media loss, database edits or fabricated success receipt.
+- This is an unresolved completion/launcher issue, not a demonstrated H3 failure.
+  The exact cause and recurrence rate are **not diagnosed**. The wrapper in
+  `apps/server/src/providers/run.ts` currently awaits process closure; a natural-
+  language final report is not a substitute for validated completion evidence.
+- A future fix must distinguish genuinely completed work from a still-working
+  agent and retain native validation; it must not blindly cancel slow generation
+  or rerun an already-produced clip. No such fix has been applied.
+
+### Config retained the pre-install task-context display
+
+- Config initially fetched H3 defaults while its installed reference files were
+  unavailable. After installation succeeded, that mounted view still displayed
+  “default incomplete” and its old unavailable-reference warning.
+- The live context API and captured generation tasks already contained the
+  complete pinned guides. Clicking **Reload saved contexts** refreshed the view;
+  no prompt edits or regeneration were needed. This was stale UI data, not agents
+  using the old guide or missing prompting instructions.
+- `apps/web/src/TaskContextSettings.tsx` loads on mount and explicit Reload, with
+  no setup-readiness-triggered refresh. Any fix must preserve unsaved edits rather
+  than silently replacing the user's custom context. No fix has been applied.
+
+These workarounds allowed the requested recorded journey to finish. They are
+not claims that the two underlying issues are resolved. Remaining accessibility
+checks were subsequently explicitly skipped by the learner, not failed or passed.
+No runtime/code change or new inference was performed during note reconciliation.
+
 ## Run log
 
 - 16:58:01 AEDT: continuous 1920×904 H.264 screen capture started after a verified content-only pilot. Separate isolated Chrome audio pilot passes; no microphone/default sink is captured.

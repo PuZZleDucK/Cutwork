@@ -5,13 +5,20 @@ It connects observable requirements to real assertion locations and recorded evi
 **No row is automatically marked passed because code or a similarly named test exists.**
 The short intent reminders do not replace the full PRD sentences.
 
-**Baseline:** completed slice 8, commit `0b99abd`, 23 October 2026: 1,322 tests in
+**Original assertion baseline:** completed slice 8, commit `0b99abd`, 23 October 2026: 1,322 tests in
 85 files on development and deployment hosts, typecheck/build, 11-stage isolated
 CPU/HTTP lifecycle proof, and 53/53 deployment-preservation checks over 831 existing
 assets. Test examples below are exact searchable titles in that baseline; a file
 can contain several related assertions, not a one-test/one-criterion bijection.
-Slice-9 bootstrap/notices/documentation changes require their own frozen run and
-newcomer evidence; this document does not silently extend slice-8 results to them.
+Later evidence is recorded separately below, not inferred from that test count.
+The current recorded-v2 source `a069a59` passed 1,504 tests in 113 files plus
+typecheck/build before the fresh installation and complete creative journey.
+
+**Reconciliation:** the completed newcomer demo is no longer a pending test.
+Remaining accessibility checks are **SKIPPED / NOT VERIFIED** by the learner's
+explicit submission decision. Historical narrow-layout observations remain
+limited evidence, not comprehensive current-device certification. Evidence limits
+in individual rows do not automatically create new pre-submission test tasks.
 
 ## Evidence key
 
@@ -25,44 +32,51 @@ newcomer evidence; this document does not silently extend slice-8 results to the
 | continuation-6 | [Slice 6 continuation](slice-6-evidence.md) | Actual original-frame + audio-conditioned H3, post-song intervals and exact fixture timing; no seamless-motion promise. |
 | recovery-7 | [Slice 7 recovery/Debug](slice-7-evidence.md) | Actual cancellation/replay/new variation and controlled repair, with measured release. Earlier OOM/observer failures retained; success uses conservative owned-Comfy flags. |
 | lifecycle-8 | [Slice 8 lifecycle](slice-8-evidence.md) | Actual CPU/HTTP deletion and independent file audit; isolated browser archive/restore/Cancel and read-only purged history. No browser destructive confirmation or production-media deletion. |
+| recorded-v2 | [Second fresh recorded journey](recorded-demo-v2.md) | Fresh app runtime/environments/models on prepared Ubuntu; Claude Day song+clip then Codex Night song/eight generations/six placements/four continuations/full live preview/28s export. Permanent deletion verified; one Claude-exit workaround and one Config reload. Not fresh OS, human listening or accessibility certification. |
 
 Private run logs and screenshots are intentionally not published; the public
 evidence documents state their observations and limits. A fixture assertion,
 a real native result, an interactive browser observation and human listening are
 different kinds of evidence, not interchangeable checkmarks.
 
-## Open release boundaries
+## Current evidence and explicit limits
 
-- **Clean host:** no clean Ubuntu26.04/driver baseline. Fresh managed environments
-  on an already prepared host do not close that gap. New bootstrap/service code
-  still needs final first-use evidence, with reused host packages/auth/cache named.
-- **Current newcomer journey:** provider setup → generator installation → song →
-  approximately three clips → export must be evaluated as the current full flow;
-  separate historical successes do not constitute one newly executed journey.
-- **Human review:** independent decoding/headless VLC does not establish audible
-  seams, musical quality or a human watch/listen of the final film. Current-bundle
-  keyboard, reduced-motion, narrow-layout and failure-state checks remain distinct.
+- **Fresh managed setup and newcomer journey — complete:** recorded-v2 uses a
+  fresh bootstrap/runtime and empty generator environments/model downloads, then
+  both providers and the full edit/continuation/archive/delete/preview/export
+  path. Reused OS, driver/APT prerequisites and provider login are disclosed.
+  A newly installed OS/driver or new-account login remains outside this proof;
+  no further download/install marathon is pending.
+- **Observed issues — unresolved:** one Claude CLI remained alive after its final
+  report/native completion; a verified targeted SIGINT allowed normal validation.
+  Config's stale preinstall reference display cleared on Reload saved contexts;
+  actual tasks already had complete guides. See recorded-v2 for facts and limits.
+- **Human review:** decoded media and recorded browser playback do not replace
+  final perceptual watch/listen or learner acceptance.
+- **Accessibility — skipped, not passed:** final keyboard/focus/dialog and
+  reduced-motion checks explicitly waived for submission. Existing features/tests
+  remain. Responsive proof is limited to recorded desktop/narrow viewports; no
+  additional certification is claimed or added as a new gate.
 - **Authority and cancellation:** full-access agents and trusted-LAN/no-auth are
   intentional. Owned cancellation has measured nonzero latency; unregistered
-  external work is not certified stopped. “Immediate” PRD language is not replaced
-  by indefinite cancelling or a claim of zero latency.
-- **Terms and presentation:** application MIT is chosen; third-party terms remain
-  separate in [the notices](../THIRD_PARTY_NOTICES.md). The historical Kirsty
-  asset is now bundled under its original retained redistribution terms, not MIT
-  or the newer commercial licence; current rendered-font verification is separate.
-- Final learner review, learning wrap-up and publication/submission are separate
-  gates. Preparing [the app map](app-map.html) is not evidence of a completed tour.
+  external work is not certified stopped. No zero-latency or arbitrary-repair claim.
+- **Terms and presentation:** application MIT remains separate from
+  [third-party notices](../THIRD_PARTY_NOTICES.md). Historical Kirsty font bytes
+  retain their original redistribution terms; the bundled rendering was observed
+  in slice-9/browser evidence, not inferred from newer commercial font terms.
+- Final learner review, learning wrap-up and publication/submission remain open.
+  Preparing [the app map](app-map.html) does not establish a completed activity.
 
 ## Spec gates (not PRD IDs)
 
 | Spec gate | Evidence available | Still not established |
 |---|---|---|
-| G1 — clean-host toolchain/terms | Pinned recipes, isolated venv/probe evidence, real16GiB GPU runs, host-Python observations; new source licence/notices work | Fresh OS/driver installation, completed newcomer packaging proof, current packaged-font rendering; no broad output-rights or all-workloads memory guarantee. |
-| G2 — provider contracts | native-1 both actual CLIs, ordinary tools/cwd/session records; recovery-7 exact Debug disclosure and controlled real repair | CLI/session model observation is not provider-side attestation; availability still depends on account. |
+| G1 — clean-host toolchain/terms | Pinned recipes, isolated venv/probe evidence, real16GiB GPU runs, host-Python observations; recorded-v2 fresh bootstrap/models and bundled font observations | Fresh OS/driver installation; no broad output-rights or all-workloads memory guarantee. |
+| G2 — provider contracts | native-1/recovery-7 actual CLIs; recorded-v2 actual Claude Day and Codex Night | Claude post-final-report hang unresolved; CLI/model observation is not provider-side attestation. |
 | G3 — media contracts | browser-3/continuation-6/recovery-7 real song, short audio/image-conditioned H3, original frames, surplus handling/replay/post-song input | No arbitrary-length success, exact generated song duration/BPM, seamless join or universal VRAM fit. |
 | G4 — interruption/ownership | native-1/recovery-7 real cancellation/handoffs and measured release; continuity-4 process restart/identity fixtures | Uninstrumented/detached work and arbitrary GPU crash recovery are not certified. |
-| G5 — edit/output parity | edit-5/continuation-6/lifecycle-8 exact arithmetic, original frame/audio identity, continuation/lifecycle/cache proof | Final human watch/listen; current complete UI accessibility/responsive check. |
-| G6 — newcomer demonstration | browser-3 actual song/three-clips/export on prepared host; native-1 other provider separately | End-to-end from no generator tools with final packaging; human playback review. |
+| G5 — edit/output parity | edit-5/continuation-6/lifecycle-8 plus recorded-v2 full live preview before exact 672-frame export, raw-frame identity and lifecycle checks | Final human watch/listen; remaining accessibility sweep skipped; responsive evidence limited. |
+| G6 — newcomer demonstration | recorded-v2: empty managed generators/models to song, eight Night generations, six placements and full 28s export, plus prior Claude Day | Prepared host, not fresh OS; two recorded workarounds; human final review remains open. |
 
 Component/gate IDs in [the spec](spec.md#verification-and-build-gates) are a different
 namespace from PRD `G1`/`C1` below. For example, PRD G1 means one-click creative
@@ -75,9 +89,9 @@ Searchable example: “uses actual persistent WAL, preserves global selection/pr
 
 | PRD ID | Observable intent reminder | Evidence boundary / remaining check |
 |---|---|---|
-| P1 | Create projects A and B; music, clips, sequence, archive, and generation history in A do not appear in or overwrite B. | Prepared-host browser continuity + real SQLite fixtures; not a clean-host journey. |
-| P2 | Switching back to A restores A's project material | Prepared-host browser continuity + real SQLite fixtures; not a clean-host journey. |
-| P3 | Switching or creating projects does not require reinstalling tools that are already ready. | Prepared-host browser continuity + real SQLite fixtures; not a clean-host journey. |
+| P1 | Create projects A and B; music, clips, sequence, archive, and generation history in A do not appear in or overwrite B. | browser-2/continuity-4 fixtures plus recorded-v2 two isolated projects and actual project switching; not a fresh-OS test. |
+| P2 | Switching back to A restores A's project material | recorded-v2 switches Night to Day and back: project material/inputs restored while Night request continues. |
+| P3 | Switching or creating projects does not require reinstalling tools that are already ready. | recorded-v2 Day to Night reuses the installed tools, no reinstall. |
 | P4 | The project selector can show coverage without labelling it an overall quality score or a completed export. | UI labels coverage; percentage fixtures are not creative quality or export completion evidence. |
 | P5 | Start a clip generation in A, switch to B, and let it complete: the result belongs to A, not B | continuity-4 exercises late completion into another project with a controlled executor, not a new GPU run for each ordering. |
 | P6 | Reload the page during generation and reopen its project: the same attempt continues, with its original inputs intact | browser-2/browser-3 browser reload plus continuity-4 lost-response/restart fixtures; server restart does not resume GPU computation. |
@@ -90,15 +104,15 @@ Searchable example: “assigns a fresh Claude UUID once during immutable launch 
 
 | PRD ID | Observable intent reminder | Evidence boundary / remaining check |
 |---|---|---|
-| F1 | First-use setup presents the Codex/Claude choice before the generation-tool setup steps | Provider-first UI exists; new bootstrap/service path is in slice 9, not yet an end-to-end fresh-host pass. |
+| F1 | First-use setup presents the Codex/Claude choice before the generation-tool setup steps | recorded-v2 fresh provider-first setup selects Claude before Install all, then switches to Codex for Night. Existing sign-in reused. |
 | F2 | The prototype uses the selected provider's fixed requested model pairing; no arbitrary provider entry or model picker is offered | native-1 verified requested CLI/native-session model identifiers; not provider-server attestation. |
 | F3 | The selected provider is shared and retained across project switches and page reloads | Actual CLI/session evidence; simultaneous cross-provider job switching is a controlled fixture, not two full native films. |
 | F4 | Creative inputs submitted in the UI are handled through the terminal interface of the agent selected at request submission, without making the user manually run each… | native-1 used both real CLIs with normal research/script-or-score tools and project cwd; Claude was not a second complete media film. |
 | F5 | Provider selection by itself does not mark the agent usable | Missing/version/auth fixture checks; no silent fallback. New-account setup is not demonstrated by a pre-authenticated host. |
-| F6 | With the selected agent installed but not signed in, its navbar indicator names that provider and displays an error status, not ordinary Idle / not running | Signed-out state has fixture coverage; final newcomer sign-in/UI flow remains to check. |
+| F6 | With the selected agent installed but not signed in, its navbar indicator names that provider and displays an error status, not ordinary Idle / not running | Signed-out state has fixture coverage. Recorded-v2 reuses existing login; new-account/signed-out onboarding is not certified. |
 | F7 | Hovering over that authentication-error indicator reveals actionable sign-in details for the selected provider, rather than only a generic error message | Commands match the pinned setup adapter/provider wrapper; no credentials exposed. Current tooltip usability still needs final sweep. |
 | F8 | Once sign-in and agent usability are verified, clear the authentication error and show the normal activity/queue status | Readiness requires actual login/usability; selecting/dismissing cannot prove authentication. Prepared-account proof only so far. |
-| F9 | Click the selected agent's navbar indicator: its Codex/Claude selector/configuration box reappears with the current choice visible | browser-2 observes reopening the selector; final keyboard/current-bundle check remains. |
+| F9 | Click the selected agent's navbar indicator: its Codex/Claude selector/configuration box reappears with the current choice visible | recorded-v2 actual status-selector reopening/provider switch; remaining full keyboard sweep explicitly skipped. |
 | F10 | Select and apply the alternative provider: the configuration box returns to the status area, whose label/configuration now identify the new provider | browser-2 observes provider switch; fixture checks cover unavailable alternative without marking it ready. |
 | F11 | The same interaction allows switching back later | browser-2/continuity-4 preserve shared selection and project state; old attempts retain captured provider. |
 | F12 | With one request running and another queued under Codex, switch the selection to Claude | Running/queued capture is asserted with controlled executors and real adapter tests; not two simultaneous native-provider films. |
@@ -111,14 +125,14 @@ Searchable example: “missing provider and version mismatch are not installed o
 
 | PRD ID | Observable intent reminder | Evidence boundary / remaining check |
 |---|---|---|
-| S1 | A fresh supported machine can enter the setup flow through the product instead of being told to manually prepare the generation tools first. | OPEN evidence: supported-host bootstrap is being added; no clean Ubuntu/driver baseline has been demonstrated. |
-| S2 | Install all starts the required setup work | Install-all ordering/partial failures have fixtures; real complete first-use Install all remains to demonstrate. |
+| S1 | A fresh supported machine can enter the setup flow through the product instead of being told to manually prepare the generation tools first. | recorded-v2 verifies app bootstrap and UI installation from empty managed generators/models. OS/driver/APT prerequisites already present; clean-OS claim excluded. |
+| S2 | Install all starts the required setup work | recorded-v2 captures one Install all request through all tool/model readiness checks; ordering/error fixtures remain separate. |
 | S3 | Retry attempts the failed action again | Retry and confirmed Debug have fixture/browser evidence; actual controlled repair is recovery-7. |
 | S4 | The debugging outcome is reported to the user | recovery-7 verifies a controlled repair with independent readiness, not arbitrary repair success. |
-| S5 | Start installation while project A is selected, then switch to B: the same shared installation and monitoring continue without resetting progress, starting a duplicate… | Shared install survives project-switch fixtures; repeat while a real newcomer download is active remains open. |
-| S6 | Reload during installation: the installation and status tracking continue, and the page shows its current progress or outcome without requiring a second Install action | browser-2 real CPU Comfy probe survived reload; that is not an interrupted first download/install demonstration. |
-| S7 | When one tool successfully finishes installation, its setup panel animates away into that tool's navbar status indicator | Source animation is not a visual pass. Final completion transitions and reduced-motion behavior remain to inspect. |
-| S8 | Once all required setup is complete, completed installation panels and their empty strip are absent | Prepared-host browser shows compact completed tools; final newcomer setup-to-navbar flow remains open. |
+| S5 | Start installation while project A is selected, then switch to B: the same shared installation and monitoring continue without resetting progress, starting a duplicate… | Project-switch installation behavior has fixture coverage; that exact switch during a model download was not separately recorded. This limit is not a claim the completed installation is pending. |
+| S6 | Reload during installation: the installation and status tracking continue, and the page shows its current progress or outcome without requiring a second Install action | Earlier fresh-runtime installation in slice-9 survived browser refresh; recorded-v2 provides complete fresh installation/download capture. No OS/session restart-resume inference. |
+| S7 | Original per-tool fly-away animation replaced by learner-approved persistent panels and initial status indicators | Superseded by accepted setup-presentation.md: all navbar indicators appear initially; only active installer stripes animate; all panels remain until ready. Recorded-v2 shows the revised flow. Reduced-motion sweep skipped. |
+| S8 | Once all required setup is complete, completed installation panels and their empty strip are absent | recorded-v2: all tools ready at19:48:57, setup strip clears together; shared ready navbar remains visible. |
 | S9 | Each navbar indicator identifies its installed tool and shows Idle / not running or Active according to whether it is executing work | recovery-7 browser proves provider stays idle during native-only replay; readiness and activity are distinct. |
 | S10 | Show the tool's queue length as the number of waiting requests, separately from active work | Queue-count fixtures cover global active/waiting distinction; no claim every numeric example was live GPU work. |
 
@@ -130,7 +144,7 @@ Searchable example: “preparation and cancellation disclose exact sanitized con
 | PRD ID | Observable intent reminder | Evidence boundary / remaining check |
 |---|---|---|
 | D1 | Clicking Debug alone does not launch the agent; cancelling the confirmation launches nothing. | recovery-7 browser Cancel launches nothing; controlled-confirmation tests cover no-process preparation. |
-| D2 | Before confirmation, the user can inspect the full prompt, command, and working directory, not just a generic description. | recovery-7 disclosed prompt/command/cwd matches controlled repair; final keyboard disclosure sweep remains. |
+| D2 | Before confirmation, the user can inspect the full prompt, command, and working directory, not just a generic description. | recovery-7 actual controlled repair verifies exact prompt/command/cwd; remaining full keyboard-disclosure sweep explicitly skipped. |
 | D3 | The launch matches the disclosed request and starts in the affected tool's directory with the agreed autonomous mode. | recovery-7 actual repair used disclosed full-access launch and correct tool cwd; mismatch/expiry reject in fixtures. |
 | D4 | The warning does not imply the agent is sandboxed to that directory | Warning and actual repair report retained; directory is not a sandbox and no general repair guarantee follows. |
 
@@ -141,12 +155,12 @@ Searchable example: “captures exact interval, song identity, provider/seeds an
 
 | PRD ID | Observable intent reminder | Evidence boundary / remaining check |
 |---|---|---|
-| G1 | Generate proceeds from user inputs to agent/tool execution without a second prompt-approval step. | Real short generations plus controlled race/recovery cases; final integrated newcomer journey remains open. |
+| G1 | Generate proceeds from user inputs to agent/tool execution without a second prompt-approval step. | recorded-v2 submits actual song/video requests directly from entered briefs without extra prompt-approval gates. |
 | G2 | A completed music output can be heard; a completed video output can be inspected | Actual media playback/decoded files observed; final human hearing/artistic review is not established. |
-| G3 | A failed attempt has a visible failure indicator and expandable details | Real short generations plus controlled race/recovery cases; final integrated newcomer journey remains open. |
+| G3 | A failed attempt has a visible failure indicator and expandable details | recovery-7 real failure/controlled recovery evidence; recorded-v2 all generation attempts ultimately succeed, so it is not a fresh failure-indicator test. |
 | G4 | Retry repeats the failed tool request with its same prompt/settings and recorded seed | recovery-7 exact replay + OOM recovery/new-seed variation; unchanged seed does not promise identical generated bytes. |
 | G5 | Each successful new video generation enters the project's library and is automatically placed at its request's recorded start/end times in the originating song's… | browser-3 actual placement + continuity-4 other-song completion; lifecycle-8 separately proves archive restoration is unplaced. |
-| G6 | Refining a result produces a fresh generation; it does not rewrite the original attempt's historical inputs or claim to undo the generated media. | Real short generations plus controlled race/recovery cases; final integrated newcomer journey remains open. |
+| G6 | Refining a result produces a fresh generation; it does not rewrite the original attempt's historical inputs or claim to undo the generated media. | recorded-v2 macro1 reused twice: identical captured creative inputs, three distinct seeds, original history retained and macro2 deleted without rewriting it. |
 | G7 | The default video-generation request includes song audio as an input even when the assembled video will use the original song rather than the generated clip's audio | browser-3/continuation-6 independent captured WAV/hash/sample-range checks; input conditioning is not guaranteed artistic synchronisation. |
 | G8 | Queued and running clip attempts appear as status-labelled library placeholders with a Cancel control | browser-3/recovery-7 actual queued/running placeholders; fixture coverage proves reservations do not become video coverage. |
 | G9 | Cancelling a queued attempt prevents its execution; cancelling a running attempt stops that attempt immediately rather than just hiding it | recovery-7 measured owned stop/release (H3 about 1.25s in final short run); not literal zero latency or proof for unregistered processes. |
@@ -189,9 +203,9 @@ Searchable example: “retains arbitrary decimal intent, containing labels and d
 
 | PRD ID | Observable intent reminder | Evidence boundary / remaining check |
 |---|---|---|
-| U1 | For an editable timing position or range, display linked beats, seconds, and frame values with clear labels and allow editing through each unit representation | Exact rational fixtures + browser edits; current-bundle keyboard/responsive sweep remains open. |
-| U2 | Edit one representation: update the others consistently using the current song timing and established frame rate | Exact rational fixtures + browser edits; current-bundle keyboard/responsive sweep remains open. |
-| U3 | Preserve the distinction between selecting retained source frames and moving footage on the song timeline | Exact rational fixtures + browser edits; current-bundle keyboard/responsive sweep remains open. |
+| U1 | For an editable timing position or range, display linked beats, seconds, and frame values with clear labels and allow editing through each unit representation | Exact rational fixtures and recorded-v2 beat/seconds/frame edits, trims and placement changes. Remaining keyboard sweep skipped; responsive coverage remains limited. |
+| U2 | Edit one representation: update the others consistently using the current song timing and established frame rate | Exact rational fixtures and recorded-v2 beat/seconds/frame edits, trims and placement changes. Remaining keyboard sweep skipped; responsive coverage remains limited. |
+| U3 | Preserve the distinction between selecting retained source frames and moving footage on the song timeline | Exact rational fixtures and recorded-v2 beat/seconds/frame edits, trims and placement changes. Remaining keyboard sweep skipped; responsive coverage remains limited. |
 | U4 | Accept fractional seconds such as `12.3456789` and fractional beats such as `1.3333333` without imposing the previously mentioned five-digit limit or snapping them to… | linked-timing/slice5 timing assertions retain arbitrary decimals; no five-digit cap. Derived displays can be approximate. |
 | U5 | Frame values remain whole numbers | Exact 12.3456789→containing frame297 assertion; internal zero-based start296 is not a contradictory display. |
 
@@ -365,17 +379,18 @@ Searchable example: “rounds only the final partial music frame upward and emit
 | E1 | An interior gap between two clips appears black for the same interval in preview and in the exported file, while the music continues. | Independent decode/headless VLC and frame/audio comparisons; no final human watch/listen or full-film capacity claim. |
 | E2 | Leading or trailing uncovered music behaves the same way | Independent decode/headless VLC and frame/audio comparisons; no final human watch/listen or full-film capacity claim. |
 | E3 | A valid project with incomplete clip coverage can export; 100% coverage is not a prerequisite. | Independent decode/headless VLC and frame/audio comparisons; no final human watch/listen or full-film capacity claim. |
-| E4 | The exported file plays independently in VLC and reflects the chosen sequence, timing, and black-gap behaviour. | Independent decode and headless VLC succeeded. Human watch/listen of final film remains OPEN. |
-| E5 | When the included final clip occupies 16.00–24.00 and the song ends at 18.00 in the timing example, preview and export preserve video through 24.00 | continuation-6/edit-5 retained post-song spans verified; illustration does not assert every source duration is exactly generated. |
-| E6 | Retaining the six post-song seconds in that example does not alter the music-coverage denominator, inflate the percentage above 100%, or mark those seconds as missing… | Independent decode/headless VLC and frame/audio comparisons; no final human watch/listen or full-film capacity claim. |
-| E7 | In the 18-second-song/24-second-video example, the final six seconds are silent when the original-song source is selected | continuation-6/edit-5 source/PCM comparisons prove silence versus selected source; perceptual review remains open. |
+| E4 | The exported file plays independently in VLC and reflects the chosen sequence, timing, and black-gap behaviour. | Recorded-v2 exact 28s MP4 fully decodes and matches the renderer receipt; earlier independent headless VLC proof remains. Final human watch/listen is still open. |
+| E5 | When the included final clip occupies 16.00–24.00 and the song ends at 18.00 in the timing example, preview and export preserve video through 24.00 | recorded-v2 song24.9587s, output28s with full coverage; 18s/24s remains a separate fixture example, not a claim of identical generated durations. |
+| E6 | Retaining the six post-song seconds in that example does not alter the music-coverage denominator, inflate the percentage above 100%, or mark those seconds as missing… | recorded-v2 visual tail3.0413s while music coverage remains100%; no claim of perceptual review. |
+| E7 | In the 18-second-song/24-second-video example, the final six seconds are silent when the original-song source is selected | recorded-v2 complete original-song AAC correlation0.99958 and silent tail measured after25.1s (allowing AAC boundary ringing); older18s/24s fixture retained. |
 | E8 | Preview and export show the same single dominant clip during each overlap and use its clip audio if enabled, otherwise the original song or post-song silence | Independent decode/headless VLC and frame/audio comparisons; no final human watch/listen or full-film capacity claim. |
 | E9 | With an 18-second song, included clips covering through 24 seconds, and an additional included clip at 24–32, preview/export retain video through 32 seconds | Post-song extension fixtures/exports; not a verified feature-length hardware/runtime capacity promise. |
 
 ## Accepted UI refinements outside the original 160-ID inventory
 
-These changes are recorded in the linked feedback, not silently assigned invented
-PRD numbers. They also need inclusion in the final current-bundle smoke check.
+These changes retain their linked historical evidence, without invented PRD IDs.
+Recorded-v2 adds the current integrated workflow observations; it does not imply
+every old fixture was rerun or that the skipped accessibility sweep passed.
 
 | Refinement | Evidence / precise limit |
 |---|---|

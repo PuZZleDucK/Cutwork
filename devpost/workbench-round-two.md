@@ -36,7 +36,11 @@ preview becomes immediate browser playback of the current saved edit plan.
 - [x] Priority editing in sequence only; top lane wins and lower lanes move up.
 - [x] Regression/full tests, typecheck/build, actual browser live-preview and
   dismissal/tab/layout checks, safe server deployment and preservation audit.
-- [ ] Learner review; no final readiness inferred from agent tests.
+
+**Review consolidated:** this historical round is superseded by later refinements
+and the completed recorded journey. Remaining human acceptance is tracked once
+in `checklist.md > Final Review`, not as an additional implementation/retest task.
+No final readiness is inferred from agent tests.
 
 ## Evidence
 

@@ -28,8 +28,11 @@ established runtime and retained media for these UI checks.
 - [x] Focused tests, full suite (1,347 in 92 files), typecheck and build.
 - [x] Browser before/after, visible actions and functional workflow checks; details below.
 - [x] Existing runtime deployment and no creative-data changes.
-- [ ] Learner functional retry of the revised workspace. Visual feedback is positive:
-  "that's looking a lot better". This is not yet final end-to-end acceptance.
+
+**Review consolidated:** this historical round is superseded by later refinements
+and the completed recorded journey. Remaining human acceptance is tracked once
+in `checklist.md > Final Review`, not as an additional implementation/retest task.
+No final readiness is inferred from agent tests.
 
 ## Verified interactions (CPU fixture, not new model inference)
 

@@ -2,6 +2,11 @@
 
 ## Outcome
 
+**Historical first recording.** Its delivered media/evidence are retained; the
+current runtime and final verification are in [recorded demo v2](recorded-demo-v2.md).
+The old port/runtime references below describe that earlier run, not an active
+installation task or the current service.
+
 Completed the recorded newcomer journey on 24 October 2026. **Night Shift Garden**
 is a 28-second 640×480 native 24 fps film with an original 25.2387-second soundtrack,
 seven placed clips, five raw-frame continuations, a prioritized overlapping insert,

@@ -1,6 +1,16 @@
 # Slice 9 — newcomer path and final verification
 
-**In progress · 23 October 2026.** Slice 8 is committed as `0b99abd` with 1,322 passing tests and the final 53/53 production preservation audit. This document is a scratchpad, not final acceptance or fresh-host certification.
+**Reconciled after the 24 October recorded runs.** Fresh managed installation,
+model downloads, both provider paths and the complete creative/export journey
+are now verified; see [recorded demo v2](recorded-demo-v2.md). Its frozen source
+passed 1,504 tests in 113 files plus typecheck/build before recording. Final human
+review/wrap-up remains open. The two observed workflow issues were worked around,
+not repaired. Historical checkpoints below are retained, not current blockers.
+
+**Learner decision:** remaining accessibility checks are skipped for submission,
+not passed. Existing accessibility features/tests remain; current full keyboard,
+focus/dialog and reduced-motion coverage is not certified. Earlier responsive
+observations remain limited to their recorded viewports, not a cross-device claim.
 
 ## Request and decisions
 
@@ -13,24 +23,24 @@
 
 ## Checklist
 
-- [x] Test and implement bootstrap, host checks, runtime defaults and persistent service packaging; actual first-use/service execution is still a separate gate.
+- [x] Bootstrap, host checks, runtime defaults and persistent service packaging, including actual fresh managed-runtime first use; prepared-host boundary retained.
 - [x] Update README, MIT licence, verified third-party notices and historical Kirsty decision.
 - [x] Audit all 160 PRD criteria against exact test/live evidence and explicit gaps (`prd-traceability.md`).
-- [ ] Exercise current browser keyboard, dialogs, responsive layout and reduced-motion behavior where supported.
-- [ ] Exercise fresh managed runtime setup and newcomer creative journey; disclose reused host prerequisites/cache/auth.
+- **SKIPPED / NOT VERIFIED by learner decision:** remaining accessibility sweep (keyboard, focus/dialogs, reduced motion). Retain earlier responsive evidence without claiming comprehensive current-bundle coverage.
+- [x] Fresh managed runtime setup and complete newcomer creative journey: `recorded-demo-v2.md`. OS/driver/APT prerequisites and provider login reused; tool environments/model downloads fresh.
 - [x] Run full checks and preserve existing production rows/assets during this deployment; repeat after any further code changes.
 - [ ] Final learner exploration and perceptual watch/listen; do not infer approval from agent tests.
 - [ ] Show the prepared app map and complete the learning wrap-up with the learner.
 
 ## Evidence boundaries
 
-The initial private preflight was taken while slice 8 was unfinished. Its partial test/proof counts are historical, superseded by `slice-8-evidence.md`. Do not repeat them as current failures. Production now runs the verified slice-9 packaging checkpoint with the service-path correction described below. No clean-OS installation, universal memory guarantee, seamless visual joins, mastered audio, or unrestricted model/output licensing is claimed.
+The initial private preflight was taken while slice 8 was unfinished. Its partial test/proof counts are historical, superseded by `slice-8-evidence.md`. Do not repeat them as current failures. That historical deployment was superseded by the recorded-v2 frozen source `a069a59`; its fresh runtime has both new projects and the verified export. The service-path repair below remains historical evidence. No clean-OS installation, universal memory guarantee, seamless visual joins, mastered audio, or unrestricted model/output licensing is claimed.
 
-## Current UI findings
+## Historical UI findings (not a fresh accessibility pass)
 
 - Real medium-width browser inspection reproduced a clipped provider help tooltip; two red CSS tests now pass after anchoring at the shared-status wrap breakpoint.
 - A real 390px iframe viewport (browser viewport emulation was blocked by a stale older tab) has no horizontal document overflow, keyboard beat/start selection updates linked values and the proposed range, and deletion disclosure Cancel/Escape restores focus. Historical Kirsty is visually verified in the rebuilt local bundle. These are CPU-fixture observations, not production deployment or native-generation evidence.
-- Live reduced-motion preference toggling remains unverified; do not confuse the media-query rule with an observed OS/browser preference switch.
+- Live reduced-motion preference toggling remains unverified and is now explicitly skipped for this submission; the media-query rule is not an observed preference-switch test.
 
 ## Packaging review
 
@@ -70,7 +80,12 @@ The real LAN browser reload shows the existing selected project, saved prompts,
 style, timing and clips intact, with bundled Kirsty headings and all five tools
 ready. No new production generation or creative edit was made for this check.
 
-## Fresh-runtime installation — tool setup complete, creative journey pending
+## Historical separate installation-only proof
+
+The following describes the earlier isolated proof project, not the current demo
+runtime. Its ungenerated prompt is not unfinished submission work: both later
+recorded fresh-install journeys completed generation and export. Do not resume
+that obsolete project or redownload models to satisfy this historical note.
 
 A separate source and empty managed runtime on Dundee pass actual bootstrap and
 repeat-install/idempotency checks. Host Python and existing production/TTS
@@ -91,6 +106,7 @@ Melbourne completion/check times on 23 October: agent 19:44, YuE2 20:40, ComfyUI
 verified; both generator dependency/import and model-checksum checks pass.
 ComfyUI registration/cancellation and CPU media/analysis checks also pass.
 No song has yet been generated in this separate proof project. The
-song/clips/edit/continuation/export journey remains pending; tool readiness is
-not a completed newcomer creative-path claim. The current status receipt is
+song/clips/edit/continuation/export journey was still pending in that earlier
+proof project; it was subsequently established by the separate recorded runs.
+The historical installation-only receipt is
 `.local-evidence/slice-9/cutwork-branding/fresh-install-overview.json`.

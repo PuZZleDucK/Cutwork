@@ -450,6 +450,8 @@ Activity mode: Proposed focused planning/verification investigation suitable for
 
 ## Revisions
 
+- **24 October — action placement and setup dismissal:** move music reuse below Generate, right-align export with a save icon, and make non-agent tool status clicks reversible Config toggles. Verification: [action-placement.md](action-placement.md). Final learner review remains open.
+
 - **24 October — editor proportions:** enlarge lyrics/style/clip-description defaults and remove four decorative borders while retaining the music/video divider. Verification: [editor-proportions.md](editor-proportions.md). Final learner review remains open.
 
 - **24 October — workspace detail polish:** remove redundant music annotations and selection tick, add the section divider, relocate beat targeting into the sequence header, and place Remove above clip previews with remaining actions in one row. Verification: [workspace-polish.md](workspace-polish.md). Final learner review remains open.

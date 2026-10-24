@@ -88,6 +88,11 @@ test('music stays concise and selection does not add an alignment-shifting tick'
  expect(html).toContain('Describe the feeling, not the machinery.');
  for(const text of ['Your agent handles the technical translation.','New generations get new seeds.','Retry / Restart keep recorded seeds','GENERATED SONGS','Select a take to listen'])expect(html).not.toContain(text);
  expect(html).toContain('>← Reuse parameters</button>');
+ const music=html.slice(html.indexOf('class="panel compose-panel"'),html.indexOf('class="panel soundtrack-panel"'));
+ expect(music).toContain('class="music-generation-actions"');
+ expect(music.indexOf('Generate music ')).toBeLessThan(music.indexOf('← Reuse parameters'));
+ expect(music).toMatch(/<button[^>]*type="button"[^>]*>← Reuse parameters<\/button>/);
+ expect(html.slice(html.indexOf('class="panel soundtrack-panel"'))).not.toContain('← Reuse parameters');
  const row=html.slice(html.indexOf('class="song-row is-selected"'),html.indexOf('aria-label="Media lifecycle:'));
  expect(row).toContain('aria-pressed="true"');expect(row).not.toContain('width="16"');
 });

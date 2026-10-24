@@ -65,9 +65,10 @@ export function PreviewExport({studio,song,arrangement,active}:{studio:Studio;so
  };
  return <section className="video-preview" aria-label="Preview and export"><div className="video-section-heading"><h2>Preview / Export</h2></div>
   <div className="screen-and-controls"><LivePreview song={song} arrangement={arrangement} clips={activeArtifacts(studio.snapshot!,'clip',studio.snapshot!.clips)} active={active}/>
-  <div className="render-controls"><button className="button primary" title="Render this arrangement as a high-quality downloadable file. Black fills uncovered intervals; video may continue past the song." disabled={studio.busy||['queued','running'].includes(current?.state??'')} onClick={()=>void render()}>{current?.state==='failed'?'Retry export':current?.state==='succeeded'?'Export again':'Export MP4'}</button>
+  <div className="render-controls">
   {current&&<div className="render-status" role="status"><strong>{current.state==='succeeded'?'EXPORT READY':current.state==='failed'?'EXPORT FAILED':'EXPORT '+current.state.toUpperCase()}</strong>{current.state!=='succeeded'&&<p>{current.stage}</p>}{current.error&&<details><summary className="warning">Export details</summary><pre>{current.error}</pre></details>}</div>}
-  {current?.state==='succeeded'&&current.assetId&&<a className="button secondary" href={`/api/projects/${song.projectId}/renders/${current.id}/download`} download>Download MP4 ↓</a>}</div></div>
+  {current?.state==='succeeded'&&current.assetId&&<a className="button secondary" href={`/api/projects/${song.projectId}/renders/${current.id}/download`} download>Download MP4 ↓</a>}
+  <button type="button" className="button primary export-button" title="Render this arrangement as a high-quality downloadable file. Black fills uncovered intervals; video may continue past the song." disabled={studio.busy||['queued','running'].includes(current?.state??'')} onClick={()=>void render()}><svg className="save-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false"><path d="M3 3h14l4 4v14H3V3ZM7 3v6h10V3M7 21v-8h10v8"/></svg>{current?.state==='failed'?'Retry export':current?.state==='succeeded'?'Export again':'Export MP4'}</button></div></div>
  </section>;
 }
 export function VideoStudio({studio,musicSection,panel='generate',onRequestPanel}:{studio:Studio;musicSection?:ReactNode;panel?:WorkspacePanel;onRequestPanel?:(panel:WorkspacePanel)=>void}) {

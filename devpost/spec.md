@@ -726,3 +726,7 @@ VideoTimeline's heading contains the title, existing radio group and coverage in
 ### Editor proportions (24 October 2026)
 
 The workbench CSS sets initial heights of 180px for lyrics (previously 90px), 84px for visual style (42px) and 99px for clip description (66px). Existing minimum heights and vertical resizing are retained. Explicit footer border-top and video-compose/video-timeline border-bottom overrides remove only the requested lines; generation-divider remains unchanged. No component, persistence, API or media changes.
+
+### Action placement and setup dismissal (24 October 2026)
+
+MusicForm derives the selected active song's originating attempt and renders its existing non-submit GenerationActions below Generate music. PreviewExport keeps status and download controls before a right-aligned export button with an aria-hidden inline SVG save icon; request identity, disabled states and retry behaviour are unchanged. Non-agent status buttons use toggleToolConfiguration as a functional view update and expose aria-expanded / aria-controls. Closing Config returns to the existing Projects view and active workspace tab; automatic incomplete-setup and open Debug handling remain unchanged.

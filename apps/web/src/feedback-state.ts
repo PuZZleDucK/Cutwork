@@ -19,3 +19,8 @@ export function initializePreviewAudio(media:Pick<HTMLVideoElement,'muted'|'defa
 export function timelinePercent(time:{numerator:bigint;denominator:bigint},totalFrames:number):number {
  return Number(time.numerator*24n*100_000_000n/(time.denominator*BigInt(totalFrames)))/1_000_000;
 }
+
+/** Tool status buttons open Config and return to the existing project workspace. */
+export function toggleToolConfiguration(view:'projects'|'config'):'projects'|'config' {
+ return view==='config'?'projects':'config';
+}

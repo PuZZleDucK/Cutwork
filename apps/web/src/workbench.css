@@ -79,3 +79,13 @@
 .clip-card-actions .button{margin:0}
 
 .video-workspace>.video-compose,.video-workspace>.video-timeline{border-bottom:0}
+
+/* Group music actions and keep file export at the preview's right edge. */
+.compose-panel .compose-footer{align-items:flex-start}
+.compose-panel .save-status{min-height:43px}
+.music-generation-actions{display:flex;flex-direction:column;align-items:flex-end;gap:8px;margin-left:auto}
+.music-generation-actions>.generation-recovery{margin:0}
+.music-generation-actions .row-actions{margin:0;justify-content:flex-end}
+.video-preview .render-controls{justify-content:flex-end}
+.video-preview .export-button{margin-left:auto;display:inline-flex;align-items:center;gap:8px}
+.export-button .save-icon{flex:none}

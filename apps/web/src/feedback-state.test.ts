@@ -21,3 +21,10 @@ it('projects very precise exact times visually without Infinity divided by Infin
  const denominator=10n**500n;expect(timelinePercent({numerator:denominator+1n,denominator},240)).toBe(10);
  expect(timelinePercent({numerator:1n,denominator:2n},240)).toBe(5);
 });
+
+it('non-agent configuration status is a reversible toggle',async()=>{
+ const {toggleToolConfiguration}=await import('./feedback-state.ts');
+ expect(toggleToolConfiguration('projects')).toBe('config');
+ expect(toggleToolConfiguration('config')).toBe('projects');
+ expect(toggleToolConfiguration(toggleToolConfiguration('projects'))).toBe('projects');
+});

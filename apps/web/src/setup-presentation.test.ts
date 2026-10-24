@@ -48,3 +48,8 @@ test('installed provider still needing sign-in keeps the complete setup row avai
  const html=render(ready,false);for(const id of ids)expect(panel(html,id)).toBeDefined();
  expect(panel(html,'agent')).toContain('setup-todo');expect(indicator(html,'agent')).not.toContain('disabled');
 });
+
+test('ready tool status buttons expose their collapsed configuration state',()=>{
+ const html=render(ready);
+ for(const id of ['yue2','analysis','comfyui','h3'] as const)expect(indicator(html,id)).toContain('aria-expanded="false"');
+});

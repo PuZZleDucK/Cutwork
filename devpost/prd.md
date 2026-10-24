@@ -799,3 +799,7 @@ In the Sequence heading, place **Click beats to set** between the title and cove
 ### Editor proportions (24 October 2026)
 
 Increase the default lyrics area to roughly twice its previous height, double the visual-style area, and increase clip-description height by half. Keep all three manually resizable. Remove the lines above Generate music and Generate clip, and below the video-generation and Sequence sections; retain the music/video divider.
+
+### Action placement and setup dismissal (24 October 2026)
+
+Place the selected song's left-arrow Reuse parameters action immediately below Generate music in the right-hand action column, not beneath the soundtrack player. Export MP4 sits at the right edge of the preview controls with a save icon and its text label. Each non-agent tool status button toggles the existing configuration view: click to open Config, click again to return to the same project/workspace tab. The provider indicator retains its independent selector toggle. Required incomplete setup remains visible; dismissing configuration never stops work.

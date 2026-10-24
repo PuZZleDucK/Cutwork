@@ -30,6 +30,7 @@ function elements(node:ReactNode):ReactElement<Record<string,unknown>>[]{
 
 test('placed intervals are native labelled edit buttons; reservations are not controls',()=>{
  const html=renderToStaticMarkup(createElement(VideoTimeline,fixture()));
+ expect(html).toContain('<h2>Sequence</h2>');expect(html).not.toContain('The sequence.');
  for(const title of ['Alpha shot','Beta shot','Gamma shot'])expect(html).toMatch(new RegExp(`<button[^>]*type="button"[^>]*aria-label="Edit clip ${title}"`));
  expect(html).toMatch(/<div[^>]*class="timeline-span reserved"[^>]*data-interval-id="reservation:pending"/);
  expect(html).not.toMatch(/<button[^>]*data-interval-id="reservation:pending"/);

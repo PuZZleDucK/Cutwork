@@ -53,9 +53,10 @@ test('the navbar filters routine advisories and successful actions but retains g
  expect(header).toContain('notice-count">2</span>');
 });
 
-test('Cutwork branding appears in the navbar and footer without renaming saved projects',()=>{
+test('Cutwork branding remains in the navbar without a decorative footer or renamed projects',()=>{
  const html=fixture();
  expect(html).toContain('aria-label="Cutwork studio home"');expect(html).toContain('src="/cutwork-mark.svg"');
- expect(html).toContain('CUTWORK');expect(html).toContain('CUTWORK / LOCAL CREATIVE WORKBENCH');
+ expect(html).toContain('CUTWORK');expect(html).not.toContain('workspace-footer');
+ expect(html).not.toContain('CUTWORK / LOCAL CREATIVE WORKBENCH');expect(html).not.toContain('YOUR PROJECTS. YOUR TOOLS. YOUR DIRECTION.');
  expect(html).not.toContain('ASSEMBLY');expect(html).toContain('Workshop');expect(html).toContain('Keep this idea');
 });

@@ -43,7 +43,7 @@ export function VideoTimeline({studio,song,arrangement,draft,onSelectClip,onSwap
   choose({numerator:BigInt(Math.round(ratio*1_000_000))*BigInt(total),denominator:24_000_000n});
  };
  const left=(time:Rational)=>timelinePercent(time,total);
- return <section className="video-timeline" aria-label="Video timeline"><div className="video-section-heading"><div><span className="section-code">04 / ASSEMBLE</span><h2>The sequence.</h2></div><div className="coverage-readout"><strong>{coverage.percent.toFixed(1)}<small>%</small></strong><span>MUSIC COVERED</span></div></div>
+ return <section className="video-timeline" aria-label="Video timeline"><div className="video-section-heading"><div><span className="section-code">04 / ASSEMBLE</span><h2>Sequence</h2></div><div className="coverage-readout"><strong>{coverage.percent.toFixed(1)}<small>%</small></strong><span>MUSIC COVERED</span></div></div>
   <div className="sequence-tools"><fieldset disabled={studio.busy}><legend>Click beats to set</legend>{(['start','end'] as const).map(target=><label key={target}><input type="radio" name={`beat-target-${song.id}`} value={target} checked={draft.target===target} onChange={()=>draft.setTarget(target)} />{target==='end'?'End time':'Start time'}</label>)}</fieldset><span className="micro">SELECT A BEAT OR CLICK THE WAVEFORM · {lanes.laneCount} {lanes.laneCount===1?'LANE':'LANES'}</span></div>
   {draft.error&&<p role="alert" className="error-copy">{draft.error}</p>}
   <div className="sequence-scroll" tabIndex={0} aria-label="Scrollable sequence"><div className="sequence-canvas" style={{minWidth:`${Math.min(12000,Math.max(720,markers.length*17))}px`}}>

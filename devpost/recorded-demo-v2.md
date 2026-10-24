@@ -10,7 +10,7 @@ Fresh Cutwork runtime, tool environments and model downloads on the prepared Ubu
 - [x] Freeze source, preflight idle state/storage and verify a recording pilot before deleting/installing.
 - [x] Start continuous capture; clean/bootstrap app; select Claude; install generators from empty runtime.
 - [x] Day: generate original music with Claude, then one audio-conditioned clip; preview both.
-- [ ] Switch provider to Codex; Night: generate original music and opening clip.
+- [x] Switch provider to Codex; Night: generate original music and opening clip.
 - [ ] Macro takes: preview 1; remove 1; reuse → 2; preview 2; delete 2; reuse 1 → 3; preview/use 3.
 - [ ] Finish cohesive Night sequence with raw-frame continuation, overlap priority, archive/restore, frame-exact edits and an ending beyond the song.
 - [ ] Play the full live preview before export, then export and verify full decoding; avoid an open save dialog over playback.
@@ -31,3 +31,12 @@ Raw files and machine-specific observations are kept outside Git under Videos/Cu
 
 - Day music completed: 25.52 seconds, analysed 112.5 BPM; full song and 4.46-second native clip playbacks reached their ends without media errors. Both captured Claude/Opus 5.5. The video CLI remained alive for five minutes after its final report with no child processes; a recorded identity-checked SIGINT yielded code 0, then normal Cutwork validation accepted the already-generated output. No receipt/database edits or rerender. This operator intervention is a known demo boundary, not a seamless-install claim.
 - 20:14: switched provider to Codex through the status selector, created Night Shift Garden, and submitted its fresh short-score music request.
+
+- Night song completed at 24.96 seconds / estimated 112.5 BPM. Opening and first raw-frame continuation completed and played back. Opening trimmed from 104 to 102 frames before Continue; captured source index 101/hash matches the retained endpoint. Planting and the first macro insert are now queued.
+- Config view retained its pre-install H3 context error until Reload saved contexts was clicked. The live endpoint and generation captures already contained verified pinned guides; reloading corrected the display. This stale-view defect is recorded for follow-up; no runtime prompt was missing or replaced.
+
+- 20:58–21:07: macro take 1 completed and played to its native end, was removed from the sequence, then its Reuse params control supplied take 2. Captured inputs match exactly and H3 seeds differ. Take 2 completed and played to its end without a media error. Its permanent-delete dialog is open; the browser requires action-time confirmation and that confirmation is pending. Take 1 is retained unplaced. Take 3 and final sequence/export are not yet done.
+
+- 21:13: first raw segment stopped cleanly at the pending deletion confirmation rather than recording an unattended dialog indefinitely. Duration 4h 15m 31.651s, H.264 1920×904, 363,394,478 bytes. Saved as raw/01-install-to-macro2.mp4. Chatterbox TTS restarted; remaining work needs a second recording segment after confirmation. This is a partial run, not a completed film/export.
+
+- TTS restoration: service and model startup completed; its local model-info endpoint returns HTTP 200 after an initial cold-start UI timeout. Personal ComfyUI remained PID 1216557, 234 MiB GPU use. Owned recorder/audio/helper services are stopped; the studio and pending confirmation remain available.

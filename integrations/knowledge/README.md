@@ -1,4 +1,4 @@
-# Generator knowledge for creative agents — revision 2
+# Generator knowledge for creative agents — revision 3
 
 These are product-owned task references for the normal Codex/Claude CLI agents,
 not a sandbox, replacement system prompt, tool allowlist or response schema.
@@ -18,11 +18,11 @@ or another project's files. Start in the supplied project's `workspace/`;
 retain attempt-specific scripts, prompts, requests and receipts in distinct run
 directories, with stable project notes/references where useful.
 
-The current proof helpers have different run layouts: the provider uses
-`projects/<id>/workspace/runs/<attempt>/`; H3 writes
-`projects/<id>/runs/<attempt>/`; YuE2 uses the caller's explicit result path.
-Record actual paths rather than pretending these are already one artifact
-registry. Runtime layout convergence belongs to the durable integration.
+Provider evidence is saved under `projects/<id>/workspace/runs/<attempt>/`.
+With the supplied coordinator, both native generators write
+`projects/<id>/runs/<native-call-id>/receipt.json`. Standalone helpers can use
+different layouts: follow the task's actual paths and keep native-call IDs
+separate from their parent agent-attempt IDs.
 
 ## Recording work without constraining creativity
 
@@ -40,17 +40,16 @@ precision in JavaScript: retain seeds as strings until the native Python call.
 
 ## Current execution boundary
 
-Both native generators have produced media independently on Dundee. A first
-Codex-driven task also generated a fresh song and H3 media, then recovered a
-validation export after the H3 helper's completion-observation timeout. That
-attempt remains failed; recovered files do not turn it into a clean pipeline
-pass. A later direct same-input replay using the repaired helper completed
-with full history and identical media; it did not rerun the provider task.
-A durable native-call GPU queue, owned systemd helper lifecycle, internal HTTP
-transport and cooperating CLI client now exist. Real CPU lifecycle tests pass;
-model cancellation/handoff verification is recorded separately in the build
-notes. This does not track arbitrary work deliberately moved outside an owned
-unit. The temporary H3 lock alone is not a cross-tool lease.
+The installed toolchain supports the song-to-video workflow, including durable
+native-call scheduling, owned systemd process tracking and captured requests.
+A recorded Dundee run exercised fresh setup, music, H3 continuation and export;
+that is evidence for that configuration, not a guarantee for every duration,
+prompt, hardware combination or musical/visual outcome.
+
+Native work shares one GPU queue. Helpers report their own jobs and artifacts;
+the coordinator additionally observes process/resource release. Work deliberately
+moved outside an owned unit is not automatically tracked. Retain evidence and
+report integration gaps rather than describing an unobserved call as complete.
 
 When the task supplies a coordinator origin, use `scripts/native-call.ts`
 with the captured project, parent attempt, tool and native request file. The

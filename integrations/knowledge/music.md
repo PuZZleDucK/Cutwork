@@ -1,26 +1,107 @@
-# YuE2 music guidance — revision 2
+# YuE2 music guidance — revision 3
 
 Read the supplied user music description and optional lyrics together. Preserve
 provided words; when lyrics are absent, use the creative brief to decide whether
 to write original lyrics or pursue an instrumental. Explain assumptions in the
 record rather than making the user learn synthesizer or arrangement terminology.
 
-## Turning musical intent into native input
+## Musical direction and lyrics
 
-Put sonic direction—genre, instrumentation, rhythmic feel, voice, language and
-tempo—in `style`; keep singable words and section labels in `lyrics`. The native
-`cot="full"` mode plans melody and harmony; `melody` and `off` are alternatives.
-An explicit `abc` supplies a composition instead. Use the native score dialect,
-not an assumed arbitrary ABC variant. Consult the pinned
-[generation guide](https://github.com/multimodal-art-projection/YuE/blob/1647252d68b70cbead046ffd3f7caf036dde47ee/docs/generation.md)
-when editing or restoring a plan.
+Build a coherent sonic brief: singing language, genre/era, vocal character,
+groove, tempo, lead instruments, arrangement development and production texture.
+Translate references into audible choices rather than only artist names or
+quality adjectives. Preserve deliberate genre fusion, unusual meters, accents,
+names and the user's specific choices; these are defaults for filling gaps,
+not a restrictive tag vocabulary. Record assumptions rather than inventing
+measurements or promising exact BPM, singer identity or duration.
 
-Our first supported proof uses the model's score-planning path. Instrumental
-score conversion has not been integrated; an empty lyric string is not proof
-of instrumental behavior. The upstream
-[music skill](https://github.com/multimodal-art-projection/YuE/tree/1647252d68b70cbead046ffd3f7caf036dde47ee/skills/yue2-music)
-is a research reference, not an automatically installed or validated product
-dependency. No transcription model is required or installed for this proof.
+Keep this direction in `style`. In `lyrics`, use standard section tags such as
+`[Verse]`, `[Chorus]`, `[Bridge]`, `[Outro]`, with blank lines between sections.
+Do not put instrumental/production instructions into the sung words. Preserve
+supplied lyrics and language; do not silently rewrite, translate or add verses.
+When writing original lyrics, use singable phrases, a clear hook, breathing
+space and deliberate repetition. Match verbal stress and phrase length to the
+musical idea rather than forcing a fixed line count or seconds-per-section rule.
+A short brief deserves a compact structure and an ending, not a full-length
+song cut off by a tiny token budget. Longer structure and phrasing influence
+length but do not enforce exact time.
+
+Example translation (illustrative, not a mandatory preset): for French-house
+textures with dubstep rhythm and English programming lyrics, describe filtered
+disco chords, a syncopated bass figure, half-time snare placement and a vocoded
+English hook. Keep those notes in style; write only the intended programming
+lyric lines under section tags. Do not add a second language merely because
+"French" described the musical tradition.
+
+## Choose the actual native planning mode
+
+- `cot="full"`: YuE2 plans melody and chords; a sensible ordinary-song starting point.
+- `cot="melody"`: melody planning with freer accompaniment. A supplied ABC must
+  already be chord-free; this mode does not strip chords or repair a score.
+- `cot="off"`: no symbolic plan; omit ABC. This is not a guarantee of better
+  audio, shorter runtime or successful instrumental output.
+- A supplied ABC with `full` or `melody` bypasses the planner. Edit a copy, retain
+  the original and document intended invariants; changed music needs a fresh
+  semantic/synthesis pass, not reuse of the old latent audio.
+
+The native request has no `negative_prompt`, `reference_audio`, separate `bpm`
+or forced phoneme-alignment field. A melody cover from audio needs transcription
+first; Cutwork does not install SheetSage2 for ordinary song generation. Its
+normal tools, research and script/score-editing capabilities remain available.
+These are native tool contracts, not restrictions on the agent's response.
+
+## Score editing and instrumental requests
+
+Use the pinned native ABC reference below, not arbitrary ABC syntax. Retain the
+score's `Vocal` and `Ins` voices, actual `L:` grid, meter/key, timing and section
+boundaries; both melodic parts are monophonic. Check bar totals, ties, accidentals
+and any requested melodic invariants. Keep pronunciation or syllable alignment
+notes outside the model score; symbolic fit is not proof of sung alignment.
+
+For an instrumental, empty lyrics or "no vocals" in style is insufficient.
+The official method moves Vocal note events into Ins, leaves rests/chords in
+Vocal, and resolves overlaps without breaking the two-voice time grid. Merely
+renaming the voice does not perform that conversion. Preserve the source and
+converted scores and validate the transfer before generating from the revised
+ABC. The stock Cutwork helper has **no automatic conversion hook** between
+planning and synthesis. Do not claim that conversion occurred unless an actual
+adapted/staged workflow and its evidence exist. Any adaptation must retain the
+assigned seeds, queue/process tracking and original outputs; the supplied tools
+are adaptable, not a sandbox. Listening is still needed to assess vocal leakage.
+
+## Sampling, length and completion
+
+Prefer the installed native defaults as a baseline, not unrelated ComfyUI node
+settings. Native `cfg_scale` defaults to 1.0 with planning and 1.01 with `off`;
+higher guidance is an experiment, not an automatic quality upgrade. The installed
+request validates CFG in [0,20], unlike some ComfyUI interfaces. Record deliberate
+sampling changes and inspect the effective configuration.
+
+`sampling.abc.max_tokens` and `sampling.semantic.max_tokens` are ceilings. The
+500-token feasibility probe is **not a duration control**. Leave room for the
+score, lyrics and generated tokens within the actual model context; inspect both
+ABC and semantic truncation flags and whether the song resolves naturally.
+Do not copy a ComfyUI `Max Duration`/seconds parameter into this native request.
+If the brief cannot fit, report the limitation instead of silently deleting user
+lyrics, shortening the composition, hiding a cut with mastering, or launching
+unrequested expensive retries.
+
+## Sources and evidence boundaries
+
+Research checked 24 October 2026 against the installed YuE2 0.1.6 source revision
+`1647252d68b70cbead046ffd3f7caf036dde47ee`:
+- [Official generation guide](https://github.com/multimodal-art-projection/YuE/blob/1647252d68b70cbead046ffd3f7caf036dde47ee/docs/generation.md)
+- [Native modes, parameters and defaults](https://github.com/multimodal-art-projection/YuE/blob/1647252d68b70cbead046ffd3f7caf036dde47ee/skills/yue2-music/references/generation-and-covers.md)
+- [Native ABC and lyric alignment](https://github.com/multimodal-art-projection/YuE/blob/1647252d68b70cbead046ffd3f7caf036dde47ee/skills/yue2-music/references/abc-editing.md)
+- [Official instrumental conversion](https://github.com/multimodal-art-projection/YuE/blob/1647252d68b70cbead046ffd3f7caf036dde47ee/skills/yue2-music/instrumental/SKILL.md)
+- [Comfy-Org guide](https://github.com/Comfy-Org/docs/blob/main/tutorials/audio/yue2/yue2.mdx): different integration, not our request schema.
+
+Community corroboration: [a wrapper author's prompting heuristics](https://github.com/EmeraldApple-AI/ComfyUI-YuE2/blob/main/prompts/yue2_prompt_generator.txt)
+and [first-hand instrumental reports](https://www.reddit.com/r/YueMusicAI/comments/1ws18tf/creating_music_without_vocals/).
+Treat these as observations, not universal parameter recipes. Do not adopt
+fixed section-duration promises, arbitrary genre/word limits, or a prescribed
+agent answer format. This product-owned synthesis does not vendor the upstream
+skill or claim a controlled improvement in listening quality.
 
 ## Current helper contract
 
@@ -61,7 +142,9 @@ before H3. A printed receipt path alone does not establish those observations.
 
 ## Analyse the retained audio without changing it
 
-The separate CPU environment is `<data-root>/tools/audio-analysis/venv/`.
+The server normally analyses the accepted original audio automatically; do not
+duplicate that work merely to complete generation. For a requested independent
+analysis, the separate CPU environment is `<data-root>/tools/audio-analysis/venv/`.
 Use its Python with `-I <integration-root>/integrations/analysis/analyze.py
 --request <analysis-request.json> --result <new-analysis-receipt.json>`; the full
 request/receipt contract is in `integrations/analysis/README.md`. Retain a new

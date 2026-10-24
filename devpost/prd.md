@@ -807,3 +807,7 @@ Place the selected song's left-arrow Reuse parameters action immediately below G
 ### Clip-card density and prompt visibility (24 October 2026)
 
 Clip-library actions read **↑ Continue** and **↑ Reuse params**; music keeps **← Reuse parameters**. Remove redundant inner spacing below clip position fields while preserving input sizes and visible error/retry controls. Other-song continuation identifies its source through its accessible name and tooltip. Config explains that editable templates are not complete task prompts: H3 product/upstream guidance and task-specific timing are inserted separately, without overwriting saved templates or historical captures.
+
+### Researched music guidance and visible task contexts (24 October 2026)
+
+Config exposes expandable, read-only Music, Video T2VA and Video I2VA-continuation task contexts alongside the editable templates. Show complete current instruction/guidance text, source references and hashes. Dynamic inputs use clearly labelled placeholders; these are not a historical generation viewer. Refreshing contexts must not reset unsaved template edits, launch work, or install documentation. Missing guidance is an explicit incomplete state. YuE2 guidance distinguishes style/lyrics, native planning modes, score editing, instrumental limitations and truncation; research-backed advice does not promise musical quality or impose a restricted agent toolset.

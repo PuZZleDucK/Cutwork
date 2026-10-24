@@ -94,3 +94,13 @@
 .clip-card .edit-context-body{padding-bottom:0}
 .clip-card .move-clip{padding-bottom:0}
 .clip-card .move-grid label{margin-bottom:0}
+
+/* Context readers are separate from editable templates and never hide text by truncation. */
+.task-context-settings{margin-top:28px;border-top:1px solid var(--border);padding-top:20px}
+.task-context-detail{border-top:1px solid var(--border);padding:12px 0}
+.task-context-detail>summary{cursor:pointer;color:var(--cyan);font:12px/1.5 var(--mono)}
+.task-context-detail textarea{width:100%;box-sizing:border-box;resize:vertical;min-height:180px;padding:12px;background:#171e20;color:var(--text);border:1px solid var(--border);font:11px/1.6 var(--mono);white-space:pre-wrap;overflow-wrap:anywhere}
+.task-context-detail .small-copy{overflow-wrap:anywhere}
+.context-sources{padding-left:18px;font:10px/1.7 var(--mono);overflow-wrap:anywhere;color:var(--muted)}
+.context-sources a{color:var(--cyan)}
+.context-sources span{margin-left:8px}

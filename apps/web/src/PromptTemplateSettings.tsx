@@ -1,3 +1,4 @@
+import {TaskContextSettings} from './TaskContextSettings.tsx';
 import {useEffect,useRef,useState} from 'react';
 import {request} from './api.ts';
 import {promptTemplateError,PROMPT_TEMPLATE_MAX_LENGTH,type AgentPromptTemplates,type PromptTemplateSettings as Settings} from '../../../packages/core/src/contracts/prompt-templates.ts';
@@ -54,5 +55,5 @@ export function PromptTemplateSettings(){
   finally{flight.current=false;if(mounted.current)setBusy(false);}
  };
  if(!value||!defaults)return <section className="prompt-template-settings" aria-label="Agent prompt templates"><h2>Agent prompt templates</h2>{error?<><p role="alert" className="error-copy">{error}</p><button className="button secondary" disabled={busy} onClick={()=>void read()}>Retry loading templates</button></>:<p role="status">Loading templates…</p>}</section>;
- return <PromptTemplateEditor value={value} busy={busy} dirty={dirty} error={error} status={status} onChange={next=>{setValue(next);setStatus(null);}} onSave={()=>void save()} onReload={()=>void read()} onDefaults={()=>{setValue({...defaults});setError(null);setStatus('Defaults loaded into the editor. Save templates to apply them.');}}/>;
+ return <><PromptTemplateEditor value={value} busy={busy} dirty={dirty} error={error} status={status} onChange={next=>{setValue(next);setStatus(null);}} onSave={()=>void save()} onReload={()=>void read()} onDefaults={()=>{setValue({...defaults});setError(null);setStatus('Defaults loaded into the editor. Save templates to apply them.');}}/><TaskContextSettings/></>;
 }

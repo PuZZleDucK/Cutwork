@@ -80,6 +80,16 @@ test('global prompt template API exposes effective defaults, validates edits and
  expect((await request('PUT','/api/config/prompt-templates',{revision:1,templates:{...templates,music:'missing context'}})).statusCode).toBe(400);
  expect((await request('GET','/api/config/prompt-templates')).json().current).toEqual(saved.json());
 });
+test('read-only context API exposes source guidance with placeholders and never changes templates/projects or starts work',async()=>{
+ const {request,store,runtime}=await fixture();const before=store.promptTemplates();
+ const response=await request('GET','/api/config/task-contexts');expect(response.statusCode).toBe(200);
+ const {contexts}=response.json();expect(contexts).toHaveLength(3);expect(contexts[0].text).toContain('YuE2 music guidance — revision 3');expect(contexts[0].text).toContain('{{music_description}}');
+ expect(contexts[1].error).toContain('H3 prompt guides');expect(contexts[2].text).toContain('Mode: I2VA');
+ expect(store.promptTemplates()).toEqual(before);expect(store.listProjects()).toEqual([]);
+ expect(runtime.submitMusic).not.toHaveBeenCalled();expect(runtime.submitVideo).not.toHaveBeenCalled();expect(runtime.setup).not.toHaveBeenCalled();
+ expect((await request('GET','/api/config/task-contexts?path=/etc/passwd')).statusCode).toBe(400);
+ expect((await request('PUT','/api/config/task-contexts',{})).statusCode).toBe(404);
+});
 test('provider checks/switches and global setup delegate to runtime, including all tools', async () => {
   const { request, runtime } = await fixture();
   expect((await request('POST', '/api/provider', { provider: 'claude' })).json().provider).toBe('claude');

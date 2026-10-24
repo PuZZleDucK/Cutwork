@@ -194,3 +194,13 @@ test.each(['success','failure'] as const)('analysis tool is active only during p
  expect(observedActive).toBe(true);expect(activeDuring).toBe(true);expect(f.store.tool('analysis').active).toBe(false);expect(f.store.attempt(f.attempt.id)?.state).toBe('succeeded');
  expect(f.store.project(f.attempt.projectId).songs[0]?.analysis.state).toBe(outcome==='success'?'available':'failed');
 });
+
+test('new music tasks inline researched guidance and literal user text, while later changes leave the capture untouched',async()=>{
+ const f=await fixture();const guidance=await readFile('integrations/knowledge/music.md','utf8');await writeFile(join(f.source,'integrations/knowledge/music.md'),guidance);
+ f.attempt.input.musicPrompt='My $& track with {{lyrics}} in its title';
+ const p=await prepare(f),before=await readFile(p.planPath,'utf8'),plan=JSON.parse(before);
+ expect(plan.launch.stdin).toContain(f.attempt.input.musicPrompt);expect(plan.launch.stdin).toContain(guidance);
+ expect(plan.launch.stdin).toContain('cfg_scale');expect(plan.launch.stdin).not.toContain('{{music_description}}');
+ expect(plan.guidance.find((g:{name:string})=>g.name==='music.md').sha256).toBe(hash(guidance));
+ await writeFile(join(f.source,'integrations/knowledge/music.md'),'Later product guidance');expect(await readFile(p.planPath,'utf8')).toBe(before);
+});

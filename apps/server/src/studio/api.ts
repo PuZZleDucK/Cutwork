@@ -1,3 +1,5 @@
+import {fileURLToPath} from 'node:url';
+import {readTaskContexts} from './task-contexts.ts';
 import type { FastifyInstance } from 'fastify';
 import {DEFAULT_AGENT_TEMPLATES,PROMPT_TEMPLATE_MAX_LENGTH,type AgentPromptTemplates} from '../../../../packages/core/src/contracts/prompt-templates.ts';
 import fastifyStatic from '@fastify/static';
@@ -11,7 +13,7 @@ import { registerLifecycleRoutes } from './lifecycle-api.ts';
 import type { StudioRuntime } from './runtime-contract.ts';
 import type { MusicDraft, MusicInput, Provider, ToolId, VideoInput } from '../../../../packages/core/src/contracts/studio.ts';
 
-interface StudioApiOptions { store: StudioStore; runtime: StudioRuntime; dataRoot: string; webRoot: string | null; debug?: DebugManager; lifecycle?: LifecycleManager }
+interface StudioApiOptions { store: StudioStore; runtime: StudioRuntime; dataRoot: string; webRoot: string | null; debug?: DebugManager; lifecycle?: LifecycleManager; source?:string }
 const uuid = { type: 'string', pattern: '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$' };
 const revision = { type: 'integer', minimum: 0, maximum: Number.MAX_SAFE_INTEGER };
 const plain = (properties: Record<string, unknown>) => ({ type: 'object', additionalProperties: false, required: Object.keys(properties), properties });
@@ -61,7 +63,7 @@ function lossless(value: unknown, depth = 0): void {
 
 /** Registered onto the existing native API so its Host/Origin, strict JSON and
  * private unexpected-error protections remain in force. No listener starts here. */
-export async function registerStudioApi(app: FastifyInstance, { store, runtime, dataRoot, webRoot, debug, lifecycle }: StudioApiOptions): Promise<void> {
+export async function registerStudioApi(app: FastifyInstance, { store, runtime, dataRoot, webRoot, debug, lifecycle, source=fileURLToPath(new URL('../../../../',import.meta.url)) }: StudioApiOptions): Promise<void> {
   if (!isAbsolute(dataRoot) || (webRoot !== null && !isAbsolute(webRoot))) throw new Error('Studio paths must be absolute');
   const root = resolve(dataRoot);
   app.register(async function studioRoutes(api) {
@@ -83,6 +85,7 @@ export async function registerStudioApi(app: FastifyInstance, { store, runtime, 
       api.post<{Params:{debugId:string}}>('/api/debug/:debugId/cancel',{schema:{params:debugParams,body:empty,querystring:empty}},request=>debug.cancel(request.params.debugId));
     }
     api.get('/api/studio', { schema: { querystring: empty } }, () => runtime.overview());
+    api.get('/api/config/task-contexts',{schema:{querystring:empty}},()=>readTaskContexts(root,source));
     api.get('/api/config/prompt-templates',{schema:{querystring:empty}},()=>({current:store.promptTemplates(),defaults:DEFAULT_AGENT_TEMPLATES}));
     api.put<{Body:{revision:number;templates:AgentPromptTemplates}}>('/api/config/prompt-templates',{
       schema:{querystring:empty,body:plain({revision,templates:plain({music:{type:'string',minLength:1,maxLength:PROMPT_TEMPLATE_MAX_LENGTH},video:{type:'string',minLength:1,maxLength:PROMPT_TEMPLATE_MAX_LENGTH}})})},

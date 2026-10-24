@@ -1,3 +1,4 @@
+import {VIDEO_CONTEXT,VIDEO_CONTINUATION_CONTEXT,formatTaskContext,readProductGuidance} from './task-context-text.ts';
 import {readH3PromptGuides,videoDirectionContext} from './h3-prompt-guidance.ts';
 import {DEFAULT_AGENT_TEMPLATES,renderAgentTemplate} from '../../../../packages/core/src/contracts/prompt-templates.ts';
 import assert from 'node:assert/strict';
@@ -84,7 +85,7 @@ export async function prepareVideoTask(o:VideoOptions,deps:Pick<VideoTaskDepende
  const launch:ProviderLaunch=providerLaunch(runtime,{projectId:attempt.projectId,attemptId:attempt.id,songId:attempt.song.id,provider:attempt.provider,model:attempt.model,musicPrompt:'',lyrics:'',style:attempt.input.style,clipPrompt:attempt.input.clipPrompt,startFrame:attempt.input.startFrame,endFrame:attempt.input.endFrame,seeds:attempt.seeds});
  launch.executable=join(runtime,`tools/provider-cli/codex-${codex.version}_claude-${claude.version}/node_modules/.bin`,attempt.provider);
  const paths:TaskPlan['paths']={planPath:planPath(o),nativeRequest:join(project,'inputs/native-calls',attempt.nativeCallId,'request.json'),nativeReceipt:join(project,'runs',attempt.nativeCallId,'receipt.json'),agentRequest:join(launch.runDirectory,'video-request.json'),validation:join(project,'validation',attempt.id)};
- const guidance=await Promise.all(['README.md','video.md'].map(async name=>{const sourcePath=`integrations/knowledge/${name}`,text=await readFile(join(source,sourcePath),'utf8');return{name,sourcePath,text,sha256:hash(text)};}));
+ const guidance=await readProductGuidance(source,'video');
  const upstreamGuides=await readH3PromptGuides(runtime,source);
  guidance.push(upstreamGuides[0]!); // Complete base guide covers both supported T2VA and I2VA.
  const sourceHashes=Object.fromEntries(await Promise.all(['generate.py','workflow.py','media.py'].map(async name=>[name,await sha(join(source,'integrations/h3',name))])));
@@ -107,17 +108,13 @@ export async function prepareVideoTask(o:VideoOptions,deps:Pick<VideoTaskDepende
  const storedSong=store.project(attempt.projectId).songs.find(s=>s.id===attempt.song.id);assert.ok(storedSong,'Captured song is missing');
  const direction=videoDirectionContext({requestedFrames:nativePlan.requestedFrames,nativeFrames:nativePlan.nativeFrames,startSample:nativePlan.conditioning.startSample,sampleIndices:storedSong.analysis.sampleIndices,hasFirstFrame:!!firstFrame});
  const command=[join(runtime,`tools/runtime/node-v${record(pins.node).version}-linux-x64/bin/node`),join(source,'scripts/native-call.ts'),origin,attempt.projectId,attempt.id,'h3',paths.agentRequest].map(quote).join(' ');
- launch.stdin=renderAgentTemplate(attempt.promptTemplate?.template??DEFAULT_AGENT_TEMPLATES.video,[
-  `Project ${attempt.projectId}; parent attempt ${attempt.id}; native H3 call ${attempt.nativeCallId}; captured song ${attempt.song.id}.`,
-  `Persistent VISUAL style:\n${attempt.input.style}\n\nIndividual clip brief:\n${attempt.input.clipPrompt}`,
-  `Requested interval is [${attempt.input.startFrame}, ${attempt.input.endFrame}) at exactly 24 fps (${nativePlan.requestedFrames} frames). Native generation is ${nativePlan.nativeFrames} frames, beginning at the same start. Preserve all original frames; initial placement includes only the ${nativePlan.requestedFrames} requested frames. Do not stretch or retime. Durations over 15 seconds are advisory warnings, not a cap.`,
-  ...(firstFrame?[`Continue from the selected last retained original PNG: ${firstFrame.path}; source frame ${attempt.continuation!.frame.index+1}, SHA256 ${firstFrame.sha256}. Inspect this supplied image with your normal tools and preserve its visual continuity. It is the first-frame input, not a replacement for the captured song audio. Do not use an MP4 extraction or the discarded untrimmed ending. The user may edit prepared times; the immutable interval below is authoritative. No seamless-motion guarantee or automatic chain is requested.`]:[]),
-  direction,
-  `Create ${paths.agentRequest} using these immutable native inputs, adding your translated tool prompt in the native "prompt" field:\n${JSON.stringify(nativeTemplate,null,2)}\nThe helper conditions every native frame with the matching original song samples and pads only beyond the actual song. Do not replace the song, borrow the current UI selection, generate a new song or use the two-second proof convenience builder.`,
-  `Use the existing helper through the running queue:\n${command}\nIt captures the actual tool request and owns only its own Comfy service. Wait for client state succeeded and inspect ${paths.nativeReceipt}. Never bypass a held lease or stop another application. If failed or uncertain, retain the evidence and explain.`,
-  `Source ${source}; STUDIO_DATA_ROOT ${runtime}; workspace ${launch.cwd}; run directory ${launch.runDirectory}. Exact assigned H3 seed is the decimal string ${attempt.seeds.h3}; never round it through a JavaScript Number or allocate a replacement.`,
-  ...guidance.map(g=>`Product guidance ${g.sourcePath}; SHA256 ${g.sha256}:\n\n${g.text}`),
- ].join('\n\n'));
+ launch.stdin=renderAgentTemplate(attempt.promptTemplate?.template??DEFAULT_AGENT_TEMPLATES.video,formatTaskContext(VIDEO_CONTEXT,{
+  project_id:attempt.projectId,attempt_id:attempt.id,native_call_id:attempt.nativeCallId,song_id:attempt.song.id,visual_style:attempt.input.style,clip_description:attempt.input.clipPrompt,
+  start_frame:String(attempt.input.startFrame),end_frame:String(attempt.input.endFrame),requested_frames:String(nativePlan.requestedFrames),native_frames:String(nativePlan.nativeFrames),
+  continuation:firstFrame?formatTaskContext(VIDEO_CONTINUATION_CONTEXT,{first_frame_path:firstFrame.path,source_frame_number:String(attempt.continuation!.frame.index+1),first_frame_sha256:firstFrame.sha256},[]):'',
+  direction,agent_request_path:paths.agentRequest,native_inputs_json:JSON.stringify(nativeTemplate,null,2),native_client_command:command,receipt_path:paths.nativeReceipt,
+  source_root:source,data_root:runtime,workspace:launch.cwd,run_directory:launch.runDirectory,h_seed:attempt.seeds.h3!,
+ },guidance));
 
   // Historical queued requests predate editable templates. Keep their original
   // instruction order rather than applying a later editable template. Already

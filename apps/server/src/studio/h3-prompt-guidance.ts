@@ -1,3 +1,4 @@
+import {formatTaskContext} from './task-context-text.ts';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {lstat,readFile,realpath} from 'node:fs/promises';
@@ -36,13 +37,21 @@ export function videoDirectionContext(input:{requestedFrames:number;nativeFrames
  const retainedSamples=BigInt(requestedFrames)*2000n,nativeSamples=BigInt(nativeFrames)*2000n;
  const beats=input.sampleIndices.map((sample,i)=>({beat:i+1,sample,relativeSamples:(BigInt(sample)-BigInt(input.startSample)).toString()}));
  const inRange=(start:bigint,end:bigint)=>beats.filter(b=>BigInt(b.relativeSamples)>=start&&BigInt(b.relativeSamples)<end);
+ return formatTaskContext(videoDirectionTemplate(hasFirstFrame),{
+  retained_samples:String(retainedSamples),requested_frames:String(requestedFrames),last_retained_frame:String(requestedFrames-1),native_frames:String(nativeFrames),
+  retained_beat_anchors:JSON.stringify(inRange(0n,retainedSamples)),native_tail_beat_anchors:JSON.stringify(inRange(retainedSamples,nativeSamples)),
+ },[]);
+}
+
+/** Same directing text as actual tasks; Config leaves only measured values as placeholders. */
+export function videoDirectionTemplate(hasFirstFrame:boolean):string{
  return[
   hasFirstFrame
    ? 'Mode: I2VA (captured first-frame image plus separate original-song conditioning). Begin the native prompt with this official alignment line, then a blank line and the three base-guide fields:\nFor the target video, at 0.00 seconds into the target video, <Picture 1> (from [Shot 1]) is fully referenced.'
    : 'Mode: T2VA (no image reference; separate original-song conditioning). Begin the native prompt directly with the three base-guide fields; do not invent an image alignment header.',
   'The base fields are integrated_multimodal_description, overall_soundscape, non_diegetic_music. The full official base guide is included below. Its model syntax governs the native prompt, not your final response or use of tools. The current graph has no last-frame or arbitrary full-reference inputs; actual audio conditioning alone does not make this Ref2VA.',
-  `Initially retained local interval: [0, ${retainedSamples}) samples at 48000 Hz, or [0, ${requestedFrames}/24) seconds. The last visible retained frame starts at ${requestedFrames-1}/24 seconds. Native duration is ${nativeFrames}/24 seconds. Resolve essential actions by the last retained frame, not in the extra native tail; let any tail maintain the resolved state. Keep all generated frames available for later editing.`,
-  `Retained beat anchors: ${JSON.stringify(inRange(0n,retainedSamples))}\nNative-tail-only beat anchors: ${JSON.stringify(inRange(retainedSamples,nativeSamples))}`,
+  `Initially retained local interval: [0, {{retained_samples}}) samples at 48000 Hz, or [0, {{requested_frames}}/24) seconds. The last visible retained frame starts at {{last_retained_frame}}/24 seconds. Native duration is {{native_frames}}/24 seconds. Resolve essential actions by the last retained frame, not in the extra native tail; let any tail maintain the resolved state. Keep all generated frames available for later editing.`,
+  `Retained beat anchors: {{retained_beat_anchors}}\nNative-tail-only beat anchors: {{native_tail_beat_anchors}}`,
   'Exact local event time is relativeSamples / 48000 seconds. Beat anchors are analysis estimates, not guaranteed visual sync. Select a few meaningful gestures from the retained anchors when useful; do not narrate every beat or schedule the payoff only on a native-tail beat. With no retained anchors, direct a duration-appropriate action without inventing beat measurements.',
   'Translate the brief into observable action progression: establish the scene, develop a compatible action or reaction, and reach a readable final state. Describe camera motion with direction, speed and extent when useful. Short clips usually benefit from one coherent action/shot; cuts are available when the idea needs them. Preserve user intent, exact dialogue and supplied reference identity; these are creative defaults, not restrictions on your normal research or tools.',
  ].join('\n\n');

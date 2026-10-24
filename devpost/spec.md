@@ -734,3 +734,7 @@ MusicForm derives the selected active song's originating attempt and renders its
 ### Clip-card density and prompt visibility (24 October 2026)
 
 Scope compact spacing overrides to `.clip-card`: remove bottom padding from `.edit-context-body` and `.move-clip`, and bottom margin from `.move-grid label`; retain card-body padding and error/status rendering. Supply the compact clip-only reuse label through the existing `GenerationActions.reuseLabel`, preserving recovery actions, captured edit IDs and dirty-state guards. Config clarifies the existing `renderAgentTemplate`/`{{task_context}}` composition, not a template migration or new guidance editor. Deployed guidance remains verified and captured by `prepareVideoTask`; historical plans are not rewritten.
+
+### Researched music guidance and visible task contexts (24 October 2026)
+
+The shared server task-context-text formatters build both new music/video task prompts and the read-only GET /api/config/task-contexts previews. H3 directing uses the same mode-specific formatter for actual values and placeholder previews. The endpoint reads current product files and integrity-verified runtime H3 base documentation; it performs no project lookup, capture write, model load or download. Per-tool failures preserve unrelated contexts and template editing. Source/preview hashes identify the displayed text. Legacy captured/replay plans are unchanged. The web context reader fetches independently of template saves and renders escaped, selectable, read-only text.

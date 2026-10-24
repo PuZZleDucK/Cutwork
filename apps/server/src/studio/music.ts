@@ -1,3 +1,4 @@
+import {MUSIC_CONTEXT,formatTaskContext,readProductGuidance} from './task-context-text.ts';
 import {DEFAULT_AGENT_TEMPLATES,renderAgentTemplate} from '../../../../packages/core/src/contracts/prompt-templates.ts';
 import assert from 'node:assert/strict';
 import {captureExecutionSource,fileHash,verifyExecutionSource,type ExecutionSource} from './execution-snapshot.ts';
@@ -95,20 +96,13 @@ export async function prepareMusicTask(options: MusicOptions): Promise<{ planPat
     analysisId: randomUUID(), analysisDirectory: '', analysisRequest: '', analysisReceipt: '' };
   paths.analysisDirectory = join(runtime, 'projects', attempt.projectId, 'analysis', paths.analysisId);
   paths.analysisRequest = join(paths.analysisDirectory, 'request.json'); paths.analysisReceipt = join(paths.analysisDirectory, 'receipt.json');
-  const guidance = await Promise.all(['README.md', 'music.md'].map(async name => {
-    const sourcePath = `integrations/knowledge/${name}`, bytes = await readFile(join(source, sourcePath));
-    return { name, sourcePath, text: bytes.toString('utf8'), sha256: hash(bytes) };
-  }));
+  const guidance = await readProductGuidance(source,'music');
   const nativeClient = [join(runtime, `tools/runtime/node-v${node.version}-linux-x64/bin/node`), join(source, 'scripts/native-call.ts'), origin, attempt.projectId, attempt.id, 'yue2', paths.agentRequest].map(quote).join(' ');
-  launch.stdin = renderAgentTemplate(attempt.promptTemplate?.template??DEFAULT_AGENT_TEMPLATES.music, [
-    `Project: ${attempt.projectId}\nParent attempt: ${attempt.id}\nCaptured native YuE2 call ID: ${attempt.nativeCallId}\nProvider/model: ${attempt.provider}/${attempt.model}`,
-    `Music description:\n${attempt.input.musicPrompt}\n\nOptional user lyrics (preserve supplied words):\n${attempt.input.lyrics}`,
-    `Integration source: ${source}\nSTUDIO_DATA_ROOT: ${runtime}\nWorkspace: ${launch.cwd}\nRun directory: ${launch.runDirectory}`,
-    `Assigned exact decimal stage seeds: ${JSON.stringify(attempt.seeds)}. With generated planning use abc, semantic and nar; with a supplied score/planning off use semantic and nar. Do not allocate replacements or round seeds.`,
-    `Write the native request to ${paths.agentRequest}. It must have schemaVersion:1 and attemptId:${attempt.nativeCallId}. Submit it through the running studio coordinator using:\n${nativeClient}\nThe server captures the exact request and writes ${paths.nativeReceipt}. Save client output and inspect the actual receipt and stage artifacts.`,
-    'This cooperative helper registers native work with the shared GPU queue. It waits for owned process and CUDA release; a helper receipt alone is insufficient. Wait for client state succeeded. If failed, cancelled or reconciling, retain the evidence and explain; do not bypass a held lease or stop unrelated applications.',
-    ...guidance.map(g => `Product guidance ${g.sourcePath}; SHA256 ${g.sha256}:\n\n${g.text}`),
-  ].join('\n\n'));
+  launch.stdin = renderAgentTemplate(attempt.promptTemplate?.template??DEFAULT_AGENT_TEMPLATES.music,formatTaskContext(MUSIC_CONTEXT,{
+    project_id:attempt.projectId,attempt_id:attempt.id,native_call_id:attempt.nativeCallId,provider_model:`${attempt.provider}/${attempt.model}`,
+    music_description:attempt.input.musicPrompt,lyrics:attempt.input.lyrics,source_root:source,data_root:runtime,workspace:launch.cwd,run_directory:launch.runDirectory,
+    stage_seeds_json:JSON.stringify(attempt.seeds),agent_request_path:paths.agentRequest,native_client_command:nativeClient,receipt_path:paths.nativeReceipt,
+  },guidance));
 
   // Historical queued requests predate editable templates. Keep their original
   // prompt wording and order rather than applying a later global configuration.

@@ -81,7 +81,7 @@ try {
       log:[record.error,record.outcome?.provider?.report,readiness?.detail,record.outcome?.boundary].filter(Boolean).join('\n\n')});
     },
    });
-   await registerStudioApi(app, { store, runtime: studio, dataRoot, webRoot, debug, lifecycle });
+   await registerStudioApi(app, { store, runtime: studio, dataRoot, webRoot, debug, lifecycle, source });
   },
  });
  let stopping = false;

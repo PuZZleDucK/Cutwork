@@ -93,3 +93,18 @@ VRAM values and their distinct measurement boundaries are recorded in
 The untracked submission draft remains excluded. Push/anonymous remote verification
 is performed after the reviewed documentation commit; no history rewrite or force
 push is authorised or planned.
+
+### Publication verified
+
+The reviewed source was first published as `d2409b7` on `main`. The local branch
+was renamed from `master` to match the remote's existing default; commits were not
+rewritten. HTTPS pushing lacked local credentials, so the existing GitHub SSH
+identity was verified and used for the push URL of the same repository. The fetch
+URL remains the learner-supplied HTTPS origin. `main` tracks `origin/main`.
+
+Anonymous GitHub API and public-page reads confirm the repository is public.
+Anonymous raw reads of README, the main screenshot, GIF and full MP4 match local
+bytes exactly. The targeted timeline suite passes 20 tests, and the reviewed public
+text/links pass. No force push, credential disclosure, new permission grant or
+private submission-draft publication occurred. This note is a follow-up commit to
+the same authorised publication, not a separate release or submission acceptance.

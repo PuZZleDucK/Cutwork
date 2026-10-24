@@ -25,14 +25,17 @@ stale context display was reproduced, fixed and deployed; the Claude post-comple
 hang did not recur in four pinned native CLI probes and is deferred for
 post-submission investigation. See [the findings](post-demo-issue-investigation.md).
 Neither was a failed render or lost project. Final learner approval/watch-listen,
-learning wrap-up, public repository publication and submission preparation remain separate.
+learning wrap-up and submission preparation remain separate; the public source is now published.
 
-**Public repository prepared, not published:** refreshed README, installation/usage
-and contribution guides, four real screenshots, compact GIF and unchanged 28-second
-sample film. Bounded current/history credential review and media/link checks pass;
-1,510 tests, typecheck and build pass again. Local agent/course files and raw captures
-remain excluded. No remote configured, no push and no submission authorship. The
-learner's concurrent submission draft remains untouched. See
+**Public source published — 25 October:** [PuZZleDucK/Cutwork](https://github.com/PuZZleDucK/Cutwork),
+branch `main`, after explicit learner authorisation. Refreshed README, installation/
+usage/contribution guides, four screenshots, compact GIF and unchanged sample film
+are available without authentication; README and sample bytes match locally.
+Bounded current/history credential review and media/link checks pass; the unchanged
+code baseline has 1,510 tests plus typecheck/build, and the timing wording review
+passes 20 focused tests. Measured VRAM is documented with sampling/allocator limits.
+Local agent/course files, raw captures and the learner's concurrent submission draft
+remain excluded. No submission authorship or course-completion claim. See
 [repository preparation](repository-preparation.md).
 
 **24 October post-demo fix:** source `08a6b5a` adds setup-triggered context refresh

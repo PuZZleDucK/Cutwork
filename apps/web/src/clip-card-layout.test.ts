@@ -16,11 +16,11 @@ function render(placed:boolean,otherSong=false){
 test('placed card has Remove above preview and all remaining actions in one shared row',()=>{
  const html=render(true),start=html.indexOf('class="clip-card '),card=html.slice(start);
  expect(card.indexOf('IN SEQUENCE')).toBeLessThan(card.indexOf('<video'));
- expect(card.indexOf('>Continue from</button>')).toBeLessThan(card.indexOf('>Reuse parameters</button>'));
+ expect(card.indexOf('>↑ Continue</button>')).toBeLessThan(card.indexOf('>↑ Reuse params</button>'));
  expect(card.indexOf('>Remove</button>')).toBeLessThan(card.indexOf('<video'));
  expect(card).toContain('class="clip-card-actions"');
  const actionRow=card.slice(card.indexOf('class="clip-card-actions"'),card.indexOf('class="clip-edit"'));
- for(const label of ['Continue from','Reuse parameters','Archive','Delete'])expect(actionRow).toContain(`>${label}</button>`);
+ for(const label of ['↑ Continue','↑ Reuse params','Archive','Delete'])expect(actionRow).toContain(`>${label}</button>`);
  expect(actionRow).not.toContain('>Remove</button>');
  expect(card.indexOf('>Remove</button>')).toBeLessThan(card.indexOf('>Archive</button>'));
  expect(card.indexOf('>Archive</button>')).toBeLessThan(card.indexOf('>Delete</button>'));
@@ -31,7 +31,7 @@ test('unplaced status and the placement button sit above preview, not among the 
  const html=render(false),start=html.indexOf('class="clip-card '),card=html.slice(start);
  expect(card.indexOf('UNPLACED')).toBeLessThan(card.indexOf('<video'));
  expect(card.indexOf('>Place in sequence</button>')).toBeLessThan(card.indexOf('<video'));
- expect(card).not.toContain('>Remove</button>');expect(card.match(/>Continue from<\/button>/g)).toHaveLength(1);
+ expect(card).not.toContain('>Remove</button>');expect(card.match(/>↑ Continue<\/button>/g)).toHaveLength(1);
 });
 test('compact primary buttons reset the old standalone continuation margins',()=>{
  const css=readFileSync(new URL('./workbench.css',import.meta.url),'utf8');
@@ -40,7 +40,16 @@ test('compact primary buttons reset the old standalone continuation margins',()=
 
 test('continuation from another song also precedes reuse and lifecycle actions',()=>{
  const html=render(false,true),start=html.indexOf('class="clip-card '),card=html.slice(start);
- expect(card).toContain('>Continue from Song</button>');
- expect(card.indexOf('>Continue from Song</button>')).toBeLessThan(card.indexOf('>Reuse parameters</button>'));
- expect(card.indexOf('>Reuse parameters</button>')).toBeLessThan(card.indexOf('>Archive</button>'));
+ expect(card).toContain('>↑ Continue</button>');
+ expect(card).toContain('aria-label="Continue from Song"');
+ expect(card.indexOf('>↑ Continue</button>')).toBeLessThan(card.indexOf('>↑ Reuse params</button>'));
+ expect(card.indexOf('>↑ Reuse params</button>')).toBeLessThan(card.indexOf('>Archive</button>'));
+});
+
+test('clip cards remove accumulated whitespace beneath the position inputs without hiding status messages',()=>{
+ const css=readFileSync(new URL('./workbench.css',import.meta.url),'utf8');
+ expect(css).toContain('.clip-card .edit-context-body{padding-bottom:0}');
+ expect(css).toContain('.clip-card .move-clip{padding-bottom:0}');
+ expect(css).toContain('.clip-card .move-grid label{margin-bottom:0}');
+ expect(css).not.toMatch(/\.clip-save-status\s*\{[^}]*display:none/);
 });

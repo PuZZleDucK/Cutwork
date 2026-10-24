@@ -10,6 +10,9 @@ test('Config exposes both actual template editors, explicit save/defaults, and r
  expect(html).toContain('Music agent template');expect(html).toContain('Video agent template');expect(html).toContain('Save templates');
  expect(html).toContain('Use defaults');expect(html).toContain('Queued and running requests');expect(html).toContain('{{task_context}}');
  expect(html).not.toMatch(/<details/);
+ expect(html).toContain('editable templates, not the complete task prompts');
+ expect(html).toContain('H3 directing guidance');expect(html).toContain('pinned official base guide');
+ expect(html).toContain('does not replace your saved templates or historical task captures');
 });
 test('invalid template blocks Save and exposes corrective information without losing draft text',()=>{
  const html=renderToStaticMarkup(createElement(PromptTemplateEditor,{value:{...DEFAULT_AGENT_TEMPLATES,music:'KEEP MY INCOMPLETE EDIT'},busy:false,dirty:true,error:null,status:null,onChange:()=>{},onSave:()=>{},onDefaults:()=>{},onReload:()=>{}}));

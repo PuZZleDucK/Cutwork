@@ -450,6 +450,8 @@ Activity mode: Proposed focused planning/verification investigation suitable for
 
 ## Revisions
 
+- **24 October — Clip density and prompt visibility:** reduced clip-card bottom whitespace by 26px; shortened actions to ↑ Continue / ↑ Reuse params while preserving music controls and context guards. Verified deployed H3 guidance and existing full prompt capture; clarified the Config template/context distinction without resetting templates. **1,486 tests / 110 files**, typecheck/build, live browser and unchanged project/settings checks pass. See [clip-density-and-prompt-visibility.md](clip-density-and-prompt-visibility.md). Final learner review remains open.
+
 - **24 October — action placement and setup dismissal:** move music reuse below Generate, right-align export with a save icon, and make non-agent tool status clicks reversible Config toggles. Verification: [action-placement.md](action-placement.md). Final learner review remains open.
 
 - **24 October — editor proportions:** enlarge lyrics/style/clip-description defaults and remove four decorative borders while retaining the music/video divider. Verification: [editor-proportions.md](editor-proportions.md). Final learner review remains open.

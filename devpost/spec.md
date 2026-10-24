@@ -730,3 +730,7 @@ The workbench CSS sets initial heights of 180px for lyrics (previously 90px), 84
 ### Action placement and setup dismissal (24 October 2026)
 
 MusicForm derives the selected active song's originating attempt and renders its existing non-submit GenerationActions below Generate music. PreviewExport keeps status and download controls before a right-aligned export button with an aria-hidden inline SVG save icon; request identity, disabled states and retry behaviour are unchanged. Non-agent status buttons use toggleToolConfiguration as a functional view update and expose aria-expanded / aria-controls. Closing Config returns to the existing Projects view and active workspace tab; automatic incomplete-setup and open Debug handling remain unchanged.
+
+### Clip-card density and prompt visibility (24 October 2026)
+
+Scope compact spacing overrides to `.clip-card`: remove bottom padding from `.edit-context-body` and `.move-clip`, and bottom margin from `.move-grid label`; retain card-body padding and error/status rendering. Supply the compact clip-only reuse label through the existing `GenerationActions.reuseLabel`, preserving recovery actions, captured edit IDs and dirty-state guards. Config clarifies the existing `renderAgentTemplate`/`{{task_context}}` composition, not a template migration or new guidance editor. Deployed guidance remains verified and captured by `prepareVideoTask`; historical plans are not rewritten.

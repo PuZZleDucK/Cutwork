@@ -17,7 +17,7 @@ function render(placed:boolean,busy=false){
 test('restored unplaced edit exposes continuation, placement and all fine controls directly',()=>{
  const html=render(false);
  expect(html).toContain('UNPLACED');
- expect(html).toMatch(/<button[^>]*>Continue from<\/button>/);
+ expect(html).toMatch(/<button[^>]*>↑ Continue<\/button>/);
  expect(html).toMatch(/<button[^>]*>Place in sequence<\/button>/);
  expect(html).not.toContain('<details');
  expect(html).not.toContain('<summary');
@@ -36,17 +36,17 @@ test('restored unplaced edit exposes continuation, placement and all fine contro
 test('placed edit exposes removal and inline timing fields without duplicate explanatory copy',()=>{
  const html=render(true);
  expect(html).toContain('IN SEQUENCE');
- expect(html).toContain('Continue from');
+ expect(html).toContain('↑ Continue');
  expect(html).toContain('Remove');
  expect(html).not.toContain('Place in sequence');
- expect(html.match(/Continue from/g)).toHaveLength(1);
+ expect(html.match(/↑ Continue/g)).toHaveLength(1);
  expect(html).not.toContain('<details');
  expect(html).toContain('title="');
 });
 
 test.each([true,false])('busy studio disables both direct actions (placed=%s)',placed=>{
  const html=render(placed,true);
- expect(html).toMatch(/<button[^>]*disabled=""[^>]*>Continue from<\/button>/);
+ expect(html).toMatch(/<button[^>]*disabled=""[^>]*>↑ Continue<\/button>/);
  expect(html).toMatch(new RegExp(`<button[^>]*disabled=""[^>]*>${placed?'Remove':'Place in sequence'}<\\/button>`));
 });
 

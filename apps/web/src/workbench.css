@@ -89,3 +89,8 @@
 .video-preview .render-controls{justify-content:flex-end}
 .video-preview .export-button{margin-left:auto;display:inline-flex;align-items:center;gap:8px}
 .export-button .save-icon{flex:none}
+
+/* Keep only the card's outer padding below the final position inputs. */
+.clip-card .edit-context-body{padding-bottom:0}
+.clip-card .move-clip{padding-bottom:0}
+.clip-card .move-grid label{margin-bottom:0}

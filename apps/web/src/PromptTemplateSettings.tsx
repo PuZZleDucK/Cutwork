@@ -12,6 +12,7 @@ export function PromptTemplateEditor({value,busy,dirty,error,status,onChange,onS
   <h2>Agent prompt templates</h2>
   <p className="small-copy">Shared across projects. Queued and running requests keep their captured instructions; retries keep the original template. Saving changes affects new generations only.</p>
   <p className="small-copy">Keep <code>{'{{task_context}}'}</code> once in each template. It inserts the captured user inputs, exact timing/seeds, tool commands and usage guidance. Everything around it is editable agent instruction.</p>
+  <p className="small-copy">These are editable templates, not the complete task prompts. For video, the inserted context also includes Cutwork’s H3 directing guidance, the pinned official base guide, and task-specific continuation and retained-beat timing. Updating that guidance does not replace your saved templates or historical task captures.</p>
   <form onSubmit={event=>{event.preventDefault();if(!busy&&dirty&&!validation.length)onSave();}}>
    <fieldset disabled={busy}>
     {(['music','video'] as const).map(kind=><div className="prompt-template-field" key={kind}>

@@ -32,7 +32,7 @@ export function ClipLibrary({studio,song,arrangement,onContinue,onRestore}:{stud
    const clip=entry.clip,allContexts=snapshot.editContexts.filter(c=>c.clipId===clip.id),contexts=allContexts.filter(c=>c.songId===song?.id).sort((a,b)=>(a.sourceOriginFrame+a.sourceStartFrame)-(b.sourceOriginFrame+b.sourceStartFrame));
    const missingContext=allContexts.some(c=>!snapshot.songs.some(s=>s.id===c.songId)||['deleting','deleted'].includes(artifactState(snapshot,{kind:'song',id:c.songId})));
    const original=attempts.find(a=>a.id===clip.attemptId),placed=arrangement?.placements.some(p=>p.clipId===clip.id);
-   const reuse=(disabled=false)=>original&&onRestore?<GenerationActions studio={studio} attempt={original} onRestore={()=>onRestore(original)} compact disabled={disabled}/>:null;
+   const reuse=(disabled=false)=>original&&onRestore?<GenerationActions studio={studio} attempt={original} onRestore={()=>onRestore(original)} reuseLabel="↑ Reuse params" compact disabled={disabled}/>:null;
    const card=(placement:ReactNode,actions:ReactNode,controls:ReactNode,disabled=false)=><article className={`clip-card ${placed?'in-sequence':'unplaced'}`} id={`clip-library-${clip.id}`} tabIndex={-1} key={entry.id} data-start-frame={entry.startFrame??undefined}>
     {placement}
     <PreviewVideo controls preload="none" src={asset(clip.assetId)} poster={clip.rawFrames[0]?asset(clip.rawFrames[0].assetId):undefined} aria-label={`Preview clip ${clip.title}`} />
@@ -42,7 +42,7 @@ export function ClipLibrary({studio,song,arrangement,onContinue,onRestore}:{stud
    const placement=<div className="clip-placement-bar"><span className="clip-placement-state">{placed?'IN SEQUENCE':'UNPLACED'}</span>{clip.nativeFrames>0&&<span className="clip-frame-count">{clip.nativeFrames} frames</span>}{song&&arrangement&&!contexts.length&&!missingContext&&<button className="button secondary small" disabled={studio.busy} onClick={()=>void studio.perform(async()=>{const next=clipSuggestion(song,arrangement.placements,snapshot.reservations);const startFrame=next?.startFrame??Math.max(0,...arrangement.placements.map(p=>p.endFrame));await request(`/api/projects/${song.projectId}/songs/${song.id}/placements`,{revision:arrangement.revision,clipId:clip.id,startFrame});},'')}>Place in sequence</button>}</div>;
    const otherContinuations=onContinue?allContexts.map(context=>{
     const referenced=snapshot.songs.find(s=>s.id===context.songId);
-    return referenced&&artifactState(snapshot,{kind:'song',id:context.songId})==='active'?<button key={context.id} className="button secondary small" disabled={studio.busy} onClick={()=>void onContinue(context)}>Continue from {referenced.title}</button>:null;
+    return referenced&&artifactState(snapshot,{kind:'song',id:context.songId})==='active'?<button key={context.id} className="button secondary small" aria-label={`Continue from ${referenced.title}`} title={`Continue from this saved edit on ${referenced.title}.`} disabled={studio.busy} onClick={()=>void onContinue(context)}>↑ Continue</button>:null;
    }):null;
    const otherContexts=<div className="other-song-continuations">{allContexts.map(context=>{
     const referenced=snapshot.songs.find(s=>s.id===context.songId),state=artifactState(snapshot,{kind:'song',id:context.songId});

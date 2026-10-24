@@ -37,14 +37,14 @@ function change(node:ReactElement<Record<string,unknown>>,value:string){(node.pr
 test('pending inline trim blocks dependent actions until it saves or is discarded',()=>{
  const props=fixture();let nodes=render(props);
  change(control(nodes,'Trim start sourceFrames edit'),'');nodes=render(props);
- const continueButton=control(nodes,'Continue from'),remove=control(nodes,'Remove');
+ const continueButton=control(nodes,'↑ Continue'),remove=control(nodes,'Remove');
  expect(continueButton.props.disabled).toBe(true);expect(remove.props.disabled).toBe(true);
  click(continueButton);click(remove);
  expect(props.onContinue).not.toHaveBeenCalled();expect(props.studio.saveClipEdit).not.toHaveBeenCalled();
  expect(nodes.find(node=>node.props.className==='move-clip')?.props.disabled).toBe(true);
  click(control(nodes,'Discard changes'));nodes=render(props);
  expect(control(nodes,'Trim start sourceFrames edit').props.value).toBe('6');
- expect(control(nodes,'Continue from').props.disabled).toBe(false);
+ expect(control(nodes,'↑ Continue').props.disabled).toBe(false);
 });
 
 test('inline trim automatically saves exact source frames with both revision guards and then allows continuation',async()=>{
@@ -53,8 +53,8 @@ test('inline trim automatically saves exact source frames with both revision gua
  vi.mocked(request).mockResolvedValue({context:{...context,revision:8,sourceEndFrame:70},arrangement:{...props.arrangement,revision:12}});
  await vi.advanceTimersByTimeAsync(350);expect(request).toHaveBeenCalledOnce();
  expect(request).toHaveBeenCalledWith('/api/projects/project/edit-contexts/edit',expect.objectContaining({revision:7,arrangementRevision:11,edit:expect.objectContaining({sourceStartFrame:5,sourceEndFrame:70})}),'PUT');
- nodes=render(props);expect(control(nodes,'Continue from').props.disabled).toBe(false);
- click(control(nodes,'Continue from'));
+ nodes=render(props);expect(control(nodes,'↑ Continue').props.disabled).toBe(false);
+ click(control(nodes,'↑ Continue'));
  expect(props.onContinue).toHaveBeenCalledWith(expect.objectContaining({sourceEndFrame:70,revision:8}));
 });
 
@@ -64,10 +64,10 @@ test('a newer context revision keeps unsaved values but disables writes and offe
  props.context={...context,revision:8,sourceOriginFrame:60};nodes=render(props);
  expect(control(nodes,'Move start frames edit').props.value).toBe('101');
  expect(nodes.find(node=>node.props.className==='move-clip')?.props.disabled).toBe(true);
- expect(control(nodes,'Continue from').props.disabled).toBe(true);
+ expect(control(nodes,'↑ Continue').props.disabled).toBe(true);
  click(control(nodes,'Load latest edit'));nodes=render(props);
  expect(control(nodes,'Move start frames edit').props.value).toBe('66');
- expect(control(nodes,'Continue from').props.disabled).toBe(false);
+ expect(control(nodes,'↑ Continue').props.disabled).toBe(false);
 });
 
 test('audio misalignment warns only when the clip audio is actually selected',()=>{

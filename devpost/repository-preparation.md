@@ -1,0 +1,78 @@
+# Public repository preparation
+
+## Request
+
+Prepare Cutwork for a later push: an approachable README, factual requirements and
+installation instructions, technology overview, Devpost planning/build process,
+and curated real screenshots/media for visitors who will not install the app.
+The learner is writing the submission separately. This is technical repository
+preparation, not submission authorship or permission to publish.
+
+## Boundaries
+
+- No push, repository creation, history rewrite, new generation or tool install.
+- Preserve active work. Capture the completed demo in a read-only local view rather
+  than changing the live server's shared selected project.
+- Only curated screenshots and a small existing demo export enter Git. Runtime,
+  credentials, private evidence, personal learner profile and raw recordings stay out.
+- Report the actual audit scope and remaining limitations, not a security guarantee.
+
+## Checklist
+
+- [x] Check current instructions against bootstrap, manifest and actual app behaviour.
+- [x] Capture and inspect screenshots plus a compact motion example from real output.
+- [x] Rewrite README; retain detailed install/usage instructions in linked guides.
+- [x] Check tracked files and all reachable history for secrets/private release clutter.
+- [x] Verify documentation links, media decoding, install-plan behaviour and tests.
+- [x] Commit only intended public artifacts and record push readiness/remaining steps.
+
+## Prepared artifacts
+
+- Rewritten README: practical project summary, feature tour, requirements, four-step
+  setup, exact prototype boundaries, stack, development and the six-stage Devpost
+  artifact trail. It does not author or substitute for the learner's submission.
+- Detailed `docs/installation.md` and `docs/usage.md` retain operational/lifecycle
+  guidance; `CONTRIBUTING.md` explains isolated development and test boundaries.
+- Four reviewed viewport screenshots, a compact eight-second animated excerpt and
+  the unchanged 28-second final MP4. Curated media totals about 6.7 MiB; provenance,
+  transformations and licence boundaries are in `docs/media/README.md`.
+- Local course/agent tooling and uncurated captures are now ignored. No such files
+  were deleted. Personal learner context, credentials and runtime/evidence remain
+  ignored and untracked.
+
+## Verification and audit
+
+- Existing-history baseline: **66 commits / 988 unique blobs** across all reachable
+  refs, plus commit-message scanning. Credential-pattern matches were limited to
+  two reviewed synthetic origin-validation/redaction test strings. No live secret
+  was identified; no forbidden credential/runtime/profile paths were in history.
+- Reviewed tracked inventory and large blobs; the only pre-existing binary was the
+  separately licensed historical font. No model weights, raw recordings, production
+  databases or provider transcripts are being added.
+- Historical evidence includes non-secret test-host aliases/paths; Git author
+  metadata remains part of the history. This is a bounded pattern/manual review,
+  not an exhaustive guarantee that no sensitive material exists. No history rewrite
+  or credential rotation was performed.
+- **1,510 tests in 114 files**, typecheck and production build pass again. The
+  bootstrap's read-only default plan exits 0; no installation was rerun.
+- **43 local documentation links/anchors** resolve. All screenshots decode and were
+  visually inspected; both GIF and MP4 fully decode without diagnostics. The MP4
+  hash matches the recorded original. The locally rendered README loads all six
+  images (logo, four screenshots, animation). This is not a claim of an already
+  published or independently tested GitHub page.
+- The read-only documentation view performed no production mutations. No active
+  project selection, prompts, media, service or agent configuration was changed.
+  Accessibility checks remain skipped; this was documentation/functional review.
+
+## Handoff
+
+Ready for the owner to choose/create the public remote and authorise the push.
+**No remote is configured and nothing was published.** Source history will become
+public when pushed. The separately edited `devpost/submission-info.md` is the
+learner's concurrent work: it was not read, modified, staged or included in this
+preparation commit. Review it separately before deciding whether to publish it.
+Final course acceptance/wrap-up and the learner-authored submission are separate
+from this repository-preparation task; neither is marked complete here.
+
+Private audit reports, local preview and test logs are retained only under ignored
+`.local-evidence/repository-prep/`.

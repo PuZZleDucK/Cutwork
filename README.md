@@ -1,254 +1,182 @@
-# Cutwork — AI music-video studio
+<p align="center"><img src="apps/web/public/cutwork-mark.svg" width="76" alt="Cutwork hazard-striped clapperboard"></p>
 
-A text-first, agent-mediated music-video workbench: describe a song, generate
-song-conditioned clips, arrange them on a beat/frame timeline, and export an MP4.
-The browser works across a **trusted LAN**; one Ubuntu/NVIDIA server runs the tools.
-**Cutwork** is the project name. Its original hazard-striped clapperboard mark is
-editable SVG at `apps/web/public/cutwork-mark.svg`, included under the project MIT
-licence. Existing runtime directories and browser-storage keys are intentionally
-unchanged so renaming the app does not disturb projects or saved drafts.
+# Cutwork
 
-The creative loop, precise edits, live preview, continuation, recovery and media
-lifecycle are implemented. Current verification is indexed in
-[the build checklist](devpost/checklist.md), with
-[recent workspace refinements](devpost/workbench-round-two.md) and
-[installation evidence](devpost/slice-9-readiness.md).
-Fresh managed-runtime tool installation and model checksum checks have passed on
-Dundee. The end-to-end creative journey in that fresh runtime, final learner
-review and learning wrap-up remain open. **A clean Ubuntu installation is not
-claimed.** See the [criterion-by-criterion evidence map](devpost/prd-traceability.md)
-rather than interpreting a test count as complete product acceptance.
+### A creative workbench for AI-generated music videos
 
-## Before you run it
+Cutwork brings **music generation, video direction, beat-aware editing and export**
+into one browser workspace. Describe the sound and the shots you want; a frontier
+agent translates your brief into the local generation tools' prompts and settings.
+Then refine the result without rebuilding workflows or juggling output folders.
 
-> **Full-access agents; no application accounts.** Everyone who can reach this
-> interface can submit work, delete managed media and confirm autonomous Debug
-> repairs as the server account. Agents retain their normal tools, network access
-> and ability to change files **outside** project/tool folders. Those folders
-> organise work; they are not security sandboxes. Host/Origin checks are not
-> authentication. Do not expose this prototype to the public Internet or an
-> untrusted LAN. Provider usage may consume account quota or money.
+Run the tools on one Ubuntu/NVIDIA machine and open the interface from another
+computer on your **trusted LAN**. The media models run locally; **Codex or Claude
+uses its cloud provider**. This is not a fully offline application.
 
-The supported target is **Ubuntu 26.04 Desktop, x86_64, NVIDIA GPU with 16 GB VRAM**,
-with a functioning NVIDIA driver, an ordinary logged-in user session and internet
-access for downloads/frontier providers. Everything except the browser runs on
-that machine. Smaller GPUs, other OSes and distributed generator discovery are
-not supported by this proof of concept.
+[Get started](#getting-started) · [See it in action](#see-it-in-action) ·
+[User guide](docs/usage.md) · [Development](#development) ·
+[Devpost process](#built-with-the-devpost-process)
 
-Allow substantial local disk space for model weights, separate Python packages,
-original frames and exports. The pinned H3 model files alone are about **35.1 GB**;
-that is not the complete installation/storage requirement. Check the bootstrap's
-individual disk diagnostics and leave room for generated media.
+![Cutwork video workspace: persistent visual direction, live preview and an overlapping beat-aligned sequence](docs/media/video-workspace.png)
 
-Memory matters beyond VRAM. On the tested 22 GiB RAM host, an earlier H3 offload
-profile exhausted memory. New owned Comfy runs use
-`--disable-pinned-memory --disable-async-offload --fast-disk`; one successful short
-run ended at about **7.1 GiB process RSS / no process swap**, not a measured universal
-peak or safe RAM minimum. Longer jobs can need more. An unrelated TTS service was
-paused **with permission** for the native tests and restored afterward; the product
-does not silently stop other services. [Observed limits](devpost/slice-7-evidence.md).
+## What you can do
 
-## Set up the server
+- **Describe music in your own words.** Supply optional lyrics, generate a song
+  with YuE2 and switch between takes with their original inputs intact.
+- **Direct consistent shots.** Share a project visual style, condition H3 clips on
+  the song, or continue from a clip's last retained original frame.
+- **Edit precisely.** Work in linked beats, seconds or frames on a native 24 fps
+  timeline. Trim, move, overlap and prioritise whole clips; keep video after the
+  music ends.
+- **Preview immediately.** Play the current arrangement without rendering first,
+  then export an H.264/AAC MP4. Choose song audio or a dominant clip's own audio.
+- **Iterate without losing the trail.** Reuse parameters for a fresh seeded take,
+  archive/restore unused media, and inspect prompts, settings, seeds and outputs
+  in the combined creative history.
+- **Manage the toolchain in one place.** Guided installation, progress and retry,
+  switchable agent providers, and editable agent templates and task-context guides.
 
-Run these commands **on the Ubuntu GPU machine**, from a stable checkout directory,
-as the user who will own the projects and sign in to the provider. The persistent
-service uses this checkout in place; it does not copy it into an independent app
-installation.
+## See it in action
+
+**Night Shift Garden** is a completed 28-second demonstration: an original song,
+six placed shots, four frame-based continuations, an overlapping macro insert,
+and a closing image that continues beyond the music.
+
+[![Animated excerpt from Night Shift Garden: a brass gardener in a miniature greenhouse](docs/media/night-shift-garden.gif)](docs/media/night-shift-garden.mp4)
+
+**[Watch or download the full 28-second film with audio →](docs/media/night-shift-garden.mp4)**
+(4.3 MiB). The GIF is a silent, reduced-resolution excerpt; the MP4 is the unchanged
+Cutwork export. Neither requires installing the app.
+
+<details>
+<summary><strong>Tour the interface — music, clip library and creative history</strong></summary>
+
+### Music and lyrics
+
+Describe the track, keep multiple takes, and inspect its waveform and estimated tempo.
+
+![Music generation, optional lyrics and the selected soundtrack waveform](docs/media/music-workspace.png)
+
+### Sequence and clip library
+
+Placed clips are highlighted. Each keeps its own preview, continuation/reuse
+controls, audio choice, trim and position. Overlapping clips stay whole.
+
+![Compact clip library with placed and unplaced shots, continuation and precise edit controls](docs/media/clip-library.png)
+
+### Creative history
+
+The project keeps a combined record of generations and edits, with expandable
+inputs and tool details rather than only a folder of final files.
+
+![Creative history showing the captured provider, recorded seed and surrounding edit events](docs/media/creative-history.png)
+
+</details>
+
+Screenshots show the real completed demo in a read-only documentation view; no
+mock media or invented successful jobs. [Media provenance](docs/media/README.md).
+
+## Requirements
+
+| Component | Prototype target |
+|---|---|
+| Server | **Ubuntu 26.04 Desktop**, x86_64; a logged-in user with a working systemd user session |
+| GPU | **NVIDIA, 16 GB VRAM**, working driver visible to `nvidia-smi` |
+| System RAM | Tested on a 22 GiB host with a competing memory-heavy service paused; not a guaranteed minimum or all-workloads fit |
+| Disk | Substantial free local space for models, isolated environments and original frames. H3 weights alone are about **35.1 GB** |
+| Agent | A signed-in **Codex or Claude** account with access to the pinned model; provider quota/charges apply |
+| Network | Internet for downloads and agent providers; a **trusted LAN** for browser access |
+| Client | A modern desktop browser; no local GPU or generator install needed on the client |
+
+Smaller GPUs, other operating systems and distributed generation services are not
+validated targets. Models are downloaded during setup, **not bundled in this repo**.
+
+> [!WARNING]
+> **Trusted LAN only. No user accounts; full-access agents.** Anyone who can reach
+> the interface can submit work, delete managed media and approve autonomous Debug
+> repairs as the server user. Agents retain their normal tools and filesystem/network
+> access. Project directories are organisational boundaries, **not sandboxes**.
+> Do not expose Cutwork to the public Internet or an untrusted network.
+
+## Getting started
+
+### 1. Prepare the Ubuntu server
+
+Clone/download this repository and open a terminal in its root **on the GPU
+machine**, as the user who will run Cutwork. Keep the checkout in a stable location:
+the service runs from it. Do not run the whole bootstrap as root.
 
 ```sh
-# 1. Inspect host prerequisites and the plan. No install or service changes.
+# Inspect prerequisites and the installation plan; changes nothing.
 bash scripts/bootstrap-ubuntu.sh
 
-# 2. Explicit installation: host dependencies, pinned runtime, app build and service.
+# Install host dependencies, pinned runtime, app and persistent user service.
 bash scripts/bootstrap-ubuntu.sh --install --host-deps --service
 ```
 
-`--host-deps` authorises installation of shared Ubuntu prerequisites using APT
-(with the usual local privilege prompt): `ca-certificates`, `curl`, `tar`,
-`xz-utils`, `unzip`, `git`, and `ffmpeg`. It does **not** install/replace an NVIDIA
-driver, change host Python/pip defaults, add swap, alter the firewall or stop other
-applications. Omit it when those prerequisites are already available.
-`ffprobe` is provided by the same Ubuntu `ffmpeg` package. These are shared native
-commands, not Python packages or a bundled codec build.
+APT may ask for local administrator approval. The bootstrap installs native
+prerequisites including FFmpeg/ffprobe, pinned Node/provider CLIs and the app. It
+**does not install an NVIDIA driver, replace host Python, change the firewall or
+stop other applications**. Generator/model installation comes next in the UI.
 
-The bootstrap prepares pinned Node/provider CLIs, runs the lockfile-based app
-install, checks the real SQLite native binding, typechecks and builds. It leaves
-YuE2/Comfy/H3/analysis installation to the studio's setup flow. The default
-**plan-only** mode of every setup helper is distinct from an actual successful
-installation. Ready means the checks passed, not simply that a folder exists.
+Open **`http://<your-server-name-or-IP>:9122/`** from your browser. `9122` is the
+shipping default; a customised installation may use another port.
 
-If you want to inspect/start the app before installing a user service, omit
-`--service`; use the pinned Node directory reported by the bootstrap at the front
-of `PATH`, then run `npm start` from the checkout. The production server serves
-both UI and API at `http://<server-name-or-IP>:9122/`.
+### 2. Choose and sign in to an agent
 
-### Provider sign-in
-
-Open the studio, choose **Codex** or **Claude**, and sign in using the corresponding
-normal terminal flow on the server as the **same user**:
+Choose **Codex** or **Claude** in setup. Use the normal login flow in a terminal on
+the server, as the same user who runs the service:
 
 ```sh
 bash scripts/provider.sh codex login --device-auth
-# OR
+# Or, if you selected Claude:
 bash scripts/provider.sh claude auth login
-
-# Inspect the selected provider's actual authentication state:
-bash scripts/provider.sh codex login status
-# OR
-bash scripts/provider.sh claude auth status
 ```
 
-`provider.sh` only selects this app's pinned executables while preserving the
-normal home/config/tools environment. It does not replace provider login or copy
-credentials into the studio. No API key/password is entered in the browser UI.
-An unsigned-in/unusable provider remains an error with sign-in guidance; selection
-alone does not make it ready. The fixed requested models are `gpt-6.1-sol` and
-`claude-opus-5-5`; access depends on your account. There is no hidden fallback.
-Click the provider's navbar indicator to reopen its selector later. Existing jobs
-keep their captured provider; the new selection applies only to new requests.
+The helper selects Cutwork's pinned CLI; it is not a separate authentication
+system. Click **Check sign-in** after completing login. The configured models are
+`gpt-6.1-sol` and `claude-opus-5-5`; there is no hidden fallback if access fails.
 
-### Install and verify the generators
+### 3. Install the tools
 
-Use the setup panels or **Install all**. They cover YuE2, audio analysis, ComfyUI
-and H3 dependencies/models, with tool-specific progress, failures, Retry and
-confirmed Debug. Setup belongs to the server, not a project: switching projects
-or refreshing the browser does not start a duplicate installation. All tool indicators are visible from the start, disabled until installed. Keep
-every setup panel visible until the complete toolchain is ready, then clear the
-setup area together. Only the actively installing step has animated hazard stripes.
+Click **Install all**, or install individual steps. YuE2, ComfyUI/H3 and audio
+analysis use isolated Python environments. Progress survives a browser refresh;
+failed steps offer details and Retry. Large model downloads and first generations
+can take a long time—this is not an instant cloud demo.
 
-- **YuE2:** its own managed Python/venv and pinned music model assets.
-- **ComfyUI + H3:** a different managed Python/venv, owned loopback service and
-  product workflow that saves decoded PNG frames before video encoding. H3 setup
-  also installs pinned upstream prompting guides; each new video task captures
-  the complete relevant guide and its hash. These documents retain their upstream
-  licence and are downloaded separately from the large model weights.
-- **Audio analysis:** a separate CPU-only Librosa venv; it may reuse Comfy's base
-  interpreter, never Comfy's installed packages. It measures duration/sample
-  metadata, waveform peaks, estimated tempo and beat positions. Missing/uncertain
-  beat analysis is not fabricated. It also verifies shared FFmpeg/FFprobe and a
-  real synthetic encode/decode.
+### 4. Make a first video
 
-No `sudo pip`, host-Python replacement or shared ML environment is required.
-The app does not adopt or stop your personal ComfyUI installation.
-The pinned recipes and independent lower-level instructions are in
-[YuE2](integrations/yue2/README.md), [ComfyUI](integrations/comfyui/README.md),
-[H3](integrations/h3/README.md) and [analysis](integrations/analysis/README.md).
+Create a project → describe music and optional lyrics → generate a soundtrack →
+set a visual style and describe a short clip → generate → use **↑ Continue** or
+create another shot → adjust the sequence → play the live preview → **Export MP4**.
+Start with short clips. Tempo and song duration are estimates/outcomes, not exact
+promises made by the model.
 
-### Service, locations and configuration
+**[Full installation, service and configuration guide](docs/installation.md)** ·
+**[Editing, audio, recovery and deletion guide](docs/usage.md)**
 
-```sh
-# Separate service helper: inspect first, then explicitly install/start if desired.
-bash scripts/install-user-service.sh
-bash scripts/install-user-service.sh --install --start
+## Tech stack
 
-systemctl --user status music-video-studio.service
-journalctl --user -u music-video-studio.service -f
-systemctl --user restart music-video-studio.service
-systemctl --user stop music-video-studio.service
-```
-
-The installer enables a persistent **user** unit. This normally starts with that
-user's login; boot-without-login requires a separately chosen systemd linger
-policy. The helper does not enable linger or silently replace a different active
-service. `--replace-stopped-service` is an explicit option for an incompatible,
-**inactive** previous unit; it is not permission to stop a service automatically.
-For an existing prepared runtime without a bootstrap receipt, or after deliberately
-changing the checkout, review the plan and use bootstrap `--install --update`
-while the relevant app is stopped and idle. A different active deployment is not
-permission to rebuild its shared source/runtime. Preserve the runtime and receipts;
-do not delete them to bypass an ownership check.
-Do not restart in the middle of valuable work expecting GPU computation to resume.
-Uncertain ownership is reconciled visibly, not automatically regenerated.
-
-Set configuration before bootstrap/service installation. The unit records these
-settings plus the pinned executable PATH and optional `XDG_CONFIG_HOME`,
-`CODEX_HOME` and `CLAUDE_CONFIG_DIR`; existing account credentials are not copied
-into the unit:
-
-
-| Variable | Default / purpose |
+| Layer | Technology / responsibility |
 |---|---|
-| `STUDIO_DATA_ROOT` | Absolute runtime directory; takes precedence over XDG. |
-| `XDG_DATA_HOME` | Otherwise use `$XDG_DATA_HOME/music-video-studio`; fallback is `~/.local/share/music-video-studio`. |
-| `STUDIO_HOST` / `STUDIO_PORT` | `0.0.0.0` / `9122`; choose a free port. |
-| `STUDIO_ALLOWED_HOSTS` | Optional exact comma-separated `host:port` allowlist. Include `127.0.0.1:<port>` for cooperating agent calls as well as the LAN hostname/IP you use. Not an access-control system. |
-| `STUDIO_GPU_UUID` | Choose a GPU on a multi-GPU host. |
-| `STUDIO_NATIVE_LIMIT_SECONDS` | Native execution deadline, default `3600`; not a requested clip-duration limit. |
+| Browser | **TypeScript, React 19, Vite 8**, custom CSS/SVG and browser media playback |
+| Server | **Node.js 24, Fastify 5**, same-origin UI/API |
+| State | **SQLite** via `better-sqlite3`; durable jobs, project records and immutable generation captures |
+| Creative agents | **Codex / Claude CLI**, normal tools and natural-language responses; per-project working directories |
+| Music | **YuE2**, through a managed Python integration |
+| Video | **MiniMax H3 via ComfyUI**; song/image conditioning and preserved pre-encode PNG frames |
+| Analysis / export | **Librosa**, **FFprobe / FFmpeg**, exact rational timing on a 24 fps grid |
+| Execution | Linux processes and **systemd user units**, persisted shared GPU queue and owned-job cancellation |
+| Verification | **Vitest**, TypeScript checks, CPU fixtures and separately opted-in native/model tests |
 
-The data root holds the SQLite database, shared tool environments/model assets,
-setup logs and per-project runtime workspaces/media/history. Keep it local and
-back it up separately from the source checkout. Treat logs and prompts as private.
-Never commit runtime data, authentication stores, personal context or generated
-media into the source repository.
+[Exact tool pins](integrations/tool-manifest.json) ·
+[Generation knowledge and prompting guides](integrations/knowledge/README.md) ·
+[Technical specification](devpost/spec.md)
 
-## Make and refine a video
+## Development
 
-1. Create/select a project. Music, clips, arrangements and history are separate;
-   only the tools/provider selection are shared.
-2. Describe the **music** and optional **lyrics**, then Generate. The agent may
-   research, write scripts or edit scores with its normal tools. Project visual
-   style is for video, not music. Selecting an older song restores its submitted
-   description/lyrics and saved arrangement; a new song starts with no placements.
-3. Set the optional persistent visual style and describe a clip. Inspect the
-   prospective range on the waveform/beat sequence; click markers to adjust End
-   or switch to Start. Beats, seconds and frames are linked, with exact rational
-   timing realised on a fixed **24 fps** grid. The UI shows the requested duration.
-4. Generate. Song audio from the captured interval is supplied to H3 by default.
-   The accepted prompt clears for the next clip; the server keeps its immutable
-   inputs and planned placement. Placeholders are not coverage. On success the
-   clip is added once at its planned position, even after a project switch/reload.
-5. Trim retained source frames, move/place/remove clips, and swap overlap dominance.
-   **Continue from end** on a particular clip uses its last retained original PNG,
-   not a re-decoded video frame. Native extra tail frames remain available but do
-   not silently lengthen the planned edit.
-6. Preview and download the assembled MP4. Preview and export use the same edit.
-   Gaps are black while the song continues; post-song video is retained. Less than
-   100% music coverage is valid. Coverage is not a quality or export-success score.
-
-The default is original-song audio. Enabling a clip's audio **replaces**, rather
-than mixes with, the song where that clip is dominant. Hidden clips contribute no
-audio. Beyond the song, use silence or the dominant clip's enabled audio. Moving
-a clip gives a non-blocking audio-alignment warning. Media previews start unmuted
-at 50% player volume; this is not an export-gain treatment.
-
-Default ranges use up to 8 unassigned beats, scaling to 4/2/1 for slow tempos and
-stopping at an occupied range. Over 15 seconds warns rather than forbids a request;
-short clips have no blanket four-second minimum. Exact desired song duration/BPM
-is **not guaranteed**: an earlier 20–30-second request produced an 83.56-second song,
-and Librosa estimates are not authoritative musical annotations. Continuity input
-is not a promise of a visually seamless join. Start with short trials and inspect
-the actual result. [Real three-clip loop](devpost/slice-3-live-evidence.md).
-
-### Recovery, archive and deletion
-
-- Failed work shows details and **Retry** / **Restore parameters**. Retry (and
-  Restart of cancelled work) reuses the recorded seed/captured call; restoring
-  editable parameters and submitting anew gives a new recorded seed. Same seed
-  aids reproducibility but is not a cross-version byte-identical-output guarantee.
-- Cancel waits for owned work to stop before reporting cancelled, then offers
-  Restart, Discard or Restore parameters. Unknown/unregistered external work is
-  not certified stopped. Discarding a placeholder does not erase history.
-- **Remove from sequence** only removes a placement. **Archive** hides the artifact
-  and removes all its placements. Restoring a clip returns it **unplaced**; restoring
-  a song leaves it **unselected**, retaining its saved arrangement.
-- **Delete permanently** first discloses what will be removed and retained. Dependent
-  work must finish or be cancelled. Accepted deletion removes timeline use and
-  full-media access immediately; durable purge failure stays visible/retryable,
-  not falsely complete. Original generation text/settings/seeds/logs and a bounded
-  thumbnail remain. There is no history-delete option.
-- Purge covers known managed originals, raw frames, recorded copies/intermediates
-  and affected preview/export caches. It is **not secure disk erasure** and cannot
-  recall downloads, backups or unknown copies made by unrestricted agents.
-  Independent generated clips survive deletion of their source song and may still
-  contain its audio. A surviving clip can be explicitly retargeted to another song
-  for continued editing without being automatically placed.
-- **Debug** shows the complete prompt, command and working directory before
-  confirmation, warns about changes beyond that folder, then reports the repair
-  and an independent readiness result. It is not a guarantee of automatic repair.
-
-## Development, evidence and licence
-
-Use the pinned Node 24 runtime (its `bin` must be first on `PATH`):
+Use Node **24**; the bootstrap prepares the pinned version. Put its reported `bin`
+directory first on `PATH`. From the repository root:
 
 ```sh
 npm ci --ignore-scripts --no-fund
@@ -258,28 +186,66 @@ npm run build
 npm start
 ```
 
-The default test suite uses fixtures and does not spend provider credits or launch
-model inference. Live tests are a separate opt-in; read [tests/README.md](tests/README.md)
-before running them. `npm run dev` is the Vite development UI, not the complete
-production server/service.
+The default tests use fixtures: **no provider spending or model inference**.
+See [tests/README.md](tests/README.md) before opting into native/live tests.
 
-- [Scope](devpost/scope.md) → [PRD](devpost/prd.md) → [technical spec](devpost/spec.md)
-  → [160-criterion traceability](devpost/prd-traceability.md).
-- [Build checklist](devpost/checklist.md) and [latest completed evidence](devpost/slice-8-evidence.md).
-- [Offline app map](devpost/app-map.html): a reference route through one real
-  action and the reasoning behind it; preparing it does not complete a walkthrough.
-- [Product-owned agent knowledge](integrations/knowledge/README.md).
+For UI development, run `npm start` in one terminal and `npm run dev` in another.
+Vite serves `http://127.0.0.1:5173/` and proxies the API to port `9122`; it is not
+itself the complete app. Use a separate `STUDIO_DATA_ROOT` for development rather
+than modifying your working studio's projects. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
-Application code is [MIT licensed](LICENSE). Models, CLIs, dependencies, fonts and
-codecs have their **own terms**; installing them does not make them MIT or establish
-unrestricted output rights. Read [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
-before installing/distributing/using their outputs. The bundled original Kirsty
-Regular font is an unchanged historical freeware copy from Ubuntu
-`fonts-larabie-straight`, with its original redistribution terms/notices retained.
-It is **not MIT or an OSI-open-source font**; the newer commercial font licence
-is not the licence attached to this archived copy.
+| Directory | Start here for… |
+|---|---|
+| `apps/web/src/` | Workspace, clip controls, timeline, live preview and Config |
+| `apps/server/src/studio/` | Project API, persistence, generation, lifecycle and render orchestration |
+| `apps/server/src/jobs/` | Shared GPU work, process ownership and cancellation |
+| `packages/core/src/` | Shared contracts and timing/arrangement rules |
+| `integrations/` | Pinned recipes, Python adapters, Comfy workflow and agent knowledge |
+| `scripts/` | Bootstrap, provider launcher and service setup |
+| `devpost/` | Scope, requirements, specification, decisions and verification evidence |
 
-Deferred: user accounts, distributed discovery, a general headless-agent API,
-separate image/foley generation, fades/transitions, mastering/mixing, arbitrary
-frame rates and smaller-GPU support. Publication, demo submission and the final
-learning wrap-up are separate from the current build checkpoint.
+## Built with the Devpost process
+
+The project followed **Build With AI: Basics** as a sequence of distinct artifacts,
+not one all-purpose vision document:
+
+| Stage | Project artifact | What it settled |
+|---|---|---|
+| 1 — Start | Learner context, kept private | Project motivation and working approach |
+| 2 — Scope | [Scope](devpost/scope.md) | The useful prototype and what to defer |
+| 3 — PRD | [Product requirements](devpost/prd.md) | User journey, behaviour and edge cases |
+| 4 — Spec | [Technical specification](devpost/spec.md) | Components, data, deployment and tool contracts |
+| 5 — Build | [Checklist](devpost/checklist.md), [evidence map](devpost/prd-traceability.md) | Tests-first slices, review, real generation and feedback-driven refinement |
+| 6 — Ship preparation | [Recorded demo](devpost/recorded-demo-v2.md), this README | Shareable technical documentation and demo assets; submission is authored by the developer |
+
+The build began with explicit review before implementation, then moved to an
+approved fast mode for the deadline. The documents retain failures, corrections
+and limits as well as successes. The [app map](devpost/app-map.html) is a compact
+code-navigation guide (download/open the HTML locally).
+
+## Status and limits
+
+**Working proof of concept.** Fresh managed-tool installation, Claude song/clip
+generation, a complete Codex music-video journey and MP4 export have been recorded.
+This reused a prepared Ubuntu host and existing provider sign-in; it is **not a
+fresh-OS certification**. The latest code verification is **1,510 tests in 114 files**,
+plus typecheck/build and targeted browser checks.
+
+- One recorded Claude process remained alive after finishing its report; normal
+  completion followed a targeted operator interrupt. Four follow-up probes did
+  not reproduce it. It remains an intermittent issue to investigate, not a claimed
+  fix. [Investigation](devpost/post-demo-issue-investigation.md).
+- Generation is slow and resource-heavy; no universal timing, memory-fit, exact
+  song length or seamless-continuation guarantee. Beat detection is an estimate.
+- No accounts, distributed discovery, separate image/foley generation, fades or
+  transitions, mastering, or arbitrary export frame rates in this prototype.
+- A further accessibility sweep was explicitly deferred; no comprehensive
+  accessibility certification is claimed.
+
+## Licence
+
+**Application source and original Cutwork mark: [MIT](LICENSE).**
+Models, tools, codecs and the bundled historical Kirsty font retain their own
+terms. The app's MIT licence does **not** relicense those components or guarantee
+unrestricted rights to generated outputs. Read [third-party notices](THIRD_PARTY_NOTICES.md)
+and [demo-media provenance](docs/media/README.md).

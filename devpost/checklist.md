@@ -25,7 +25,15 @@ stale context display was reproduced, fixed and deployed; the Claude post-comple
 hang did not recur in four pinned native CLI probes and is deferred for
 post-submission investigation. See [the findings](post-demo-issue-investigation.md).
 Neither was a failed render or lost project. Final learner approval/watch-listen,
-learning wrap-up, public-source audit and submission preparation remain separate.
+learning wrap-up, public repository publication and submission preparation remain separate.
+
+**Public repository prepared, not published:** refreshed README, installation/usage
+and contribution guides, four real screenshots, compact GIF and unchanged 28-second
+sample film. Bounded current/history credential review and media/link checks pass;
+1,510 tests, typecheck and build pass again. Local agent/course files and raw captures
+remain excluded. No remote configured, no push and no submission authorship. The
+learner's concurrent submission draft remains untouched. See
+[repository preparation](repository-preparation.md).
 
 **24 October post-demo fix:** source `08a6b5a` adds setup-triggered context refresh
 without discarding drafts or weakening concurrent-save conflict detection. Six new

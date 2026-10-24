@@ -21,3 +21,10 @@ __pycache__/
 
 # Built browser bundle
 /dist/
+
+# Local course/agent tooling and uncurated screen captures
+/.agents/
+/.claude/
+/agent/
+/screen-caps/
+/skills-lock.json

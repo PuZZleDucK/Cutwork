@@ -4,14 +4,15 @@
 
 ### A creative workbench for AI-generated music videos
 
-Cutwork brings **music generation, video direction, beat-aware editing and export**
+Cutwork brings **music generation, video direction, beat-aware editing, compositing and export**
 into one browser workspace. Describe the sound and the shots you want; a frontier
 agent translates your brief into the local generation tools' prompts and settings.
 Then refine the result without rebuilding workflows or juggling output folders.
 
 Run the tools on one Ubuntu/NVIDIA machine and open the interface from another
 computer on your **trusted LAN**. The media models run locally; **Codex or Claude
-uses its cloud provider**. This is not a fully offline application.
+uses its cloud provider**. This is local AI media generation with frontier AI
+orchestration—not a fully offline application.
 
 [Get started](#getting-started) · [See it in action](#see-it-in-action) ·
 [User guide](docs/usage.md) · [Development](#development) ·
@@ -26,10 +27,11 @@ uses its cloud provider**. This is not a fully offline application.
 - **Direct consistent shots.** Share a project visual style, condition H3 clips on
   the song, or continue from a clip's last retained original frame.
 - **Edit precisely.** Work in linked beats, seconds or frames on a native 24 fps
-  timeline. Trim, move, overlap and prioritise whole clips; keep video after the
-  music ends.
+  timeline. Trim, move, overlap and prioritise whole clips; cover the song’s lead-in
+  or keep the video going after the music ends.
 - **Preview immediately.** Play the current arrangement without rendering first,
-  then export an H.264/AAC MP4. Choose song audio or a dominant clip's own audio.
+  then export an H.264/AAC MP4. Choose song audio or a dominant clip's own audio
+  for diegetic effects.
 - **Iterate without losing the trail.** Reuse parameters for a fresh seeded take,
   archive/restore unused media, and inspect prompts, settings, seeds and outputs
   in the combined creative history.
@@ -88,6 +90,10 @@ mock media or invented successful jobs. [Media provenance](docs/media/README.md)
 | Network | Internet for downloads and agent providers; a **trusted LAN** for browser access |
 | Client | A modern desktop browser; no local GPU or generator install needed on the client |
 
+In the recorded demo, H3’s highest sampled process usage was **15.09 GiB VRAM**;
+YuE2 recorded **7.81 GiB peak allocation / 7.94 GiB reservation**. These are different
+measurement types, not minimum hardware requirements. [Measurement details](docs/generation-memory.md).
+
 Smaller GPUs, other operating systems and distributed generation services are not
 validated targets. Models are downloaded during setup, **not bundled in this repo**.
 
@@ -107,6 +113,9 @@ machine**, as the user who will run Cutwork. Keep the checkout in a stable locat
 the service runs from it. Do not run the whole bootstrap as root.
 
 ```sh
+git clone https://github.com/PuZZleDucK/Cutwork.git
+cd Cutwork
+
 # Inspect prerequisites and the installation plan; changes nothing.
 bash scripts/bootstrap-ubuntu.sh
 

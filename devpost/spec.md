@@ -59,6 +59,8 @@ Select exact compatible package versions during the first contract/build slice, 
 
 ## Where It Runs and How Someone Tries It
 
+**Public source location (25 October 2026):** [PuZZleDucK/Cutwork](https://github.com/PuZZleDucK/Cutwork). See the current [README](../README.md) for implemented installation commands; the original launch-planning text below is retained as design history.
+
 **Agreed:** the named deployment/demo target is **Dundee**, not Artigas. Artigas is the laptop hosting the inspected personal prototype; that evidence is not a hardware recommendation. Everything except the browser runs on one Ubuntu 26.04 Desktop machine with an NVIDIA GPU and 16 GB VRAM. This includes provider CLIs, project files, Python environments, ComfyUI, YuE2, analysis and FFmpeg. Frontier model requests still contact their provider over the internet. Sixteen-gigabyte feasibility is a gate, not measured evidence; 8 GB support is deferred.
 
 **Accepted P3 — launch contract, not commands available today:** from the future release checkout, run `./scripts/bootstrap-ubuntu.sh`. It checks the OS, driver visibility, disk space and host prerequisites, installs the pinned application runtime/build, creates a user service, and prints the studio URL. It must not silently replace an NVIDIA driver. Any required privileged package step is described and authorised locally by the operator; no sudo password enters a web form, agent prompt or log. Generator downloads and installations remain in the product's setup UI, not manual prerequisite homework.

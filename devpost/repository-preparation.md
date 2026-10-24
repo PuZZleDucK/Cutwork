@@ -64,7 +64,7 @@ preparation, not submission authorship or permission to publish.
   project selection, prompts, media, service or agent configuration was changed.
   Accessibility checks remain skipped; this was documentation/functional review.
 
-## Handoff
+## Preparation handoff (before publication)
 
 Ready for the owner to choose/create the public remote and authorise the push.
 **No remote is configured and nothing was published.** Source history will become
@@ -76,3 +76,20 @@ from this repository-preparation task; neither is marked complete here.
 
 Private audit reports, local preview and test logs are retained only under ignored
 `.local-evidence/repository-prep/`.
+
+## Publication follow-up — 25 October 2026
+
+The learner supplied `https://github.com/PuZZleDucK/Cutwork.git` and explicitly
+requested review, commit and push when ready. The remote is an empty public
+repository with default branch `main`; source and its included history will be
+public. Review accepts the README's local-generation/frontier-orchestration and
+basic compositing descriptions. “Start early” is clarified to cover the song's
+lead-in, not imply an unsupported pre-song negative-time editor. The normal
+clone command now uses the actual repository URL.
+
+Retained generation logs were inspected without launching work. Public measured
+VRAM values and their distinct measurement boundaries are recorded in
+`docs/generation-memory.md`; system RAM is not confused with VRAM.
+The untracked submission draft remains excluded. Push/anonymous remote verification
+is performed after the reviewed documentation commit; no history rewrite or force
+push is authorised or planned.

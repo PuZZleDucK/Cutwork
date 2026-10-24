@@ -67,4 +67,3 @@ the actual result. [Real three-clip loop](../devpost/slice-3-live-evidence.md).
 - **Debug** shows the complete prompt, command and working directory before
   confirmation, warns about changes beyond that folder, then reports the repair
   and an independent readiness result. It is not a guarantee of automatic repair.
-

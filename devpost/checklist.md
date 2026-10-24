@@ -11,7 +11,19 @@ The scope, PRD and technical specification are approved. The learner approved th
 
 ## Latest fast-mode verification index
 
-**24 October recorded newcomer journey completed:** fresh application runtime,
+**24 October second recorded journey completed:** frozen source `a069a59`, fresh
+runtime/environments/model downloads, Claude Day song+clip before Codex Night.
+The requested macro take-1/remove/reuse/take-2/preview/delete/reuse-take-1/take-3
+order is verified. Six whole placements, four continuations, priority swaps,
+archive/restore/place, trim/move and a three-second post-song tail produce a
+verified 28-second film. Full live playback precedes export; no save dialog.
+Two raw segments total 4h52m19.983s, with chapter index and app-audio editions.
+All recordings/export/retained clips decode; take-2 purge and frame hashes pass.
+TTS restored, personal ComfyUI unchanged. See [recorded-demo-v2.md](recorded-demo-v2.md)
+for the confirmation gap, two operator-workaround boundaries and exact evidence.
+Final learner review/wrap-up and submission editing remain open.
+
+**Earlier 24 October recorded newcomer journey completed:** fresh application runtime,
 isolated Python environments and real model downloads, followed by Night Shift
 Garden: original song, eight successful video generations, seven placed clips,
 five continuations, overlap priority, trim/move, archive/restore/deletion and a

@@ -1,23 +1,61 @@
 # Cutwork recorded newcomer journey — second take
 
+**Completed 24 October 2026.** The fresh-install journey and requested Claude→Codex
+demo are captured in two raw segments totalling **4h 52m 19.983s**. The 28-second
+Night film is exported and verified. Original silent screen captures, separate
+Chrome-only FLACs, video-bitstream-preserving audio editions, chapter bookmarks,
+project provenance and checksums are retained locally. The historical pending
+notes below describe checkpoints, not the final state.
+
 ## Request
 Record a new complete clean application install and generation demonstration using the updated UI and guidance. Select Claude during setup; generate Day Shift Sketchbook music and one video clip before moving to Night Shift Garden. Switch to Codex for the Night film. At its macro insert, preview take 1, remove it from the sequence, reuse its parameters for take 2 and preview it, delete take 2, reuse take 1 again for take 3 and use take 3. Play the entire live sequence before exporting, avoiding a download/save dialog over the playback.
 
 ## Boundaries
-Fresh Cutwork runtime, tool environments and model downloads on the prepared Ubuntu 26.04/NVIDIA host. Reuse host OS, driver/APT prerequisites and existing normal provider sign-in. Remove only the idle Cutwork runtime; never unrelated ComfyUI, provider credentials or previous delivered recordings. Continuous raw screen capture, real waits, no reconstructed/timelapsed installation. Capture app playback separately without a microphone or unrelated desktop audio. Do not publish a submission. Final learner review remains open.
+Fresh Cutwork runtime, tool environments and model downloads on the prepared Ubuntu 26.04/NVIDIA host. Reuse host OS, driver/APT prerequisites and existing normal provider sign-in. Remove only the idle Cutwork runtime; never unrelated ComfyUI, provider credentials or previous delivered recordings. Continuous raw screen capture within each segment, real waits, no reconstructed/timelapsed installation. Capture app playback separately without a microphone or unrelated desktop audio. Do not publish a submission. Final learner review remains open.
 
 ## Checklist
 - [x] Freeze source, preflight idle state/storage and verify a recording pilot before deleting/installing.
 - [x] Start continuous capture; clean/bootstrap app; select Claude; install generators from empty runtime.
 - [x] Day: generate original music with Claude, then one audio-conditioned clip; preview both.
 - [x] Switch provider to Codex; Night: generate original music and opening clip.
-- [ ] Macro takes: preview 1; remove 1; reuse → 2; preview 2; delete 2; reuse 1 → 3; preview/use 3.
-- [ ] Finish cohesive Night sequence with raw-frame continuation, overlap priority, archive/restore, frame-exact edits and an ending beyond the song.
-- [ ] Play the full live preview before export, then export and verify full decoding; avoid an open save dialog over playback.
-- [ ] Stop/validate recording, collect chapters/provenance/final outputs, restore any paused TTS and release owned capture resources.
+- [x] Macro takes: preview 1; remove 1; reuse → 2; preview 2; delete 2; reuse 1 → 3; preview/use 3.
+- [x] Finish cohesive Night sequence with raw-frame continuation, overlap priority, archive/restore, frame-exact edits and an ending beyond the song.
+- [x] Play the full live preview before export, then export and verify full decoding; avoid an open save dialog over playback.
+- [x] Stop/validate recording, collect chapters/provenance/final outputs, restore any paused TTS and release owned capture resources.
 
 ## Evidence
 Raw files and machine-specific observations are kept outside Git under Videos/Cutwork/2026-10-24-v2 and ignored .local-evidence/demo-v2-20261024. This document records completed facts only as the run proceeds; unchecked stages are not complete.
+
+### Final verification
+
+- Day has one original song and one video, both Claude/Opus 5.5, previewed before
+  Night. It intentionally remains a one-clip sketch, not a completed second film.
+- Night has one song and eight successful Codex/Sol 6.1 clip generations. Six
+  whole placements cover all 672 frames at 24 fps; maximum overlap is two clips.
+  Four continuations match the exact retained source-frame hashes and boundaries.
+- Macro takes share the same captured creative inputs and have three distinct
+  seeds. Take 1 is unplaced, take 2 deleted, take 3 placed and dominant. All 76
+  planned take-2 files are absent and full-media endpoints return 404; its small
+  history thumbnail remains accessible. Its full source was not copied out.
+- Live playback reached 28:00/28:00 before the export request. No native download
+  dialog was opened. Export revision 19 is H.264/AAC, 640×480, 672 frames, 28 seconds,
+  SHA-256 `027f234296294b041537f083c3331904167b275b2c4a7c96a800b601b61d8965`.
+- Export and all eight retained native clips fully decode. Exported music matches
+  the complete original song (AAC correlation 0.99958); the visual tail continues
+  3.041 seconds past it, with silence. No mastering or subjective listening claim.
+- Both screen originals and audio editions fully decode with zero diagnostics;
+  their H.264 bitstreams match pairwise. Audio alignment uses wall timestamps,
+  not a sample-accurate calibrated clock. `CHAPTERS.md` indexes the real waits.
+- TTS is restored with `loaded=true`; personal ComfyUI kept its original process.
+  Owned recording/audio/helper services are stopped. Cutwork and both projects
+  remain available. No implementation changes during this frozen-source run.
+
+**Remaining rough edges:** Claude's post-final-report idle hang required the
+recorded targeted SIGINT; Config needed Reload saved contexts to clear a stale
+preinstall guide view. The source/runtime were not patched mid-recording. The
+confirmation pause separates the two original segments; this is not a claim of
+an uninterrupted capture or a zero-intervention installation. Final learner
+review, public-release audit and an edited submission demo remain separate work.
 
 ## Run log
 
@@ -40,3 +78,16 @@ Raw files and machine-specific observations are kept outside Git under Videos/Cu
 - 21:13: first raw segment stopped cleanly at the pending deletion confirmation rather than recording an unattended dialog indefinitely. Duration 4h 15m 31.651s, H.264 1920×904, 363,394,478 bytes. Saved as raw/01-install-to-macro2.mp4. Chatterbox TTS restarted; remaining work needs a second recording segment after confirmation. This is a partial run, not a completed film/export.
 
 - TTS restoration: service and model startup completed; its local model-info endpoint returns HTTP 200 after an initial cold-start UI timeout. Personal ComfyUI remained PID 1216557, 234 MiB GPU use. Owned recorder/audio/helper services are stopped; the studio and pending confirmation remain available.
+
+- 21:28: learner confirmed continuing at the deletion gate. Verified resumed capture area; started raw/02-macro2-to-export.mp4. Refreshed the expired plan for the same take and clicked Delete permanently; the purge succeeded for 76 files /30,254,334 bytes, preserving thumbnail/text history. Reused take1 again for take3; all three creative inputs are identical and all three seeds differ. Growth continuation is queued after take3.
+
+- Take3 succeeded and played fully; it remains placed and dominant at12–14.5s. Recorded a whole-clip priority swap to planting and back, with two lanes and no split placements. First raw screen segment fully decodes with preserved demux time base and zero diagnostics; an initial null-muxer check produced timestamp-rounding warnings from its inferred output time base, retained separately in the evidence.
+
+- 21:48–22:02: garden continuation previewed, archived (automatically unplaced), restored unplaced, then explicitly placed. Clip-audio moved-position warning demonstrated and cleared; final mix restored to original song. Continued from its last retained raw frame for the closing shot. Six placements now cover the full 28-second timeline, including 3.04 seconds beyond the music. All native generation attempts succeeded.
+
+- 22:03–22:04: full live playback completed before clicking Export MP4; export
+  succeeded and its exact file was collected without opening a save dialog.
+  Second capture stopped at 22:04:48 after Export ready was visible, duration
+  36m 48.331s. Final lifecycle/media audits passed; all raw captures and muxed
+  audio editions decode. Chapters, provenance and checksums packaged locally.
+  TTS restored and model readiness confirmed; personal ComfyUI unchanged.

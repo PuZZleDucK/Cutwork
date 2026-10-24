@@ -1,8 +1,9 @@
 import {useEffect,useRef,useState} from 'react';
 import {request} from './api.ts';
 import {TASK_CONTEXT_IDS,TASK_CONTEXT_FIELDS,TASK_CONTEXT_MAX_LENGTH,taskContextError,type TaskContextConfiguration,type TaskContextOverrides,type TaskContextSettings as Settings} from '../../../packages/core/src/contracts/task-contexts.ts';
+import {ContextRefreshGate,mergeTaskContextRead,taskContextsDirty,type TaskContextEditorState} from './task-context-refresh.ts';
+export {taskContextsDirty} from './task-context-refresh.ts';
 interface Props {data:TaskContextConfiguration|null;value:TaskContextOverrides|null;loading:boolean;saving:boolean;error:string|null;status:string|null;onChange:(value:TaskContextOverrides)=>void;onSave:()=>void;onReload:()=>void}
-export function taskContextsDirty(data:TaskContextConfiguration|null,value:TaskContextOverrides|null){return !!data&&!!value&&TASK_CONTEXT_IDS.some(id=>data.settings.overrides[id]!==value[id]);}
 export function TaskContextsPanel({data,value,loading,saving,error,status,onChange,onSave,onReload}:Props){
  const dirty=taskContextsDirty(data,value),busy=loading||saving,invalid=!!value&&TASK_CONTEXT_IDS.some(id=>taskContextError(id,value[id]));
  return <section className="task-context-settings" aria-label="Generation task contexts">
@@ -24,21 +25,23 @@ export function TaskContextsPanel({data,value,loading,saving,error,status,onChan
  </form>}
  </section>;
 }
-export function TaskContextSettings(){
- const[data,setData]=useState<TaskContextConfiguration|null>(null),[value,setValue]=useState<TaskContextOverrides|null>(null),[loading,setLoading]=useState(true),[saving,setSaving]=useState(false),[error,setError]=useState<string|null>(null),[status,setStatus]=useState<string|null>(null);
- const mounted=useRef(false),flight=useRef(false);
- const read=async()=>{if(flight.current)return;flight.current=true;setLoading(true);setError(null);setStatus(null);
-  try{const result=await request<TaskContextConfiguration>('/api/config/task-contexts');if(!result.settings)throw new Error('The server does not yet support editable task contexts.');if(mounted.current){setData(result);setValue({...result.settings.overrides});}}
+export function TaskContextSettings({refreshKey=''}:{refreshKey?:string}){
+ const[{data,value},setEditor]=useState<TaskContextEditorState>({data:null,value:null}),[loading,setLoading]=useState(true),[saving,setSaving]=useState(false),[error,setError]=useState<string|null>(null),[status,setStatus]=useState<string|null>(null);
+ const mounted=useRef(false),flight=useRef(new ContextRefreshGate());
+ const finish=()=>{const pending=flight.current.end();if(pending&&mounted.current)void read(true);};
+ const read=async(preserveEdits=false)=>{if(!flight.current.begin(preserveEdits))return;setLoading(true);setError(null);setStatus(null);
+  try{const result=await request<TaskContextConfiguration>('/api/config/task-contexts');if(!result.settings)throw new Error('The server does not yet support editable task contexts.');if(mounted.current)setEditor(current=>mergeTaskContextRead(current,result,preserveEdits));}
   catch(e){if(mounted.current)setError(e instanceof Error?e.message:'Unable to read task contexts.');}
-  finally{flight.current=false;if(mounted.current)setLoading(false);}
+  finally{if(mounted.current)setLoading(false);finish();}
  };
- useEffect(()=>{mounted.current=true;void read();return()=>{mounted.current=false;};},[]);
+ useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;};},[]);
+ useEffect(()=>{void read(true);},[refreshKey]);
  const dirty=taskContextsDirty(data,value);
  useEffect(()=>{if(!dirty)return;const warn=(e:BeforeUnloadEvent)=>{e.preventDefault();e.returnValue='';};window.addEventListener('beforeunload',warn);return()=>window.removeEventListener('beforeunload',warn);},[dirty]);
- const save=async()=>{if(!data||!value||flight.current)return;flight.current=true;setSaving(true);setError(null);setStatus(null);
-  try{const settings=await request<Settings>('/api/config/task-contexts',{revision:data.settings.revision,overrides:value},'PUT');if(mounted.current){setData({...data,settings});setValue({...settings.overrides});setStatus('Task contexts saved. New requests use these instructions.');}}
+ const save=async()=>{if(!data||!value||!flight.current.begin())return;setSaving(true);setError(null);setStatus(null);
+  try{const settings=await request<Settings>('/api/config/task-contexts',{revision:data.settings.revision,overrides:value},'PUT');if(mounted.current){setEditor({data:{...data,settings},value:{...settings.overrides}});setStatus('Task contexts saved. New requests use these instructions.');}}
   catch(e){if(mounted.current)setError(e instanceof Error?e.message:'Unable to save task contexts.');}
-  finally{flight.current=false;if(mounted.current)setSaving(false);}
+  finally{if(mounted.current)setSaving(false);finish();}
  };
- return <TaskContextsPanel data={data} value={value} loading={loading} saving={saving} error={error} status={status} onChange={next=>{setValue(next);setStatus(null);}} onSave={()=>void save()} onReload={()=>void read()}/>;
+ return <TaskContextsPanel data={data} value={value} loading={loading} saving={saving} error={error} status={status} onChange={next=>{setEditor(current=>({...current,value:next}));setStatus(null);}} onSave={()=>void save()} onReload={()=>void read()}/>;
 }

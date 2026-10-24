@@ -33,7 +33,7 @@ export function PromptTemplateEditor({value,busy,dirty,error,status,onChange,onS
  </section>;
 }
 
-export function PromptTemplateSettings(){
+export function PromptTemplateSettings({contextRefreshKey=''}:{contextRefreshKey?:string}){
  const[saved,setSaved]=useState<Settings|null>(null),[defaults,setDefaults]=useState<AgentPromptTemplates|null>(null),[value,setValue]=useState<AgentPromptTemplates|null>(null);
  const[busy,setBusy]=useState(false),[error,setError]=useState<string|null>(null),[status,setStatus]=useState<string|null>(null);
  const mounted=useRef(false),flight=useRef(false);
@@ -55,5 +55,5 @@ export function PromptTemplateSettings(){
   finally{flight.current=false;if(mounted.current)setBusy(false);}
  };
  if(!value||!defaults)return <section className="prompt-template-settings" aria-label="Agent prompt templates"><h2>Agent prompt templates</h2>{error?<><p role="alert" className="error-copy">{error}</p><button className="button secondary" disabled={busy} onClick={()=>void read()}>Retry loading templates</button></>:<p role="status">Loading templates…</p>}</section>;
- return <><PromptTemplateEditor value={value} busy={busy} dirty={dirty} error={error} status={status} onChange={next=>{setValue(next);setStatus(null);}} onSave={()=>void save()} onReload={()=>void read()} onDefaults={()=>{setValue({...defaults});setError(null);setStatus('Defaults loaded into the editor. Save templates to apply them.');}}/><TaskContextSettings/></>;
+ return <><PromptTemplateEditor value={value} busy={busy} dirty={dirty} error={error} status={status} onChange={next=>{setValue(next);setStatus(null);}} onSave={()=>void save()} onReload={()=>void read()} onDefaults={()=>{setValue({...defaults});setError(null);setStatus('Defaults loaded into the editor. Save templates to apply them.');}}/><TaskContextSettings refreshKey={contextRefreshKey}/></>;
 }

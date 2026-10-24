@@ -32,15 +32,19 @@ export async function readH3PromptGuides(runtime:string,source:string):Promise<P
  }catch(error){throw new Error(`H3 prompt guides are missing or unverifiable. Retry H3 setup to install/verify the pinned documentation (no weight re-download). ${error instanceof Error?error.message:String(error)}`);}
 }
 
-export function videoDirectionContext(input:{requestedFrames:number;nativeFrames:number;startSample:number;sampleIndices:string[];hasFirstFrame:boolean}):string{
- const {requestedFrames,nativeFrames,hasFirstFrame}=input;
+interface VideoDirectionInput {requestedFrames:number;nativeFrames:number;startSample:number;sampleIndices:string[];hasFirstFrame:boolean}
+export function videoDirectionContext(input:VideoDirectionInput):string{
+ return formatTaskContext(videoDirectionTemplate(input.hasFirstFrame),videoDirectionValues(input),[]);
+}
+export function videoDirectionValues(input:VideoDirectionInput):Record<string,string>{
+ const {requestedFrames,nativeFrames}=input;
  const retainedSamples=BigInt(requestedFrames)*2000n,nativeSamples=BigInt(nativeFrames)*2000n;
  const beats=input.sampleIndices.map((sample,i)=>({beat:i+1,sample,relativeSamples:(BigInt(sample)-BigInt(input.startSample)).toString()}));
  const inRange=(start:bigint,end:bigint)=>beats.filter(b=>BigInt(b.relativeSamples)>=start&&BigInt(b.relativeSamples)<end);
- return formatTaskContext(videoDirectionTemplate(hasFirstFrame),{
+ return {
   retained_samples:String(retainedSamples),requested_frames:String(requestedFrames),last_retained_frame:String(requestedFrames-1),native_frames:String(nativeFrames),
   retained_beat_anchors:JSON.stringify(inRange(0n,retainedSamples)),native_tail_beat_anchors:JSON.stringify(inRange(retainedSamples,nativeSamples)),
- },[]);
+ };
 }
 
 /** Same directing text as actual tasks; Config leaves only measured values as placeholders. */

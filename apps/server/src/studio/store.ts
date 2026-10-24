@@ -1,3 +1,4 @@
+import {DEFAULT_TASK_CONTEXT_OVERRIDES,TASK_CONTEXT_IDS,taskContextError,type TaskContextSettings} from '../../../../packages/core/src/contracts/task-contexts.ts';
 import type { ArtifactRef, ArtifactLifecycle, ArtifactBlocker, ArtifactUseReservation, DeletionContext, ManagedMediaInventory, PurgeRecord, RetainedThumbnail } from '../../../../packages/core/src/contracts/lifecycle.ts';
 import Database from 'better-sqlite3';
 import {DEFAULT_AGENT_TEMPLATES,promptTemplateError,type PromptTemplateSettings} from '../../../../packages/core/src/contracts/prompt-templates.ts';
@@ -268,7 +269,7 @@ export function openStudioStore(path: string): StudioStore {
       db.exec(`CREATE TABLE IF NOT EXISTS studio_meta (singleton INTEGER PRIMARY KEY CHECK(singleton=1), version INTEGER NOT NULL,
         provider TEXT NOT NULL, selected_project TEXT); INSERT OR IGNORE INTO studio_meta VALUES (1,1,'codex',NULL);`);
       const meta = db.prepare('SELECT version FROM studio_meta WHERE singleton=1').get() as { version: number };
-      if (![1, 2, 3, 4, 5, 6, 7, 8, 9].includes(meta.version)) conflict('Unsupported studio schema version');
+      if (![1, 2, 3, 4, 5, 6, 7, 8, 9, 10].includes(meta.version)) conflict('Unsupported studio schema version');
       db.exec(`
         CREATE TABLE IF NOT EXISTS studio_projects (sequence INTEGER PRIMARY KEY AUTOINCREMENT, id TEXT NOT NULL UNIQUE, data TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS studio_attempts (sequence INTEGER PRIMARY KEY AUTOINCREMENT, id TEXT NOT NULL UNIQUE,
@@ -371,6 +372,9 @@ export function openStudioStore(path: string): StudioStore {
       // Version 9 adds shared editable templates without rewriting historical attempts.
       db.exec(`CREATE TABLE IF NOT EXISTS studio_prompt_templates (singleton INTEGER PRIMARY KEY CHECK(singleton=1), data TEXT NOT NULL);
         UPDATE studio_meta SET version=9 WHERE singleton=1;`);
+      // Version 10 adds context overrides without rewriting accepted requests.
+      db.exec(`CREATE TABLE IF NOT EXISTS studio_task_contexts (singleton INTEGER PRIMARY KEY CHECK(singleton=1), data TEXT NOT NULL);
+        UPDATE studio_meta SET version=10 WHERE singleton=1;`);
       for (const id of toolIds) {
         const t: ToolStatus = { id, label: labels[id], state: 'missing', installed: false, detail: 'Not checked', log: '', checkedAt: null, jobId: null, active: false, queued: 0 };
         db.prepare('INSERT OR IGNORE INTO studio_tools VALUES (?,?)').run(id, canonical(t));
@@ -777,6 +781,19 @@ export function openStudioStore(path: string): StudioStore {
         db.prepare('INSERT INTO studio_prompt_templates(singleton,data) VALUES (1,?) ON CONFLICT(singleton) DO UPDATE SET data=excluded.data').run(canonical(saved));return saved;
       });
     },
+    taskContexts() {
+      const row=db.prepare('SELECT data FROM studio_task_contexts WHERE singleton=1').get() as JsonRow|undefined;
+      return row?decode<TaskContextSettings>(row):{revision:0,overrides:{...DEFAULT_TASK_CONTEXT_OVERRIDES}};
+    },
+    saveTaskContexts(revision,value) {
+      integer(revision,'Task context revision');const overrides=object(value,[...TASK_CONTEXT_IDS]);
+      for(const id of TASK_CONTEXT_IDS){const error=taskContextError(id,overrides[id]);if(error)invalid(error);}
+      return write(()=>{
+        const previous=store.taskContexts();if(previous.revision!==revision)conflict('Task contexts changed in another window. Reload saved contexts before applying your edits.');
+        const saved:TaskContextSettings={revision:revision+1,overrides:overrides as TaskContextSettings['overrides']};
+        db.prepare('INSERT INTO studio_task_contexts(singleton,data) VALUES (1,?) ON CONFLICT(singleton) DO UPDATE SET data=excluded.data').run(canonical(saved));return saved;
+      });
+    },
     provider() { return (db.prepare('SELECT provider FROM studio_meta WHERE singleton=1').get() as { provider: Provider }).provider; },
     setProvider(value) { const p = providerId(value); db.prepare('UPDATE studio_meta SET provider=? WHERE singleton=1').run(p); },
     selectedProject() { return (db.prepare('SELECT selected_project FROM studio_meta WHERE singleton=1').get() as { selected_project: string | null }).selected_project; },
@@ -891,7 +908,8 @@ export function openStudioStore(path: string): StudioStore {
         const a: MusicAttempt = { id: randomUUID(), nativeCallId: randomUUID(), projectId: p.id, sequence: nextSequence(),
           createdAt: timestamp, updatedAt: timestamp, state: 'queued', provider, model: providerModels[provider], input: captured,
           seeds: seedSet(), stage: 'Queued', error: null, songId: null, details: {},
-          promptTemplate:{revision:store.promptTemplates().revision,template:store.promptTemplates().music} };
+          promptTemplate:{revision:store.promptTemplates().revision,template:store.promptTemplates().music},
+          taskContext:{id:'music',revision:store.taskContexts().revision,template:store.taskContexts().overrides.music} };
         const result = db.prepare('INSERT INTO studio_attempts(sequence,id,native_call_id,project_id,idempotency_key,input_json,data) VALUES (?,?,?,?,?,?,?)')
           .run(a.sequence, a.id, a.nativeCallId, p.id, key, inputJson, canonical(a));
         return { ...a, sequence: Number(result.lastInsertRowid) };
@@ -1066,6 +1084,7 @@ export function openStudioStore(path: string): StudioStore {
           createdAt: timestamp, updatedAt: timestamp, state: 'queued', provider, model: providerModels[provider], input: captured,
           seeds: { h3: (randomBytes(8).readBigUInt64BE() & ((1n << 63n) - 1n)).toString() },
           promptTemplate:{revision:store.promptTemplates().revision,template:store.promptTemplates().video},
+          taskContext:{id:continuation?'video-image':'video-text',revision:store.taskContexts().revision,template:store.taskContexts().overrides[continuation?'video-image':'video-text']},
           song: { id: song.id, assetId: song.assetId, sha256: song.sha256, sampleCount: song.sampleCount, sampleRate: song.sampleRate, channels: song.channels },
           stage: 'Queued', error: null, clipId: null, details: {}, ...(timingResolution ? { timingResolution } : {}), ...(continuation ? { continuation } : {}) };
         db.prepare('INSERT INTO studio_video_attempts(sequence,id,native_call_id,project_id,idempotency_key,input_json,data) VALUES (?,?,?,?,?,?,?)')

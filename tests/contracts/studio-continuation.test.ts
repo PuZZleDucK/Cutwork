@@ -27,7 +27,7 @@ test('per-card preparation follows retained raw frame/current end even unplaced 
 
 test('fresh submission captures immutable continuation and idempotent replay ignores later predecessor/provider/selection changes',()=>{
  const {s,p,audio,clip,context,path}=fixture(),prepared=s.prepareContinuation(p.id,context.id,0,0),key=randomUUID(),input:VideoInput={songId:audio.id,clipPrompt:'Next shot',style:'Current style',startFrame:80,endFrame:176,timingIntent:prepared.draft.timingIntent!,continuation:{contextId:context.id,contextRevision:0}},accepted=s.submitVideo(p.id,key,input);
- expect(accepted.continuation).toEqual(prepared.draft.continuation);expect(accepted.continuation!.frame).toEqual(clip.rawFrames[79]);expect(accepted.continuation!.frame).not.toEqual(clip.rawFrames[80]);
+ expect(accepted.taskContext).toEqual({id:"video-image",revision:0,template:null});expect(accepted.continuation).toEqual(prepared.draft.continuation);expect(accepted.continuation!.frame).toEqual(clip.rawFrames[79]);expect(accepted.continuation!.frame).not.toEqual(clip.rawFrames[80]);
  s.editClipContext(p.id,context.id,0,1,{sourceEndFrame:70});s.setProvider('claude');song(s,p.id);s.close();const r=open(path);expect(r.submitVideo(p.id,key,input)).toEqual(accepted);expect(r.videoAttempt(accepted.id)).toEqual(accepted);
  const before=r.project(p.id);status(()=>r.submitVideo(p.id,randomUUID(),input),409);expect(r.project(p.id)).toEqual(before);
 });
@@ -70,7 +70,7 @@ test('foreign/changed asset registration or forged continuation metadata cannot 
 
 test('schema5 to current does not rewrite legacy drafts, requests, render snapshots or creative rows',()=>{
  const {s,p,audio,path}=fixture();s.saveClipDraft(p.id,audio.id,0,{clipPrompt:'Preserved unsent legacy draft',timingIntent:{start:{unit:'beats',value:'1.333333333333'},end:{unit:'seconds',value:''}}});const render=s.enqueueRender(p.id,audio.id,1,randomUUID());s.finishRender(render.id,{assetId:randomUUID(),path:`/managed/${p.id}/${randomUUID()}.mp4`,sha256:'d'.repeat(64),frameCount:240,planHash:'e'.repeat(64),receiptPath:`/managed/${p.id}/receipt.json`},{nativeVersion:'fixture'});s.enqueueRender(p.id,audio.id,1,randomUUID());s.close();const db=new Database(path);db.exec('UPDATE studio_meta SET version=5');const tables=(db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name!='studio_meta' ORDER BY name").all() as {name:string}[]).map(r=>r.name),before=Object.fromEntries(tables.map(t=>[t,db.prepare(`SELECT * FROM ${t}`).all()])),schema=db.prepare('SELECT * FROM sqlite_master ORDER BY name').all();db.close();
- const r=open(path),check=new Database(path,{readonly:true});expect(check.prepare('SELECT version FROM studio_meta').get()).toEqual({version:9});expect(check.prepare('SELECT * FROM sqlite_master ORDER BY name').all()).toEqual(schema);for(const t of tables)expect(check.prepare(`SELECT * FROM ${t}`).all(),t).toEqual(before[t]);check.close();expect(r.project(p.id).clipDrafts[0]).not.toHaveProperty('continuation');
+ const r=open(path),check=new Database(path,{readonly:true});expect(check.prepare('SELECT version FROM studio_meta').get()).toEqual({version:10});expect(check.prepare('SELECT * FROM sqlite_master ORDER BY name').all()).toEqual(schema);for(const t of tables)expect(check.prepare(`SELECT * FROM ${t}`).all(),t).toEqual(before[t]);check.close();expect(r.project(p.id).clipDrafts[0]).not.toHaveProperty('continuation');
 });
 
 

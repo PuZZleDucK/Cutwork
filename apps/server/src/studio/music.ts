@@ -1,4 +1,4 @@
-import {MUSIC_CONTEXT,formatTaskContext,readProductGuidance} from './task-context-text.ts';
+import {MUSIC_CONTEXT,readProductGuidance,configuredContextGuidance,renderCapturedTaskContext} from './task-context-text.ts';
 import {DEFAULT_AGENT_TEMPLATES,renderAgentTemplate} from '../../../../packages/core/src/contracts/prompt-templates.ts';
 import assert from 'node:assert/strict';
 import {captureExecutionSource,fileHash,verifyExecutionSource,type ExecutionSource} from './execution-snapshot.ts';
@@ -19,7 +19,7 @@ interface MusicOptions { runtime: string; source: string; origin: string; attemp
 interface RunOptions extends MusicOptions { store: StudioStore; queue: GpuQueue; signal?: AbortSignal }
 export interface MusicTaskDependencies { provider?: typeof runProvider; execute?: SetupExecutor }
 interface Guidance { name: string; sourcePath: string; sha256: string; text: string }
-type CapturedAttempt = Pick<MusicAttempt, 'id' | 'nativeCallId' | 'projectId' | 'provider' | 'model' | 'input' | 'seeds' | 'promptTemplate'>;
+type CapturedAttempt = Pick<MusicAttempt, 'id' | 'nativeCallId' | 'projectId' | 'provider' | 'model' | 'input' | 'seeds' | 'promptTemplate' | 'taskContext'>;
 export interface MusicPlan {
   executionSource?: ExecutionSource; replayCall?: ReplayCall;
   schemaVersion: 1; runtime: string; source: string; origin: string; attempt: CapturedAttempt;
@@ -36,7 +36,7 @@ const record = (v: unknown): RecordValue => { assert.ok(v && typeof v === 'objec
 // capture only music inputs, without mutating that historical attempt.
 const captured = (a: MusicAttempt): CapturedAttempt => structuredClone({ id: a.id, nativeCallId: a.nativeCallId,
   projectId: a.projectId, provider: a.provider, model: a.model,
-  input: { musicPrompt: a.input.musicPrompt, lyrics: a.input.lyrics }, seeds: a.seeds, ...(a.promptTemplate?{promptTemplate:a.promptTemplate}:{}) });
+  input: { musicPrompt: a.input.musicPrompt, lyrics: a.input.lyrics }, seeds: a.seeds, ...(a.promptTemplate?{promptTemplate:a.promptTemplate}:{}), ...(a.taskContext?{taskContext:a.taskContext}:{}) });
 const pendingAnalysis = (): SongAnalysis => ({ state: 'pending', estimatedBpm: null, sampleIndices: [], waveformBucketSamples: 0, peaks: [], error: null, version: null });
 function validateOptions({ runtime, source, origin, attempt }: MusicOptions) {
   assert.ok(isAbsolute(runtime) && isAbsolute(source), 'Absolute runtime and source paths required');
@@ -96,17 +96,17 @@ export async function prepareMusicTask(options: MusicOptions): Promise<{ planPat
     analysisId: randomUUID(), analysisDirectory: '', analysisRequest: '', analysisReceipt: '' };
   paths.analysisDirectory = join(runtime, 'projects', attempt.projectId, 'analysis', paths.analysisId);
   paths.analysisRequest = join(paths.analysisDirectory, 'request.json'); paths.analysisReceipt = join(paths.analysisDirectory, 'receipt.json');
-  const guidance = await readProductGuidance(source,'music');
+  const guidance = configuredContextGuidance(attempt.taskContext)??await readProductGuidance(source,'music');
   const nativeClient = [join(runtime, `tools/runtime/node-v${node.version}-linux-x64/bin/node`), join(source, 'scripts/native-call.ts'), origin, attempt.projectId, attempt.id, 'yue2', paths.agentRequest].map(quote).join(' ');
-  launch.stdin = renderAgentTemplate(attempt.promptTemplate?.template??DEFAULT_AGENT_TEMPLATES.music,formatTaskContext(MUSIC_CONTEXT,{
+  launch.stdin = renderAgentTemplate(attempt.promptTemplate?.template??DEFAULT_AGENT_TEMPLATES.music,renderCapturedTaskContext(MUSIC_CONTEXT,{
     project_id:attempt.projectId,attempt_id:attempt.id,native_call_id:attempt.nativeCallId,provider_model:`${attempt.provider}/${attempt.model}`,
     music_description:attempt.input.musicPrompt,lyrics:attempt.input.lyrics,source_root:source,data_root:runtime,workspace:launch.cwd,run_directory:launch.runDirectory,
     stage_seeds_json:JSON.stringify(attempt.seeds),agent_request_path:paths.agentRequest,native_client_command:nativeClient,receipt_path:paths.nativeReceipt,
-  },guidance));
+  },guidance,attempt.taskContext));
 
   // Historical queued requests predate editable templates. Keep their original
   // prompt wording and order rather than applying a later global configuration.
-  if (!attempt.promptTemplate) {
+  if (!attempt.promptTemplate && !attempt.taskContext) {
   launch.stdin = [
     'Create one fresh song candidate for this music-only studio task. Perform the tool work, not merely propose a plan. No automatic variations or silent retries are requested.',
     'Use your normal capabilities, tools, research, relevant project context, scripts and score editing. The project workspace organises artifacts; it is not a filesystem sandbox. Reply naturally; no JSON answer schema is required.',

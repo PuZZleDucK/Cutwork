@@ -23,7 +23,7 @@ test('music planner uses the template accepted with the attempt, not later confi
  expect(plan.attempt.promptTemplate).toEqual(attempt.promptTemplate);
 });
 test('pre-template queued music keeps legacy instruction order even when global templates change',async()=>{
- const f=await fixture();delete f.attempt.promptTemplate;
+ const f=await fixture();delete f.attempt.promptTemplate;delete f.attempt.taskContext;
  f.store.savePromptTemplates(0,{music:'NEW MUSIC {{task_context}}',video:'NEW VIDEO {{task_context}}'});
  const p=await prepareMusicTask(f.options),plan=JSON.parse(await readFile(p.planPath,'utf8')),prompt=plan.launch.stdin as string;
  expect(prompt.indexOf('Music description:')).toBeLessThan(prompt.indexOf('Translate the creative brief'));
@@ -203,4 +203,14 @@ test('new music tasks inline researched guidance and literal user text, while la
  expect(plan.launch.stdin).toContain('cfg_scale');expect(plan.launch.stdin).not.toContain('{{music_description}}');
  expect(plan.guidance.find((g:{name:string})=>g.name==='music.md').sha256).toBe(hash(guidance));
  await writeFile(join(f.source,'integrations/knowledge/music.md'),'Later product guidance');expect(await readFile(p.planPath,'utf8')).toBe(before);
+});
+
+test('accepted custom music context replaces guides, expands once and ignores later settings',async()=>{
+ const f=await fixture(),overrides={music:'MY GUIDE {{music_description}} | {{stage_seeds_json}} | {{native_client_command}}','video-text':null,'video-image':null};
+ f.store.saveTaskContexts(0,overrides);const attempt=f.store.submitMusic(f.attempt.projectId,randomUUID(),{musicPrompt:'literal $& {{lyrics}}',lyrics:'words'});
+ f.store.saveTaskContexts(1,{...overrides,music:'LATER GUIDE'});await rm(join(f.source,'integrations/knowledge/music.md'));
+ const p=await prepareMusicTask({...f.options,attempt}),plan=JSON.parse(await readFile(p.planPath,'utf8'));
+ expect(plan.launch.stdin).toContain('MY GUIDE literal $& {{lyrics}}');expect(plan.launch.stdin).not.toContain('LATER GUIDE');expect(plan.launch.stdin).not.toContain('Fixture copied guidance');
+ expect(plan.launch.stdin).toContain(JSON.stringify(attempt.seeds));expect(plan.launch.stdin).toContain('scripts/native-call.ts');
+ expect(plan.attempt.taskContext).toEqual(attempt.taskContext);expect(plan.guidance).toHaveLength(1);expect(plan.guidance[0].sourcePath).toBe('config/task-contexts/music/revision/1');
 });

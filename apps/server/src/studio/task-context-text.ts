@@ -8,10 +8,10 @@ export async function readProductGuidance(source:string,kind:'music'|'video'):Pr
 }
 /** Single pass: user text resembling a placeholder or replacement pattern stays literal. */
 export function formatTaskContext(template:string,values:Record<string,string>,guidance:TaskGuidance[]):string{
- const text=template.replace(/\{\{([a-z_]+)\}\}/g,(_token,key:string)=>{const value=values[key];if(value===undefined)throw new Error(`Missing task context value: ${key}`);return value;});
+ const text=template.replace(/\{\{([a-z_][a-z0-9_]*)\}\}/g,(_token,key:string)=>{const value=values[key];if(value===undefined)throw new Error(`Missing task context value: ${key}`);return value;});
  return [text,...guidance.map(g=>`Product guidance ${g.sourcePath}; SHA256 ${g.sha256}:\n\n${g.text}`)].join('\n\n');
 }
-export function contextPlaceholders(template:string):Record<string,string>{return Object.fromEntries([...template.matchAll(/\{\{([a-z_]+)\}\}/g)].map(m=>[m[1]!,m[0]]));}
+export function contextPlaceholders(template:string):Record<string,string>{return Object.fromEntries([...template.matchAll(/\{\{([a-z_][a-z0-9_]*)\}\}/g)].map(m=>[m[1]!,m[0]]));}
 
 export const MUSIC_CONTEXT=`Project: {{project_id}}
 Parent attempt: {{attempt_id}}
@@ -61,3 +61,12 @@ Use the existing helper through the running queue:
 It captures the actual tool request and owns only its own Comfy service. Wait for client state succeeded and inspect {{receipt_path}}. Never bypass a held lease or stop another application. If failed or uncertain, retain the evidence and explain.
 
 Source {{source_root}}; STUDIO_DATA_ROOT {{data_root}}; workspace {{workspace}}; run directory {{run_directory}}. Exact assigned H3 seed is the decimal string {{h_seed}}; never round it through a JavaScript Number or allocate a replacement.`;
+
+/** User overrides replace the complete context; provenance never labels edited bytes as upstream-verified. */
+export function configuredContextGuidance(captured:import('../../../../packages/core/src/contracts/task-contexts.ts').CapturedTaskContext|undefined):TaskGuidance[]|null{
+ if(captured?.template==null)return null;
+ return[{name:`Configured ${captured.id} task context`,sourcePath:`config/task-contexts/${captured.id}/revision/${captured.revision}`,sha256:contextHash(captured.template),text:captured.template}];
+}
+export function renderCapturedTaskContext(defaultTemplate:string,values:Record<string,string>,guidance:TaskGuidance[],captured:import('../../../../packages/core/src/contracts/task-contexts.ts').CapturedTaskContext|undefined):string{
+ return captured?.template!=null?formatTaskContext(captured.template,values,[]):formatTaskContext(defaultTemplate,values,guidance);
+}

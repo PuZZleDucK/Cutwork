@@ -80,7 +80,7 @@ test('global prompt template API exposes effective defaults, validates edits and
  expect((await request('PUT','/api/config/prompt-templates',{revision:1,templates:{...templates,music:'missing context'}})).statusCode).toBe(400);
  expect((await request('GET','/api/config/prompt-templates')).json().current).toEqual(saved.json());
 });
-test('read-only context API exposes source guidance with placeholders and never changes templates/projects or starts work',async()=>{
+test('context API exposes source guidance with placeholders and never changes templates/projects or starts work',async()=>{
  const {request,store,runtime}=await fixture();const before=store.promptTemplates();
  const response=await request('GET','/api/config/task-contexts');expect(response.statusCode).toBe(200);
  const {contexts}=response.json();expect(contexts).toHaveLength(3);expect(contexts[0].text).toContain('YuE2 music guidance — revision 3');expect(contexts[0].text).toContain('{{music_description}}');
@@ -88,7 +88,12 @@ test('read-only context API exposes source guidance with placeholders and never 
  expect(store.promptTemplates()).toEqual(before);expect(store.listProjects()).toEqual([]);
  expect(runtime.submitMusic).not.toHaveBeenCalled();expect(runtime.submitVideo).not.toHaveBeenCalled();expect(runtime.setup).not.toHaveBeenCalled();
  expect((await request('GET','/api/config/task-contexts?path=/etc/passwd')).statusCode).toBe(400);
- expect((await request('PUT','/api/config/task-contexts',{})).statusCode).toBe(404);
+ expect((await request('PUT','/api/config/task-contexts',{})).statusCode).toBe(400);
+ const overrides={music:'New guide {{music_description}}','video-text':null,'video-image':null};
+ expect((await request('PUT','/api/config/task-contexts',{revision:0,overrides})).json()).toEqual({revision:1,overrides});
+ expect((await request('GET','/api/config/task-contexts')).json().settings).toEqual({revision:1,overrides});
+ expect((await request('PUT','/api/config/task-contexts',{revision:0,overrides})).statusCode).toBe(409);
+ expect((await request('PUT','/api/config/task-contexts',{revision:1,overrides:{...overrides,music:'{{typo}}'}})).statusCode).toBe(400);
 });
 test('provider checks/switches and global setup delegate to runtime, including all tools', async () => {
   const { request, runtime } = await fixture();

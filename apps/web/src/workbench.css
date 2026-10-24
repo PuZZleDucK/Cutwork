@@ -104,3 +104,5 @@
 .context-sources{padding-left:18px;font:10px/1.7 var(--mono);overflow-wrap:anywhere;color:var(--muted)}
 .context-sources a{color:var(--cyan)}
 .context-sources span{margin-left:8px}
+
+.context-variables{margin:10px 0}.context-variables p{overflow-wrap:anywhere;line-height:1.8}.task-context-detail>details>summary{cursor:pointer;color:var(--muted);font:11px/1.6 var(--mono)}

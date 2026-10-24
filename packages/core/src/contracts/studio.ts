@@ -38,6 +38,8 @@ export type AttemptState = 'queued' | 'preparing' | 'waiting_gpu' | 'running' | 
 export interface AttemptLifecycle {
   /** Captured at acceptance. Historical attempts omit this and retain legacy defaults. */
   promptTemplate?: import('./prompt-templates.ts').CapturedPromptTemplate;
+  /** Accepted global context override; null means bundled guidance, absent on historical records. */
+  taskContext?: import('./task-contexts.ts').CapturedTaskContext;
   /** Absent on historical records and work which was never cancelled. */
   cancellation?: { requestedAt: string; completedAt: string | null };
   recovery?: { parentAttemptId: string; action: 'retry' | 'restart' };

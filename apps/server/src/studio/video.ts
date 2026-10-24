@@ -1,5 +1,5 @@
-import {VIDEO_CONTEXT,VIDEO_CONTINUATION_CONTEXT,formatTaskContext,readProductGuidance} from './task-context-text.ts';
-import {readH3PromptGuides,videoDirectionContext} from './h3-prompt-guidance.ts';
+import {VIDEO_CONTEXT,VIDEO_CONTINUATION_CONTEXT,formatTaskContext,readProductGuidance,configuredContextGuidance,renderCapturedTaskContext} from './task-context-text.ts';
+import {readH3PromptGuides,videoDirectionContext,videoDirectionValues} from './h3-prompt-guidance.ts';
 import {DEFAULT_AGENT_TEMPLATES,renderAgentTemplate} from '../../../../packages/core/src/contracts/prompt-templates.ts';
 import assert from 'node:assert/strict';
 import {captureExecutionSource,captureReplayFile,fileHash,verifyExecutionSource,type ExecutionSource,type ReplayFile} from './execution-snapshot.ts';
@@ -22,7 +22,7 @@ interface VideoOptions { runtime:string; source:string; origin:string; attempt:V
 interface RunOptions extends VideoOptions { queue:GpuQueue; signal?:AbortSignal }
 export interface VideoTaskDependencies { provider?:typeof runProvider; execute?:SetupExecutor }
 type Rec=Record<string,unknown>;
-type CapturedAttempt=Pick<VideoAttempt,'id'|'nativeCallId'|'projectId'|'provider'|'model'|'input'|'seeds'|'song'|'continuation'|'promptTemplate'>;
+type CapturedAttempt=Pick<VideoAttempt,'id'|'nativeCallId'|'projectId'|'provider'|'model'|'input'|'seeds'|'song'|'continuation'|'promptTemplate'|'taskContext'>;
 export interface TaskPlan {
  executionSource?:ExecutionSource; replaySong?:ReplayFile; replayCall?:ReplayCall;
  schemaVersion:1; runtime:string; source:string; origin:string; attempt:CapturedAttempt; nativePlan:VideoPlan;
@@ -38,7 +38,7 @@ const hash=(b:Buffer|string)=>createHash('sha256').update(b).digest('hex');
 const record=(v:unknown):Rec=>{assert.ok(v&&typeof v==='object'&&!Array.isArray(v),'Expected evidence object');return v as Rec;};
 const message=(e:unknown)=>(e instanceof Error?e.message:String(e)).slice(0,12000);
 const quote=(v:string)=>`'${v.replaceAll("'","'\\''")}'`;
-const captured=(a:VideoAttempt):CapturedAttempt=>structuredClone({id:a.id,nativeCallId:a.nativeCallId,projectId:a.projectId,provider:a.provider,model:a.model,input:a.input,seeds:a.seeds,song:a.song,...(a.promptTemplate?{promptTemplate:a.promptTemplate}:{}),...(a.continuation?{continuation:a.continuation}:{})});
+const captured=(a:VideoAttempt):CapturedAttempt=>structuredClone({id:a.id,nativeCallId:a.nativeCallId,projectId:a.projectId,provider:a.provider,model:a.model,input:a.input,seeds:a.seeds,song:a.song,...(a.promptTemplate?{promptTemplate:a.promptTemplate}:{}),...(a.taskContext?{taskContext:a.taskContext}:{}),...(a.continuation?{continuation:a.continuation}:{})});
 function parse(text:string):unknown{return JSON.parse(text,(_k,v:unknown,c?:{source?:string})=>{if(typeof v==='number'&&Number.isInteger(v)&&!Number.isSafeInteger(v)){assert.ok(c?.source,'Node 24 lossless native JSON parsing required');return c.source;}return v;});}
 async function json(path:string,max=16_000_000){assert.ok((await stat(path)).size<=max,'Evidence exceeds reader bound');return record(parse(await readFile(path,'utf8')));}
 async function sha(path:string,signal?:AbortSignal){signal?.throwIfAborted();const h=createHash('sha256');for await(const b of createReadStream(path,{signal:signal?AbortSignal.any([signal,AbortSignal.timeout(300000)]):AbortSignal.timeout(300000)}))h.update(b);return h.digest('hex');}
@@ -85,9 +85,9 @@ export async function prepareVideoTask(o:VideoOptions,deps:Pick<VideoTaskDepende
  const launch:ProviderLaunch=providerLaunch(runtime,{projectId:attempt.projectId,attemptId:attempt.id,songId:attempt.song.id,provider:attempt.provider,model:attempt.model,musicPrompt:'',lyrics:'',style:attempt.input.style,clipPrompt:attempt.input.clipPrompt,startFrame:attempt.input.startFrame,endFrame:attempt.input.endFrame,seeds:attempt.seeds});
  launch.executable=join(runtime,`tools/provider-cli/codex-${codex.version}_claude-${claude.version}/node_modules/.bin`,attempt.provider);
  const paths:TaskPlan['paths']={planPath:planPath(o),nativeRequest:join(project,'inputs/native-calls',attempt.nativeCallId,'request.json'),nativeReceipt:join(project,'runs',attempt.nativeCallId,'receipt.json'),agentRequest:join(launch.runDirectory,'video-request.json'),validation:join(project,'validation',attempt.id)};
- const guidance=await readProductGuidance(source,'video');
- const upstreamGuides=await readH3PromptGuides(runtime,source);
- guidance.push(upstreamGuides[0]!); // Complete base guide covers both supported T2VA and I2VA.
+ const customGuidance=configuredContextGuidance(attempt.taskContext);
+ const guidance=customGuidance??await readProductGuidance(source,'video');
+ if(!customGuidance)guidance.push((await readH3PromptGuides(runtime,source))[0]!); // Complete base guide covers both supported T2VA and I2VA.
  const sourceHashes=Object.fromEntries(await Promise.all(['generate.py','workflow.py','media.py'].map(async name=>[name,await sha(join(source,'integrations/h3',name))])));
  const models=await json(join(source,'integrations/h3/models.json')),recipe=await json(join(source,'integrations/comfyui/recipe.json'));
  assert.ok(Array.isArray(models.models));const verifiedModels=models.models.flatMap(m=>{const model=record(m);assert.ok(Array.isArray(model.files));return model.files.map(f=>{const file=record(f);return{path:join(runtime,'models/h3',String(model.repository).split('/')[1]!,String(model.revision),String(file.path)),sha256:String(file.sha256),bytes:Number(file.bytes)};});});
@@ -106,20 +106,23 @@ export async function prepareVideoTask(o:VideoOptions,deps:Pick<VideoTaskDepende
  }
  const nativeTemplate={schemaVersion:1,attemptId:attempt.nativeCallId,projectId:attempt.projectId,song,plan:nativePlan,seed:attempt.seeds.h3,...(firstFrame?{firstFrame}:{})};
  const storedSong=store.project(attempt.projectId).songs.find(s=>s.id===attempt.song.id);assert.ok(storedSong,'Captured song is missing');
- const direction=videoDirectionContext({requestedFrames:nativePlan.requestedFrames,nativeFrames:nativePlan.nativeFrames,startSample:nativePlan.conditioning.startSample,sampleIndices:storedSong.analysis.sampleIndices,hasFirstFrame:!!firstFrame});
+ const directionInput={requestedFrames:nativePlan.requestedFrames,nativeFrames:nativePlan.nativeFrames,startSample:nativePlan.conditioning.startSample,sampleIndices:storedSong.analysis.sampleIndices,hasFirstFrame:!!firstFrame};
+ const direction=videoDirectionContext(directionInput);
  const command=[join(runtime,`tools/runtime/node-v${record(pins.node).version}-linux-x64/bin/node`),join(source,'scripts/native-call.ts'),origin,attempt.projectId,attempt.id,'h3',paths.agentRequest].map(quote).join(' ');
- launch.stdin=renderAgentTemplate(attempt.promptTemplate?.template??DEFAULT_AGENT_TEMPLATES.video,formatTaskContext(VIDEO_CONTEXT,{
+ launch.stdin=renderAgentTemplate(attempt.promptTemplate?.template??DEFAULT_AGENT_TEMPLATES.video,renderCapturedTaskContext(VIDEO_CONTEXT,{
+  ...videoDirectionValues(directionInput),
+  ...(firstFrame?{first_frame_path:firstFrame.path,source_frame_number:String(attempt.continuation!.frame.index+1),first_frame_sha256:firstFrame.sha256}:{}),
   project_id:attempt.projectId,attempt_id:attempt.id,native_call_id:attempt.nativeCallId,song_id:attempt.song.id,visual_style:attempt.input.style,clip_description:attempt.input.clipPrompt,
   start_frame:String(attempt.input.startFrame),end_frame:String(attempt.input.endFrame),requested_frames:String(nativePlan.requestedFrames),native_frames:String(nativePlan.nativeFrames),
   continuation:firstFrame?formatTaskContext(VIDEO_CONTINUATION_CONTEXT,{first_frame_path:firstFrame.path,source_frame_number:String(attempt.continuation!.frame.index+1),first_frame_sha256:firstFrame.sha256},[]):'',
   direction,agent_request_path:paths.agentRequest,native_inputs_json:JSON.stringify(nativeTemplate,null,2),native_client_command:command,receipt_path:paths.nativeReceipt,
   source_root:source,data_root:runtime,workspace:launch.cwd,run_directory:launch.runDirectory,h_seed:attempt.seeds.h3!,
- },guidance));
+ },guidance,attempt.taskContext));
 
   // Historical queued requests predate editable templates. Keep their original
   // instruction order rather than applying a later editable template. Already
   // captured tasks are replayed from their immutable plan, never rebuilt here.
-  if (!attempt.promptTemplate) {
+  if (!attempt.promptTemplate && !attempt.taskContext) {
  launch.stdin=[
   'Create one fresh video clip for this captured music-video task. Perform the actual tool work; no automatic variations or silent expensive retries.',
   'Use your normal capabilities, tools, research, scripts and relevant project context. The workspace organises artifacts, not a filesystem sandbox. Reply naturally; no JSON answer format is required.',

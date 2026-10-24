@@ -189,3 +189,23 @@ test('continuation task routes to I2VA, not Ref2VA despite audio and image condi
  const plan=JSON.parse(await readFile(p.planPath,'utf8'));expect(plan.launch.stdin).toContain('Mode: I2VA');
  expect(plan.launch.stdin).toContain('<Picture 1> (from [Shot 1]) is fully referenced.');expect(plan.launch.stdin).not.toContain('Mode: Ref2VA');
 });
+
+test('custom video context replaces bundled guides without requiring upstream prompt documents',async()=>{
+ const f=await fixture();f.attempt.taskContext={id:'video-text',revision:4,template:'CUSTOM {{clip_description}} {{native_inputs_json}} {{retained_beat_anchors}} {{h_seed}}'};
+ await rm(join(f.source,'integrations/h3/prompt-guides.json'));await rm(join(f.source,'integrations/knowledge/video.md'));
+ const p=await prepareVideoTask(f.options),plan=JSON.parse(await readFile(p.planPath,'utf8'));
+ expect(plan.launch.stdin).toContain('CUSTOM');expect(plan.launch.stdin).toContain(f.attempt.seeds.h3);expect(plan.launch.stdin).not.toContain('{{retained_beat_anchors}}');expect(plan.launch.stdin).not.toContain('Fixture video guidance');
+ expect(plan.attempt.taskContext).toEqual(f.attempt.taskContext);expect(plan.guidance[0].sourcePath).toBe('config/task-contexts/video-text/revision/4');
+});
+
+test('custom I2VA context expands original-frame and timing placeholders without appending the default guide',async()=>{
+ const f=await fixture(),c=await attachContinuation(f);
+ f.attempt.taskContext={id:'video-image',revision:5,template:'CUSTOM IMAGE {{first_frame_path}} frame={{source_frame_number}} hash={{first_frame_sha256}}\n{{retained_beat_anchors}}\n{{clip_description}}\n{{native_client_command}}'};
+ f.attempt.input.clipPrompt='Literal $& {{first_frame_path}} in the user brief';
+ await rm(join(f.source,'integrations/h3/prompt-guides.json'));await rm(join(f.source,'integrations/knowledge/video.md'));
+ const p=await prepareVideoTask(f.options,{execute:c.execute}),plan=JSON.parse(await readFile(p.planPath,'utf8'));
+ expect(plan.launch.stdin).toContain(`CUSTOM IMAGE ${plan.firstFrame.path} frame=5 hash=${c.frame.sha256}`);
+ expect(plan.launch.stdin).toContain(f.attempt.input.clipPrompt);expect(plan.launch.stdin).toContain('scripts/native-call.ts');
+ expect(plan.launch.stdin).not.toContain('{{retained_beat_anchors}}');expect(plan.launch.stdin).not.toContain('Fixture video guidance');
+ expect(plan.guidance).toHaveLength(1);expect(plan.attempt.taskContext).toEqual(f.attempt.taskContext);
+});

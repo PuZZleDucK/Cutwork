@@ -49,5 +49,5 @@ test('version 8 migration adds only template storage and keeps historical attemp
  const legacy=JSON.parse(row.data);delete legacy.promptTemplate;const bytes=JSON.stringify(legacy);db.prepare('UPDATE studio_attempts SET data=? WHERE id=?').run(bytes,a.id);
  db.exec('DROP TABLE studio_prompt_templates; UPDATE studio_meta SET version=8');db.close();
  const reopened=openStudioStore(path);stores.push(reopened);expect(reopened.attempt(a.id)?.promptTemplate).toBeUndefined();
- const observed=new Database(path);expect(observed.prepare('SELECT data FROM studio_attempts WHERE id=?').get(a.id)).toEqual({data:bytes});expect(observed.prepare('SELECT version FROM studio_meta').get()).toEqual({version:9});observed.close();
+ const observed=new Database(path);expect(observed.prepare('SELECT data FROM studio_attempts WHERE id=?').get(a.id)).toEqual({data:bytes});expect(observed.prepare('SELECT version FROM studio_meta').get()).toEqual({version:10});observed.close();
 });

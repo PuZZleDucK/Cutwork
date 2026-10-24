@@ -23,6 +23,8 @@ export interface RestoreAttemptResult { project: StudioProject; draft: ClipDraft
 export interface StudioStore {
   promptTemplates(): import('../../../../packages/core/src/contracts/prompt-templates.ts').PromptTemplateSettings;
   savePromptTemplates(revision:number,templates:import('../../../../packages/core/src/contracts/prompt-templates.ts').AgentPromptTemplates):import('../../../../packages/core/src/contracts/prompt-templates.ts').PromptTemplateSettings;
+  taskContexts():import('../../../../packages/core/src/contracts/task-contexts.ts').TaskContextSettings;
+  saveTaskContexts(revision:number,overrides:import('../../../../packages/core/src/contracts/task-contexts.ts').TaskContextOverrides):import('../../../../packages/core/src/contracts/task-contexts.ts').TaskContextSettings;
   close(): void;
   lifecycle(projectId: string, artifact: ArtifactRef): ArtifactLifecycle;
   assertArtifactAvailable(projectId: string, artifact: ArtifactRef, options?: { allowArchived?: boolean }): void;

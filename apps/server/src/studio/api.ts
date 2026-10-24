@@ -1,3 +1,4 @@
+import {TASK_CONTEXT_MAX_LENGTH,type TaskContextOverrides} from '../../../../packages/core/src/contracts/task-contexts.ts';
 import {fileURLToPath} from 'node:url';
 import {readTaskContexts} from './task-contexts.ts';
 import type { FastifyInstance } from 'fastify';
@@ -85,7 +86,9 @@ export async function registerStudioApi(app: FastifyInstance, { store, runtime, 
       api.post<{Params:{debugId:string}}>('/api/debug/:debugId/cancel',{schema:{params:debugParams,body:empty,querystring:empty}},request=>debug.cancel(request.params.debugId));
     }
     api.get('/api/studio', { schema: { querystring: empty } }, () => runtime.overview());
-    api.get('/api/config/task-contexts',{schema:{querystring:empty}},()=>readTaskContexts(root,source));
+    api.get('/api/config/task-contexts',{schema:{querystring:empty}},async()=>({...await readTaskContexts(root,source),settings:store.taskContexts()}));
+    const contextOverride={anyOf:[{type:'null'},{type:'string',minLength:1,maxLength:TASK_CONTEXT_MAX_LENGTH}]};
+    api.put<{Body:{revision:number;overrides:TaskContextOverrides}}>('/api/config/task-contexts',{bodyLimit:2*1024*1024,schema:{querystring:empty,body:plain({revision,overrides:plain({music:contextOverride,'video-text':contextOverride,'video-image':contextOverride})})}},request=>store.saveTaskContexts(request.body.revision,request.body.overrides));
     api.get('/api/config/prompt-templates',{schema:{querystring:empty}},()=>({current:store.promptTemplates(),defaults:DEFAULT_AGENT_TEMPLATES}));
     api.put<{Body:{revision:number;templates:AgentPromptTemplates}}>('/api/config/prompt-templates',{
       schema:{querystring:empty,body:plain({revision,templates:plain({music:{type:'string',minLength:1,maxLength:PROMPT_TEMPLATE_MAX_LENGTH},video:{type:'string',minLength:1,maxLength:PROMPT_TEMPLATE_MAX_LENGTH}})})},

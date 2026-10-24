@@ -46,7 +46,7 @@ export async function runReplayCall(o:{plan:ReplayCall;attempt:StudioAttempt;que
 /** Caller already allocated a linked attempt with original parameters/seeds. */
 export async function prepareRecoveryTask(o:{runtime:string;origin:string;attempt:StudioAttempt;parent:StudioAttempt;queue:GpuQueue}):Promise<{planPath:string;planSha256:string;nativeReplayRequest?:Json;nativeRecoverySong?:{path:string;sha256:string}}>{
  const {runtime,attempt,parent,queue,origin}=o;
- assert.equal(attempt.projectId,parent.projectId);assert.deepEqual(attempt.input,parent.input);assert.deepEqual(attempt.seeds,parent.seeds);assert.equal(attempt.provider,parent.provider);assert.equal(attempt.model,parent.model);assert.deepEqual(attempt.promptTemplate,parent.promptTemplate);
+ assert.equal(attempt.projectId,parent.projectId);assert.deepEqual(attempt.input,parent.input);assert.deepEqual(attempt.seeds,parent.seeds);assert.equal(attempt.provider,parent.provider);assert.equal(attempt.model,parent.model);assert.deepEqual(attempt.promptTemplate,parent.promptTemplate);assert.deepEqual(attempt.taskContext,parent.taskContext);
  assert.ok(typeof parent.details.planPath==='string'&&typeof parent.details.planSha256==='string','Exact recovery unavailable: original captured task/hash missing');
  assert.equal(await fileHash(parent.details.planPath),parent.details.planSha256,'Original captured task changed');assert.ok((await stat(parent.details.planPath)).size<=4_000_000);
  const original=record(JSON.parse(await readFile(parent.details.planPath,'utf8')));assert.equal(original.attempt.id,parent.id);assert.equal(original.attempt.nativeCallId,parent.nativeCallId);assert.equal(original.runtime,runtime);

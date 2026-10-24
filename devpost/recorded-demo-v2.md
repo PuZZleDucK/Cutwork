@@ -50,14 +50,20 @@ Raw files and machine-specific observations are kept outside Git under Videos/Cu
   Owned recording/audio/helper services are stopped. Cutwork and both projects
   remain available. No implementation changes during this frozen-source run.
 
-**Remaining rough edges:** Claude's post-final-report idle hang required the
+**Recorded rough edges:** Claude's post-final-report idle hang required the
 recorded targeted SIGINT; Config needed Reload saved contexts to clear a stale
 preinstall guide view. The source/runtime were not patched mid-recording. The
 confirmation pause separates the two original segments; this is not a claim of
 an uninterrupted capture or a zero-intervention installation. Final learner
 review, public-release audit and an edited submission demo remain separate work.
 
-## Observed issues not yet fixed
+## Observed issues and follow-up
+
+**Post-recording update:** [the targeted investigation](post-demo-issue-investigation.md)
+reproduced and fixed Config refresh in `08a6b5a`, now deployed as a web-only update.
+Claude exited normally in four pinned native probes; its one recorded hang remains
+an undiagnosed intermittent rough edge deferred until after submission. Neither
+result rewrites the operator interventions in this frozen-source recording.
 
 ### Claude process did not exit after completed Day video
 
@@ -86,14 +92,16 @@ review, public-release audit and an edited submission demo remain separate work.
   complete pinned guides. Clicking **Reload saved contexts** refreshed the view;
   no prompt edits or regeneration were needed. This was stale UI data, not agents
   using the old guide or missing prompting instructions.
-- `apps/web/src/TaskContextSettings.tsx` loads on mount and explicit Reload, with
-  no setup-readiness-triggered refresh. Any fix must preserve unsaved edits rather
-  than silently replacing the user's custom context. No fix has been applied.
+- The recorded source loaded `apps/web/src/TaskContextSettings.tsx` on mount and
+  explicit Reload only, without a setup-readiness refresh. The post-recording fix
+  now refreshes on setup changes while retaining unsaved edits and revision-conflict
+  detection; see the follow-up above for regression/browser/deployment evidence.
 
-These workarounds allowed the requested recorded journey to finish. They are
-not claims that the two underlying issues are resolved. Remaining accessibility
-checks were subsequently explicitly skipped by the learner, not failed or passed.
-No runtime/code change or new inference was performed during note reconciliation.
+These workarounds allowed the requested recorded journey to finish. Config was
+fixed only afterward; Claude's original hang is not claimed fixed. Remaining
+accessibility checks were explicitly skipped by the learner, not failed or passed.
+No source changes occurred during the recording; the later fix required no new
+media inference or model downloads.
 
 ## Run log
 

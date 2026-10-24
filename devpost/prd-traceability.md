@@ -11,8 +11,11 @@ CPU/HTTP lifecycle proof, and 53/53 deployment-preservation checks over 831 exis
 assets. Test examples below are exact searchable titles in that baseline; a file
 can contain several related assertions, not a one-test/one-criterion bijection.
 Later evidence is recorded separately below, not inferred from that test count.
-The current recorded-v2 source `a069a59` passed 1,504 tests in 113 files plus
+The frozen recorded-v2 source `a069a59` passed 1,504 tests in 113 files plus
 typecheck/build before the fresh installation and complete creative journey.
+Post-recording source `08a6b5a` passes 1,510 tests in 114 files plus typecheck/build;
+its web-only Config refresh fix has targeted browser and preservation evidence in
+[the follow-up](post-demo-issue-investigation.md).
 
 **Reconciliation:** the completed newcomer demo is no longer a pending test.
 Remaining accessibility checks are **SKIPPED / NOT VERIFIED** by the learner's
@@ -47,10 +50,11 @@ different kinds of evidence, not interchangeable checkmarks.
   path. Reused OS, driver/APT prerequisites and provider login are disclosed.
   A newly installed OS/driver or new-account login remains outside this proof;
   no further download/install marathon is pending.
-- **Observed issues — unresolved:** one Claude CLI remained alive after its final
-  report/native completion; a verified targeted SIGINT allowed normal validation.
-  Config's stale preinstall reference display cleared on Reload saved contexts;
-  actual tasks already had complete guides. See recorded-v2 for facts and limits.
+- **Observed issues — investigated:** Config's stale preinstall display was
+  reproduced, fixed and deployed with draft-preservation regressions/browser proof.
+  The one Claude completion hang did not recur in four native CLI probes; it is
+  deferred for post-submission investigation, not claimed fixed. Recorded-v2 retains
+  the original operator interventions; the follow-up records current disposition.
 - **Human review:** decoded media and recorded browser playback do not replace
   final perceptual watch/listen or learner acceptance.
 - **Accessibility — skipped, not passed:** final keyboard/focus/dialog and
@@ -72,7 +76,7 @@ different kinds of evidence, not interchangeable checkmarks.
 | Spec gate | Evidence available | Still not established |
 |---|---|---|
 | G1 — clean-host toolchain/terms | Pinned recipes, isolated venv/probe evidence, real16GiB GPU runs, host-Python observations; recorded-v2 fresh bootstrap/models and bundled font observations | Fresh OS/driver installation; no broad output-rights or all-workloads memory guarantee. |
-| G2 — provider contracts | native-1/recovery-7 actual CLIs; recorded-v2 actual Claude Day and Codex Night | Claude post-final-report hang unresolved; CLI/model observation is not provider-side attestation. |
+| G2 — provider contracts | native-1/recovery-7 actual CLIs; recorded-v2 actual Claude Day and Codex Night | Claude hang not reproduced in four probes, deferred; CLI/model observation is not provider-side attestation. |
 | G3 — media contracts | browser-3/continuation-6/recovery-7 real song, short audio/image-conditioned H3, original frames, surplus handling/replay/post-song input | No arbitrary-length success, exact generated song duration/BPM, seamless join or universal VRAM fit. |
 | G4 — interruption/ownership | native-1/recovery-7 real cancellation/handoffs and measured release; continuity-4 process restart/identity fixtures | Uninstrumented/detached work and arbitrary GPU crash recovery are not certified. |
 | G5 — edit/output parity | edit-5/continuation-6/lifecycle-8 plus recorded-v2 full live preview before exact 672-frame export, raw-frame identity and lifecycle checks | Final human watch/listen; remaining accessibility sweep skipped; responsive evidence limited. |

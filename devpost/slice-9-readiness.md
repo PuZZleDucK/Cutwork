@@ -4,8 +4,11 @@
 model downloads, both provider paths and the complete creative/export journey
 are now verified; see [recorded demo v2](recorded-demo-v2.md). Its frozen source
 passed 1,504 tests in 113 files plus typecheck/build before recording. Final human
-review/wrap-up remains open. The two observed workflow issues were worked around,
-not repaired. Historical checkpoints below are retained, not current blockers.
+review/wrap-up remains open. A [post-demo investigation](post-demo-issue-investigation.md)
+now fixes and deploys the reproduced Config refresh defect (`08a6b5a`, 1,510 tests
+in 114 files, typecheck/build and browser checks). The Claude hang did not recur in
+four native probes and is deferred, not claimed repaired. Historical checkpoints
+below are retained, not current blockers.
 
 **Learner decision:** remaining accessibility checks are skipped for submission,
 not passed. Existing accessibility features/tests remain; current full keyboard,

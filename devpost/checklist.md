@@ -20,11 +20,19 @@ no fresh cross-device certification or new sweep is being added as a gate.
 
 The fresh managed-install and creative journey are complete; do not restart
 model downloads or treat old scratchpad “pending” notes as current work. The only
-observed unresolved workflow issues from the second recording are the Claude
-post-completion process hang and stale Config context display, detailed in
-[the issue explanations](recorded-demo-v2.md#observed-issues-not-yet-fixed).
-Neither is a failed render or lost project. Final learner approval/watch-listen,
+observed issues from the second recording have now been investigated: Config's
+stale context display was reproduced, fixed and deployed; the Claude post-completion
+hang did not recur in four pinned native CLI probes and is deferred for
+post-submission investigation. See [the findings](post-demo-issue-investigation.md).
+Neither was a failed render or lost project. Final learner approval/watch-listen,
 learning wrap-up, public-source audit and submission preparation remain separate.
+
+**24 October post-demo fix:** source `08a6b5a` adds setup-triggered context refresh
+without discarding drafts or weakening concurrent-save conflict detection. Six new
+regressions; **1,510 tests in 114 files**, typecheck/build and functional browser
+checks pass. Web-only deployment leaves 30 database tables/schemas, 1,070 asset
+records (995 present file hashes), both projects and service identities unchanged.
+Backend remains the recorded `a069a59`; no restart, inference or downloads.
 
 **24 October second recorded journey completed:** frozen source `a069a59`, fresh
 runtime/environments/model downloads, Claude Day song+clip before Codex Night.
@@ -462,7 +470,7 @@ in `workbench-feedback.md` and `workbench-round-two.md`; they are not two additi
 implementation/retest projects. Consolidate remaining human acceptance into the
 single final review below rather than inventing separate approvals.
 
-- [ ] Decide/resolve the two observed run issues: Claude process completion and Config context refresh. They were worked around, not fixed; details in `recorded-demo-v2.md`.
+- [x] Investigate the two observed run issues under the learner's fix-if-reproduced instruction: Config refresh reproduced/fixed/deployed; Claude did not recur in four native probes, retained as a post-submission rough edge. See `post-demo-issue-investigation.md`. This is an investigation disposition, not final learner acceptance.
 - **SKIPPED, not passed:** remaining accessibility checks, explicitly waived for this submission. No accessibility implementation removed.
 
 - [ ] Final review complete — feedback resolved and learner confirms ready to ship

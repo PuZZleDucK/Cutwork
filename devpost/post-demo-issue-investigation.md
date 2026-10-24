@@ -26,8 +26,8 @@ new media generation, model downloads, accessibility sweep or demo-data edits.
 - [x] Reproduce Config staleness in an isolated browser/API fixture before edits.
 - [x] Write regression tests first; implement only evidenced corrections.
 - [x] Full tests/typecheck/build plus functional browser verification.
-- [ ] Deploy any fix without changing demo projects/settings/media; verify it.
-- [ ] Reconcile findings and remaining limits, then commit.
+- [x] Deploy any fix without changing demo projects/settings/media; verify it.
+- [x] Reconcile findings and remaining limits, then commit.
 
 Private logs/fixtures live in ignored `.local-evidence/post-demo-issues/` and a
 separate remote investigation directory, not the recorded delivery bundle.
@@ -96,5 +96,22 @@ generation. The existing recorded workaround is not an automatic app recovery.
 
 ## Deployment
 
-Pending web-only publication and preservation audit. Backend, provider runner,
-recorded demo media and installed tools require no changes.
+Source **`08a6b5a`** published to Dundee as a web-only overlay. The recorded backend
+remains `a069a59`; no service restart or installed-tool/provider change. A separate
+release folder retains the source archive, new bundle manifest and previous web
+files. Old hashed assets remain available; the new index was replaced atomically.
+
+All 10 HTTP-served files match the locally verified build byte-for-byte. Before/after
+preservation snapshots match exactly: **30 database tables and schemas, 1,070 asset
+records (995 present files hashed; 75 already absent), both project API snapshots,
+Cutwork/TTS/personal-Comfy process identities**. Production context revision remains
+0. The real LAN browser shows all three complete default contexts, no stale warning,
+and no unsaved edits. The 75 absent assets were absent before this change; no files
+were removed by the deployment. Recording delivery files were not touched.
+
+The setup-transition regression was exercised in the disposable full-app browser
+fixture, not by reinstalling production tools. The production check confirms the
+published bundle and healthy current Config state. Private before/after screenshots,
+HTTP manifest, test logs and preservation snapshots are retained under the evidence
+folder above. Accessibility remains skipped as requested; this was functional
+verification of the reproduced defect, not an accessibility sweep.

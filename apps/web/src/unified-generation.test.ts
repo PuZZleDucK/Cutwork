@@ -36,3 +36,18 @@ test('song list has bounded scroll, two-line titles and right-aligned stacked li
  expect(css).toMatch(/\.song-library-item>\.artifact-controls>\.row-actions\{[^}]*flex-direction:column/);
  expect(css).toMatch(/\.song-row-copy strong\{[^}]*-webkit-line-clamp:2/);
 });
+
+test('generation text areas have balanced default heights without disabling manual resizing',()=>{
+ const css=readFileSync(new URL('./workbench.css',import.meta.url),'utf8');
+ expect(css).toMatch(/\.compose-panel \.lyrics-input\{[^}]*height:180px/);
+ expect(css).toMatch(/\.video-compose #visual-style\{[^}]*height:84px/);
+ expect(css).toMatch(/\.video-compose #clip-prompt\{[^}]*height:99px/);
+ expect(css).not.toMatch(/(?:lyrics-input|#visual-style|#clip-prompt)\{[^}]*resize:none/);
+});
+test('only generation footers and the video/sequence section bottoms lose their dividers',()=>{
+ const css=readFileSync(new URL('./workbench.css',import.meta.url),'utf8');
+ expect(css).toMatch(/\.compose-panel \.compose-footer\{[^}]*border-top:0/);
+ expect(css).toMatch(/\.video-compose \.compose-footer\{[^}]*border-top:0/);
+ expect(css).toContain('.video-workspace>.video-compose,.video-workspace>.video-timeline{border-bottom:0}');
+ expect(css).toMatch(/\.generation-divider\{[^}]*border-top:1px solid var\(--border\)/);
+});

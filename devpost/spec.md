@@ -722,3 +722,7 @@ The keyed song workspace still resets song-specific video draft state. `song-sel
 Music's GenerationActions uses compact presentation and a local left-arrow reuse label; other callers retain their existing labels and recovery explanations. Song selection keeps `aria-pressed` and the selected styling but drops the extra icon. The music/video divider is rendered once after the music section in both selected-song and empty states.
 
 VideoTimeline's heading contains the title, existing radio group and coverage in that DOM order; lane guidance moves into the legend. ClipEditControls renders the same guarded placement mutation in the preview bar for both placed and unplaced saved contexts. VideoStudio groups creative and lifecycle actions in a wrapping flex row. No request contract, seed handling, edit persistence, confirmation or media behaviour changes.
+
+### Editor proportions (24 October 2026)
+
+The workbench CSS sets initial heights of 180px for lyrics (previously 90px), 84px for visual style (42px) and 99px for clip description (66px). Existing minimum heights and vertical resizing are retained. Explicit footer border-top and video-compose/video-timeline border-bottom overrides remove only the requested lines; generation-divider remains unchanged. No component, persistence, API or media changes.

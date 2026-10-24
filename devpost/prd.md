@@ -795,3 +795,7 @@ Show generated songs before the selected song's player. Use a fixed-height scrol
 Selected songs use their existing highlight and pressed state, without a tick that shifts duration/BPM alignment. Remove the music seed/history paragraph, the technical-translation sentence, the generated-song subheading and routine recovery explanation. Keep “Describe the feeling, not the machinery.” Music's button reads **← Reuse parameters**; failure and cleanup warnings remain available. Add one horizontal divider between music and video.
 
 In the Sequence heading, place **Click beats to set** between the title and coverage. Put waveform-selection/lane guidance alongside the legend below the sequence. In each clip's preview bar, show saved placement status, frame count, and **Remove** or **Place in sequence** at the right. Below the clip title, **Continue from**, **Reuse parameters**, **Archive**, and **Delete** share one row where space permits. Narrow cards may wrap rather than hide controls. Removal still affects only the indicated saved placement and preserves the source clip and edits.
+
+### Editor proportions (24 October 2026)
+
+Increase the default lyrics area to roughly twice its previous height, double the visual-style area, and increase clip-description height by half. Keep all three manually resizable. Remove the lines above Generate music and Generate clip, and below the video-generation and Sequence sections; retain the music/video divider.

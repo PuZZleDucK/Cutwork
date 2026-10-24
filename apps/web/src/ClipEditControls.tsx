@@ -24,11 +24,10 @@ export function ClipEditControls(props:{studio:Studio;song:StudioSong;arrangemen
   const result=await request<ClipEditResult>(`/api/projects/${song.projectId}/edit-contexts/${context.id}/placement`,{revision:current.revision,arrangementRevision:revision,placed:!current.placementId});
   studio.acceptClipEdit(result);return result;
  });
- const placement=<div className="clip-placement-bar"><span className="clip-placement-state">{base.placementId?'IN SEQUENCE':'UNPLACED'}</span><span className="clip-frame-count" title={`Source frames ${base.sourceStartFrame+1}–${base.sourceEndFrame}; timeline frame boundaries ${start}–${end}.`}>{base.sourceEndFrame-base.sourceStartFrame} frames</span>{!base.placementId&&<button type="button" className="button secondary small placement-action" disabled={actionsDisabled} onClick={()=>{if(!actionsDisabled)void mutatePlacement();}}>Place in sequence</button>}</div>;
+ const placement=<div className="clip-placement-bar"><span className="clip-placement-state">{base.placementId?'IN SEQUENCE':'UNPLACED'}</span><span className="clip-frame-count" title={`Source frames ${base.sourceStartFrame+1}–${base.sourceEndFrame}; timeline frame boundaries ${start}–${end}.`}>{base.sourceEndFrame-base.sourceStartFrame} frames</span><button type="button" className="button secondary small placement-action" title={base.placementId?'Remove this placement from the sequence; keep the clip and its saved edits in the library.':'Place this saved edit in the sequence.'} disabled={actionsDisabled} onClick={()=>{if(!actionsDisabled)void mutatePlacement();}}>{base.placementId?'Remove':'Place in sequence'}</button></div>;
  const actions=<div className="clip-primary-actions" role="group" aria-label={`Actions for ${clip.title} on ${song.title}`}>
   <button type="button" className="button secondary small continue-clip" title="Prepare the next generation from this edit’s last retained frame." disabled={actionsDisabled} onClick={()=>{if(!actionsDisabled)void onContinue(base);}}>Continue from</button>
   {reuseAction?.(actionsDisabled)}
-  {base.placementId&&<button type="button" className="button secondary small placement-action" title="Remove this placement from the sequence; keep the clip and its saved edits in the library." disabled={actionsDisabled} onClick={()=>{if(!actionsDisabled)void mutatePlacement();}}>Remove</button>}
  </div>;
  const contents=<>
   <div className="edit-context-body" aria-label={`Timing and audio for ${clip.title}`}>

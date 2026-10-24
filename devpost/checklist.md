@@ -450,6 +450,8 @@ Activity mode: Proposed focused planning/verification investigation suitable for
 
 ## Revisions
 
+- **24 October — workspace detail polish:** remove redundant music annotations and selection tick, add the section divider, relocate beat targeting into the sequence header, and place Remove above clip previews with remaining actions in one row. Verification: [workspace-polish.md](workspace-polish.md). Final learner review remains open.
+
 - **24 October — unified generation workspace:** combine music and video under Generate, remove the duplicate soundtrack selector, and compact the song list above its player with duration/BPM and stacked lifecycle buttons. See [unified-generation.md](unified-generation.md) for verification. Final learner review remains open.
 
 - **24 October — automatic clip edits:** valid trims and movements save automatically with guarded, typing-safe persistence. Reorder and shorten library actions, move placement status above previews and Audio above Trim. Verification is recorded in [clip-autosave.md](clip-autosave.md); final learner review remains open.

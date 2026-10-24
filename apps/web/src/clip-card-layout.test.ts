@@ -13,11 +13,15 @@ function render(placed:boolean,otherSong=false){
  const studio={busy:false,cancelling:new Set(),snapshot:{project:{id:'p'},songs:otherSong?[song,selectedSong]:[song],clips:[clip],videoAttempts:[{id:'attempt',projectId:'p',state:'succeeded',input:{songId:'s',startFrame:0},song}],editContexts:[context],artifactLifecycles:[]}};
  return renderToStaticMarkup(createElement(ClipLibrary,{studio,song:selectedSong,arrangement,onContinue:vi.fn(),onRestore:vi.fn()} as unknown as Parameters<typeof ClipLibrary>[0]));
 }
-test('placed card status is above preview; creative actions precede the compact lifecycle row',()=>{
+test('placed card has Remove above preview and all remaining actions in one shared row',()=>{
  const html=render(true),start=html.indexOf('class="clip-card '),card=html.slice(start);
  expect(card.indexOf('IN SEQUENCE')).toBeLessThan(card.indexOf('<video'));
  expect(card.indexOf('>Continue from</button>')).toBeLessThan(card.indexOf('>Reuse parameters</button>'));
- expect(card.indexOf('>Reuse parameters</button>')).toBeLessThan(card.indexOf('>Remove</button>'));
+ expect(card.indexOf('>Remove</button>')).toBeLessThan(card.indexOf('<video'));
+ expect(card).toContain('class="clip-card-actions"');
+ const actionRow=card.slice(card.indexOf('class="clip-card-actions"'),card.indexOf('class="clip-edit"'));
+ for(const label of ['Continue from','Reuse parameters','Archive','Delete'])expect(actionRow).toContain(`>${label}</button>`);
+ expect(actionRow).not.toContain('>Remove</button>');
  expect(card.indexOf('>Remove</button>')).toBeLessThan(card.indexOf('>Archive</button>'));
  expect(card.indexOf('>Archive</button>')).toBeLessThan(card.indexOf('>Delete</button>'));
  expect(card).not.toContain('Delete permanently…');expect(card).not.toContain('Apply trim');expect(card).not.toContain('Apply move');

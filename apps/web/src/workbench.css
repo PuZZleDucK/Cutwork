@@ -52,7 +52,7 @@
 .clip-primary-actions>.button{margin:0}
 
 /* Unified music/video generation: compact, scrollable soundtrack choices. */
-.pane-generate>.studio-grid{margin-bottom:24px}
+.pane-generate>.studio-grid{margin-bottom:0}
 .soundtrack-panel .song-library{margin:14px 0 0;padding:0;border-top:0}
 .song-list{height:240px;overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable}
 .song-library-item{display:flex;align-items:center;gap:10px;min-height:96px}
@@ -66,3 +66,14 @@
 .selected-song .song-name-row{margin-top:16px}
 .selected-song h3{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
 @media(max-width:560px){.song-library-item{gap:5px}.song-mini-icon{display:none}.song-row{gap:6px}.song-row-timing{font-size:9px}.song-library-item .row-actions>.button{padding:5px 7px}}
+
+/* Keep guidance compact and place each action beside its result. */
+.generation-divider{border:0;border-top:1px solid var(--border);margin:24px 0}
+.video-timeline .sequence-heading{flex-wrap:wrap;align-items:center;gap:8px 12px;margin-bottom:8px}
+.sequence-heading>.sequence-tools{margin:0}
+.sequence-heading>.coverage-readout{margin-left:auto}
+.timeline-legend>.sequence-hint{font-size:8px;margin-left:auto}
+.clip-card-actions{display:flex;align-items:center;flex-wrap:wrap;gap:5px}
+.clip-card-actions>.artifact-controls{margin:0}
+.clip-card-actions>.artifact-controls>.row-actions{gap:5px;margin:0}
+.clip-card-actions .button{margin:0}

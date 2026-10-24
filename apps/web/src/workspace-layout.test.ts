@@ -80,3 +80,14 @@ test('unknown tempo is explicit and completed guidance clears after the first cl
  const html=renderToStaticMarkup(createElement(App));
  expect(html).toContain('— BPM');expect(html).not.toContain('needs-attention');expect(html).not.toContain('NaN');
 });
+
+test('music stays concise and selection does not add an alignment-shifting tick',()=>{
+ fixture(true);state.current.snapshot.project.createdAt='2026-10-23T00:00:00Z';
+ state.current.snapshot.songs[0].attemptId='attempt';state.current.snapshot.attempts=[{id:'attempt',projectId:'project',sequence:1,state:'succeeded',createdAt:'2026-10-23T00:00:00Z',updatedAt:'2026-10-23T00:00:01Z',input:{musicPrompt:'idea',lyrics:''}}];
+ const html=renderToStaticMarkup(createElement(App));
+ expect(html).toContain('Describe the feeling, not the machinery.');
+ for(const text of ['Your agent handles the technical translation.','New generations get new seeds.','Retry / Restart keep recorded seeds','GENERATED SONGS','Select a take to listen'])expect(html).not.toContain(text);
+ expect(html).toContain('>← Reuse parameters</button>');
+ const row=html.slice(html.indexOf('class="song-row is-selected"'),html.indexOf('aria-label="Media lifecycle:'));
+ expect(row).toContain('aria-pressed="true"');expect(row).not.toContain('width="16"');
+});

@@ -777,9 +777,8 @@ keystrokes; a failure retains the input with retry, while a revision conflict
 requires explicit recovery rather than silently replacing another edit.
 
 Show placement status, frame count and the unplaced **Place in sequence** action
-above the clip preview, without the old status divider. The first button row is
-**Continue from**, **Reuse parameters**, **Remove** (when placed); the second is
-**Archive**, **Delete**. Delete still opens the full irreversible-deletion
+above the clip preview, without the old status divider. Place **Remove** in the preview bar when placed. The action row is
+**Continue from**, **Reuse parameters**, **Archive**, **Delete** (refined below). Delete still opens the full irreversible-deletion
 confirmation. Audio controls precede Trim and Position. **Continue from** is a
 label change only: it still captures the clicked saved edit's last retained
 frame, exact current end and continuation parameters. Multiple saved edit
@@ -790,3 +789,9 @@ contexts keep their own unambiguous actions. Successful edits do not notify.
 Use **Generate / Archive / History** tabs. Generate combines music at the top with video generation, live preview, sequence and library underneath. Use **Generate Music** and **Generate Video** headings. Remove the separate Music/Video tabs and the duplicate video soundtrack dropdown; the generated-song list is the single song selector. Switching projects preserves the active tab; existing song-selection, prompt/lyrics restoration and per-song arrangement behaviour are unchanged.
 
 Show generated songs before the selected song's player. Use a fixed-height scrollable list exposing two complete versions and part of the next. Clamp each title to two lines (full title remains available by tooltip and accessible name), show duration above estimated BPM, omit generation date/time, and place **Archive** above **Delete** at the far right. Missing BPM displays an em dash. The shorter Delete label retains the full confirmation. Manual song selection keeps the list's scroll and keyboard position. Generate keeps hazard guidance for a missing soundtrack or first video, and shows a combined active song/clip count.
+
+### Compact music and sequence controls (24 October 2026)
+
+Selected songs use their existing highlight and pressed state, without a tick that shifts duration/BPM alignment. Remove the music seed/history paragraph, the technical-translation sentence, the generated-song subheading and routine recovery explanation. Keep “Describe the feeling, not the machinery.” Music's button reads **← Reuse parameters**; failure and cleanup warnings remain available. Add one horizontal divider between music and video.
+
+In the Sequence heading, place **Click beats to set** between the title and coverage. Put waveform-selection/lane guidance alongside the legend below the sequence. In each clip's preview bar, show saved placement status, frame count, and **Remove** or **Place in sequence** at the right. Below the clip title, **Continue from**, **Reuse parameters**, **Archive**, and **Delete** share one row where space permits. Narrow cards may wrap rather than hide controls. Removal still affects only the indicated saved placement and preserves the source clip and edits.

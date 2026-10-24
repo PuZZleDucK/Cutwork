@@ -77,3 +77,13 @@ test('audio misalignment warns only when the clip audio is actually selected',()
  hooks.editor=null;props.context={...props.context,audioSource:'clip'};nodes=render(props);
  expect(nodes.some(node=>node.props.children==='⚠ Audio may be out of sync.')).toBe(true);
 });
+
+test('the relocated Remove action still targets only its saved context with both revision guards',async()=>{
+ const props=fixture(),nodes=render(props);
+ const result={context:{...context,revision:8,placementId:null},arrangement:{...props.arrangement,revision:12,placements:[]}};
+ vi.mocked(request).mockResolvedValue(result);
+ click(control(nodes,'Remove'));await vi.advanceTimersByTimeAsync(0);
+ expect(request).toHaveBeenCalledExactlyOnceWith('/api/projects/project/edit-contexts/edit/placement',{revision:7,arrangementRevision:11,placed:false});
+ expect(props.studio.acceptClipEdit).toHaveBeenCalledWith(result);
+ expect(props.onContinue).not.toHaveBeenCalled();
+});

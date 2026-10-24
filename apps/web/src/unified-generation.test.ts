@@ -14,7 +14,9 @@ test('one Generate panel contains music before video for new and existing soundt
   const html=fixture(withSong);
   expect(html.match(/id="workspace-pane-generate"/g)).toHaveLength(1);
   expect(html.match(/role="tabpanel"/g)).toHaveLength(3);
-  expect(html.indexOf('Music editor')).toBeLessThan(html.indexOf('Generate Video'));
+  expect(html.indexOf('Music editor')).toBeLessThan(html.indexOf('<hr class="generation-divider"'));
+  expect(html.indexOf('<hr class="generation-divider"')).toBeLessThan(html.indexOf('Generate Video'));
+  expect(html.match(/class="generation-divider"/g)).toHaveLength(1);
   expect(html).not.toContain('Open music');expect(html).not.toContain('video-song');
  }
 });

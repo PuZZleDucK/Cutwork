@@ -143,3 +143,12 @@ test('the reported four-clip overlap renders exactly four complete blocks and tw
   expect(block.props['data-placement-end']).toBe(p.endFrame);
  }
 });
+
+test('beat targeting sits between the sequence title and coverage, with lane guidance in the legend',()=>{
+ const html=renderToStaticMarkup(createElement(VideoTimeline,fixture()));
+ const header=html.slice(0,html.indexOf('class="sequence-scroll"'));
+ expect(header.indexOf('<h2>Sequence</h2>')).toBeLessThan(header.indexOf('Click beats to set'));
+ expect(header.indexOf('Click beats to set')).toBeLessThan(header.indexOf('class="coverage-readout"'));
+ expect(header).not.toContain('SELECT A BEAT OR CLICK THE WAVEFORM');
+ expect(html.slice(html.indexOf('class="timeline-legend"'))).toContain('SELECT A BEAT OR CLICK THE WAVEFORM');
+});

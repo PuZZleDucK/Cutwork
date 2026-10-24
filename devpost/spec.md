@@ -706,8 +706,8 @@ sequence immediately through a monotonic, project-scoped snapshot merge and
 invalidate older polling reads; a refresh supplies history and overview updates.
 No global busy lock is taken for typing saves. Only failures raise notifications.
 
-The card composes placement status above its preview, then Continue from / Reuse
-parameters / Remove, then Archive / Delete. Audio precedes Trim and Position.
+The card composes placement status, frame count and Place/Remove above its preview,
+then Continue from / Reuse parameters / Archive / Delete in one row (refined below). Audio precedes Trim and Position.
 The compact Delete label does not shorten the confirmation or alter lifecycle
 semantics. The Continue from label does not alter the last-retained-frame rule.
 
@@ -716,3 +716,9 @@ semantics. The Continue from label does not alter the last-retained-frame rule.
 Workspace navigation uses `generate | archive | history`; all keyboard wraparound uses the actual tab count. App owns the active tab independently of project selection. VideoStudio accepts the music section above video content inside one Generate tabpanel, including the no-song state. Archive and History remain separate mounted panels. Continuation, parameter reuse and restored-library shortcuts target Generate and focus the relevant field. LivePreview is active only on Generate.
 
 The keyed song workspace still resets song-specific video draft state. `song-selection.ts` captures list scroll before selection and restores it after React commits; focus restoration is guarded against hidden/departed workspaces, disabled controls and newer user focus. The compact song list is 240px high with 96px minimum rows, two-line title clamping, vertically stacked duration/BPM and right-aligned lifecycle buttons. The selected-song player follows the list. No API, stored-media, generator or lifecycle changes are required.
+
+### Workspace control placement (24 October 2026)
+
+Music's GenerationActions uses compact presentation and a local left-arrow reuse label; other callers retain their existing labels and recovery explanations. Song selection keeps `aria-pressed` and the selected styling but drops the extra icon. The music/video divider is rendered once after the music section in both selected-song and empty states.
+
+VideoTimeline's heading contains the title, existing radio group and coverage in that DOM order; lane guidance moves into the legend. ClipEditControls renders the same guarded placement mutation in the preview bar for both placed and unplaced saved contexts. VideoStudio groups creative and lifecycle actions in a wrapping flex row. No request contract, seed handling, edit persistence, confirmation or media behaviour changes.
